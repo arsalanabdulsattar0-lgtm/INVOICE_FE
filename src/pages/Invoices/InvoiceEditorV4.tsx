@@ -176,41 +176,18 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                 </div>
               </div>
 
-              {/* Row 2: Dates, Bank, Currency */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+              {/* Row 2: Dates */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Input label="Issue Date" type="date" value={data.date}
                   onChange={(e) => onChange({ ...data, date: e.target.value })} />
                 <Input label="Due Date" type="date" value={data.dueDate}
                   onChange={(e) => onChange({ ...data, dueDate: e.target.value })} />
-                <Select label="Bank Account" value={data.bankAccount}
-                  onChange={(e) => onChange({ ...data, bankAccount: e.target.value })}
-                  options={[
-                    { value: 'chase', label: 'Chase Bank (...4521)' },
-                    { value: 'hbl', label: 'HBL Account (...9920)' },
-                    { value: 'stripe', label: 'Stripe Payouts' },
-                  ]}
-                />
-                {/* Currency Selector */}
-                <Select
-                  label={<><DollarSign className="w-3 h-3" /> Currency</>}
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  options={currencies}
-                />
               </div>
 
-              {/* Row 3: Subject, Payment Method */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2">
-                  <Input label="Product Code / Barcode" placeholder="Scan or enter product code..." value={data.subject}
-                    onChange={(e) => onChange({ ...data, subject: e.target.value })} />
-                </div>
-                <Select
-                  label={<><CreditCard className="w-3 h-3" /> Payment Method</>}
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  options={paymentMethods}
-                />
+              {/* Row 3: Product Code */}
+              <div className="grid grid-cols-1 gap-5">
+                <Input label="Product Code / Barcode" placeholder="Scan or enter product code..." value={data.subject}
+                  onChange={(e) => onChange({ ...data, subject: e.target.value })} />
               </div>
             </div>
           </div>
