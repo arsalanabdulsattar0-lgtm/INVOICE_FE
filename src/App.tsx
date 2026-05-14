@@ -11,12 +11,13 @@ import ClientList from './pages/Clients/ClientList';
 import Settings from './pages/Settings/Settings';
 import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
+import AIAssistant from './components/ui/AIAssistant';
 
 type View = 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'settings' | 'help';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeView, setActiveView] = useState<View>('add-invoice-v4');
+  const [activeView, setActiveView] = useState<View>('add-invoice');
   const [invoice, setInvoice] = useState<InvoiceData>({
     invoiceNumber: 'SI-000248',
     date: '2026-05-12',
@@ -28,15 +29,17 @@ function App() {
     subject: 'Brand Identity & Web Development - Phase 1',
     reference: 'PO-2026-004',
     items: [
-      { id: '1', description: 'Custom Brand Identity Design (Logo, Typography, Palette)', quantity: 1, price: 2500 },
-      { id: '2', description: 'React-based E-commerce Frontend Development', quantity: 1, price: 4500 },
-      { id: '3', description: 'UI/UX Interactive Prototyping (Figma)', quantity: 15, price: 120 },
-      { id: '4', description: 'Monthly Cloud Infrastructure Maintenance', quantity: 1, price: 450 },
+      { id: '1', productCode: 'BC-001', description: 'Custom Brand Identity Design (Logo, Typography, Palette)', unit: 'Job', unitDetails: 'Standard', quantity: 1, price: 2500, discount: 0, tax: 0, furtherTax: 0 },
+      { id: '2', productCode: 'BC-002', description: 'React-based E-commerce Frontend Development', unit: 'Hour', unitDetails: 'Dev', quantity: 1, price: 4500, discount: 0, tax: 0, furtherTax: 0 },
+      { id: '3', productCode: 'BC-003', description: 'UI/UX Interactive Prototyping (Figma)', unit: 'Hour', unitDetails: 'Design', quantity: 15, price: 120, discount: 0, tax: 0, furtherTax: 0 },
+      { id: '4', productCode: 'BC-004', description: 'Monthly Cloud Infrastructure Maintenance', unit: 'Month', unitDetails: 'Support', quantity: 1, price: 450, discount: 0, tax: 0, furtherTax: 0 },
     ],
     taxRate: 8,
     discountPercentage: 5,
     discountAmount: 0,
     shippingCharges: 25,
+    roundOff: 0,
+    receivedAmount: 0,
     bankAccount: 'chase',
     notes: 'Please include the invoice number in your wire transfer reference.\nPayment via ACH or Wire Transfer to Chase Bank Account #....4521.',
   });
@@ -73,6 +76,7 @@ function App() {
   return (
     <Layout activeView={activeView} onViewChange={(v) => setActiveView(v as View)}>
       {renderView()}
+      <AIAssistant />
     </Layout>
   );
 }

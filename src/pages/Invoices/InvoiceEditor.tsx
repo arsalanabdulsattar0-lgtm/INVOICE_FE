@@ -20,9 +20,15 @@ const InvoiceEditor: React.FC<Props> = ({ data, onChange }) => {
   const addItem = () => {
     const newItem: InvoiceItem = {
       id: crypto.randomUUID(),
+      productCode: '',
       description: '',
+      unit: '',
+      unitDetails: '',
       quantity: 1,
       price: 0,
+      discount: 0,
+      tax: 0,
+      furtherTax: 0,
     };
     onChange({ ...data, items: [...data.items, newItem] });
   };

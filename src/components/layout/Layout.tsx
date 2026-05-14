@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,11 +10,17 @@ interface Props {
 }
 
 const Layout: React.FC<Props> = ({ children, activeView, onViewChange }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <Sidebar activeView={activeView} onViewChange={onViewChange} />
+      <Sidebar 
+        activeView={activeView} 
+        onViewChange={onViewChange} 
+        isCollapsed={isCollapsed}
+      />
       <div className="flex-grow flex flex-col min-w-0">
-        <Header />
+        <Header onToggleSidebar={() => setIsCollapsed(!isCollapsed)} isSidebarOpen={!isCollapsed} />
         <main className="flex-grow relative overflow-y-auto bg-slate-50/50">
           <AnimatePresence mode="wait">
             <motion.div

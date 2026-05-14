@@ -1,8 +1,14 @@
 export interface InvoiceItem {
   id: string;
+  productCode: string;
   description: string;
+  unit: string;
+  unitDetails: string;
   quantity: number;
   price: number;
+  discount: number;
+  tax: number;
+  furtherTax: number;
 }
 
 export interface InvoiceData {
@@ -20,6 +26,8 @@ export interface InvoiceData {
   discountPercentage: number;
   discountAmount: number;
   shippingCharges: number;
+  roundOff: number;
+  receivedAmount: number;
   bankAccount: string;
   notes: string;
 }

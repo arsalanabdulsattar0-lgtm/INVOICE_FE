@@ -6,15 +6,16 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   icon?: LucideIcon;
   error?: string;
   variant?: 'default' | 'compact' | 'transparent';
+  suffix?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant = 'default', className = '', ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant = 'default', suffix, className = '', ...props }) => {
   const isTransparent = variant === 'transparent';
   
   const baseClasses = isTransparent 
-    ? "w-full bg-transparent border-none text-[13px] font-bold outline-none placeholder:text-slate-200 focus:border-[#2759CD]"
+    ? "w-full bg-transparent border-none text-[11px] font-bold outline-none placeholder:text-slate-200 focus:border-[#2759CD]"
     : variant === 'compact'
-      ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-[13px] font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all"
+      ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-[11px] font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all"
       : "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 pr-4 text-sm font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all";
 
   const paddingLeft = !isTransparent && Icon ? 'pl-11' : (!isTransparent && variant === 'default' ? 'px-4' : '');
@@ -22,7 +23,7 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant 
   return (
     <div className={`w-full ${!isTransparent ? 'space-y-2 group' : ''}`}>
       {label && (
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
+        <label className="text-[11px] font-bold text-slate-400 ml-1 flex items-center gap-1.5">
           {label}
         </label>
       )}
@@ -31,11 +32,16 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant 
           <Icon className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
         )}
         <input
-          className={`${baseClasses} ${paddingLeft} ${error ? 'border-red-500 focus:ring-red-500/5' : ''} ${className}`}
+          className={`${baseClasses} ${paddingLeft} ${suffix ? 'pr-8' : ''} ${error ? 'border-red-500 focus:ring-red-500/5' : ''} ${className}`}
           {...props}
         />
+        {suffix && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+            {suffix}
+          </div>
+        )}
       </div>
-      {error && <p className="text-[10px] font-bold text-red-500 ml-1 uppercase tracking-widest">{error}</p>}
+      {error && <p className="text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </div>
   );
 };
@@ -50,7 +56,7 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
   return (
     <div className="space-y-2 w-full group">
       {label && (
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
+        <label className="text-[11px] font-bold text-slate-400 ml-1 flex items-center gap-1.5">
           {label}
         </label>
       )}
@@ -90,7 +96,7 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = ''
   return (
     <div className="space-y-2 w-full group">
       {label && (
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+        <label className="text-[11px] font-bold text-slate-400 ml-1">
           {label}
         </label>
       )}

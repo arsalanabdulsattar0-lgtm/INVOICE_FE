@@ -12,14 +12,12 @@ import {
   Check,
   FileText,
   X,
-  DollarSign,
-  CreditCard,
   AlertCircle,
   Clock,
   CheckCircle,
   FileEdit,
 } from 'lucide-react';
-import { Input, Select, TextArea } from '../../components/ui/FormControls';
+import { Input, TextArea } from '../../components/ui/FormControls';
 
 interface Props {
   data: InvoiceData;
@@ -35,24 +33,6 @@ const statusConfig: Record<PaymentStatus, { label: string; icon: React.ElementTy
   overdue: { label: 'Overdue', icon: AlertCircle, bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
 };
 
-const currencies = [
-  { value: 'USD', label: '🇺🇸 USD — US Dollar' },
-  { value: 'EUR', label: '🇪🇺 EUR — Euro' },
-  { value: 'GBP', label: '🇬🇧 GBP — British Pound' },
-  { value: 'PKR', label: '🇵🇰 PKR — Pakistani Rupee' },
-  { value: 'AED', label: '🇦🇪 AED — UAE Dirham' },
-  { value: 'SAR', label: '🇸🇦 SAR — Saudi Riyal' },
-];
-
-const paymentMethods = [
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'cheque', label: 'Cheque' },
-  { value: 'stripe', label: 'Stripe' },
-  { value: 'paypal', label: 'PayPal' },
-];
-
 const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const brand = {
     primary: '#2759CD',
@@ -64,8 +44,6 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   };
 
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
-  const [currency, setCurrency] = useState('USD');
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
 
   const [files, setFiles] = useState([
@@ -76,7 +54,18 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const removeFile = (index: number) => setFiles(files.filter((_, i) => i !== index));
 
   const addItem = () => {
-    const newItem: InvoiceItem = { id: crypto.randomUUID(), description: '', quantity: 1, price: 0 };
+    const newItem: InvoiceItem = {
+      id: crypto.randomUUID(),
+      productCode: '',
+      description: '',
+      unit: '',
+      unitDetails: '',
+      quantity: 1,
+      price: 0,
+      discount: 0,
+      tax: 0,
+      furtherTax: 0
+    };
     onChange({ ...data, items: [...data.items, newItem] });
   };
 
@@ -86,27 +75,27 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const updateItem = (id: string, updates: Partial<InvoiceItem>) =>
     onChange({ ...data, items: data.items.map((item) => (item.id === id ? { ...item, ...updates } : item)) });
 
-  const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.price) - item.discount + item.tax + item.furtherTax, 0);
   const taxAmount = (subtotal * data.taxRate) / 100;
-  const discountVal = (subtotal * data.discountPercentage) / 100;
-  const total = subtotal + taxAmount - discountVal + data.shippingCharges;
+  const discountVal = data.discountAmount || (subtotal * data.discountPercentage) / 100;
+  const netPayable = subtotal + taxAmount - discountVal + data.shippingCharges + data.roundOff;
 
   const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-  const currencySymbol = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'PKR' ? '₨' : currency === 'AED' ? 'د.إ' : '﷼';
+  const currencySymbol = '$';
 
   const status = statusConfig[paymentStatus];
   const StatusIcon = status.icon;
 
-  const filteredItems = data.items.filter(item => 
+  const filteredItems = data.items.filter(item =>
     item.description.toLowerCase().includes(itemSearchQuery.toLowerCase())
   );
 
   // Section header helper
   const SectionHeader = ({ title, badge }: { title: string; badge?: string }) => (
     <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
-      <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">{title}</h3>
-      {badge && <div className="px-2 py-0.5 bg-white/20 rounded text-[7px] font-bold uppercase tracking-wider">{badge}</div>}
+      <h3 className="text-[11px] font-bold">{title}</h3>
+      {badge && <div className="px-2 py-0.5 bg-white/20 rounded text-[9px] font-bold">{badge}</div>}
     </div>
   );
 
@@ -117,7 +106,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
         {/* ── Header ── */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b pb-6" style={{ borderColor: brand.dark + '10' }}>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.3em] mb-1" style={{ color: brand.primary }}>
+            <div className="flex items-center gap-2 font-bold text-[11px] mb-1" style={{ color: brand.primary }}>
               <Zap className="w-3 h-3 fill-current" />
               <span>System V4.0</span>
             </div>
@@ -135,7 +124,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               <select
                 value={paymentStatus}
                 onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
-                className="text-[9px] font-black uppercase tracking-widest bg-transparent border-none outline-none cursor-pointer"
+                className="text-[10px] font-bold bg-transparent border-none outline-none cursor-pointer"
                 style={{ color: status.text }}
               >
                 {(Object.keys(statusConfig) as PaymentStatus[]).map((s) => (
@@ -144,10 +133,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               </select>
             </div>
 
-            <button className="h-9 px-4 bg-white border font-black text-[9px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2" style={{ color: brand.dark, borderColor: brand.dark + '15' }}>
+            <button className="h-9 px-4 bg-white border font-bold text-[11px] rounded-lg hover:bg-slate-50 transition-all flex items-center gap-2" style={{ color: brand.dark, borderColor: brand.dark + '15' }}>
               <History className="w-3.5 h-3.5" /> Activity
             </button>
-            <button className="h-9 px-6 text-white font-black rounded-lg text-[9px] uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 hover:opacity-90" style={{ backgroundColor: brand.primary }}>
+            <button className="h-9 px-6 text-white font-bold rounded-lg text-[11px] shadow-lg transition-all flex items-center gap-2 hover:opacity-90" style={{ backgroundColor: brand.primary }}>
               <Save className="w-3.5 h-3.5" /> Save
             </button>
           </div>
@@ -158,36 +147,38 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
           {/* ── General Information ── */}
           <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: brand.dark + '10' }}>
             <SectionHeader title="General Information" badge="Identity Layer" />
-            <div className="p-6 space-y-5">
+            <div className="p-4 space-y-4">
 
-              {/* Row 1: Customer, Invoice ID, Reference */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                <div className="lg:col-span-6">
-                  <Input label="Customer Entity" icon={Search} placeholder="Search client..." value={data.clientName}
+              {/* Row 1: Customer, Invoice ID, Reference, Product Code */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-4">
+                  <Input variant="compact" label="Customer Entity" icon={Search} placeholder="Search client..." value={data.clientName}
                     onChange={(e) => onChange({ ...data, clientName: e.target.value })} />
                 </div>
-                <div className="lg:col-span-3">
-                  <Input label="Invoice ID" className="font-mono" style={{ color: brand.primary }}
+                <div className="lg:col-span-2">
+                  <Input variant="compact" label="Invoice ID" className="font-mono" style={{ color: brand.primary }}
                     value={data.invoiceNumber} onChange={(e) => onChange({ ...data, invoiceNumber: e.target.value })} />
                 </div>
-                <div className="lg:col-span-3">
-                  <Input label="Reference" placeholder="PO-NODE-004" value={data.reference}
+                <div className="lg:col-span-2">
+                  <Input variant="compact" label="Reference" placeholder="PO-NODE-004" value={data.reference}
                     onChange={(e) => onChange({ ...data, reference: e.target.value })} />
+                </div>
+                <div className="lg:col-span-4">
+                  <Input variant="compact" label="Product Code / Barcode" placeholder="Scan or enter code..." value={data.subject}
+                    onChange={(e) => onChange({ ...data, subject: e.target.value })} />
                 </div>
               </div>
 
               {/* Row 2: Dates */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Input label="Issue Date" type="date" value={data.date}
-                  onChange={(e) => onChange({ ...data, date: e.target.value })} />
-                <Input label="Due Date" type="date" value={data.dueDate}
-                  onChange={(e) => onChange({ ...data, dueDate: e.target.value })} />
-              </div>
-
-              {/* Row 3: Product Code */}
-              <div className="grid grid-cols-1 gap-5">
-                <Input label="Product Code / Barcode" placeholder="Scan or enter product code..." value={data.subject}
-                  onChange={(e) => onChange({ ...data, subject: e.target.value })} />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-2">
+                  <Input variant="compact" label="Issue Date" type="date" value={data.date}
+                    onChange={(e) => onChange({ ...data, date: e.target.value })} />
+                </div>
+                <div className="lg:col-span-2">
+                  <Input variant="compact" label="Due Date" type="date" value={data.dueDate}
+                    onChange={(e) => onChange({ ...data, dueDate: e.target.value })} />
+                </div>
               </div>
             </div>
           </div>
@@ -197,24 +188,24 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Transaction Entries</h3>
-                <span className="ml-2 px-2 py-0.5 rounded-full text-[8px] font-bold" style={{ backgroundColor: brand.soft, color: brand.dark }}>
+                <h3 className="text-[11px] font-bold">Transaction Entries</h3>
+                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: brand.soft, color: brand.dark }}>
                   {filteredItems.length} items
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="relative hidden sm:block">
                   <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/60" />
-                  <input 
-                    type="text" 
-                    placeholder="Search products..." 
+                  <input
+                    type="text"
+                    placeholder="Search products..."
                     value={itemSearchQuery}
                     onChange={(e) => setItemSearchQuery(e.target.value)}
                     className="w-48 bg-white/10 border border-white/20 rounded-lg py-1.5 pl-7 pr-3 text-[10px] font-bold text-white placeholder:text-white/60 outline-none focus:bg-white/20 focus:border-white/40 transition-all"
                   />
                 </div>
                 <button onClick={addItem}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-black rounded-lg hover:bg-slate-50 transition-all uppercase tracking-widest text-[8px] shrink-0"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg hover:bg-slate-50 transition-all text-[11px] shrink-0"
                   style={{ color: brand.primary }}>
                   <Plus className="w-3 h-3" /> Add Item
                 </button>
@@ -224,61 +215,109 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             <div className="overflow-x-auto overflow-y-auto max-h-[280px]">
               <table className="w-full relative">
                 <thead className="sticky top-0 bg-white z-10 shadow-sm">
-                  <tr className="text-[9px] font-black uppercase tracking-[0.2em] border-b" style={{ color: brand.dark, borderColor: brand.dark + '08' }}>
-                    <th className="px-6 py-3.5 text-left">Description</th>
-                    <th className="px-4 py-3.5 text-center w-24">Qty</th>
-                    <th className="px-4 py-3.5 text-right w-32">Unit Price</th>
-                    <th className="px-4 py-3.5 text-right w-20">Tax %</th>
-                    <th className="px-6 py-3.5 text-right w-36">Total</th>
-                    <th className="px-4 py-3.5 w-12" />
+                  <tr className="text-[10px] font-bold border-b" style={{ color: brand.dark, borderColor: brand.dark + '08' }}>
+                    <th className="px-4 py-3.5 text-left w-10">#</th>
+                    <th className="px-3 py-3.5 text-left w-28">Product Code</th>
+                    <th className="px-3 py-3.5 text-left min-w-[200px]">Description</th>
+                    <th className="px-3 py-3.5 text-center w-20">Unit</th>
+                    <th className="px-3 py-3.5 text-left w-28">Unit Details</th>
+                    <th className="px-3 py-3.5 text-center w-20">Qty</th>
+                    <th className="px-3 py-3.5 text-right w-28">Price</th>
+                    <th className="px-3 py-3.5 text-right w-24">Discount</th>
+                    <th className="px-3 py-3.5 text-right w-24">Tax</th>
+                    <th className="px-3 py-3.5 text-right w-24">Further Tax</th>
+                    <th className="px-4 py-3.5 text-right w-32">Total</th>
+                    <th className="px-3 py-3.5 w-10" />
                   </tr>
                 </thead>
-                <tbody className="divide-y" style={{ borderColor: brand.dark + '05' }}>
+                <tbody style={{ borderColor: brand.dark + '10' }}>
                   {filteredItems.map((item, idx) => (
-                    <tr key={item.id} className="group hover:bg-slate-50/40 transition-colors">
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[9px] font-black text-slate-300 w-4 shrink-0">{idx + 1}</span>
-                          <Input
-                            variant="transparent"
-                            placeholder="Item description..."
-                            value={item.description}
-                            onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                          />
-                        </div>
+                    <tr key={item.id} className="group hover:bg-slate-50/40 transition-colors border-b last:border-0" style={{ borderColor: brand.dark + '10' }}>
+                      <td className="px-4 py-2.5 text-[9px] font-black text-slate-300">{idx + 1}</td>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          variant="compact"
+                          placeholder="P-001"
+                          value={item.productCode}
+                          onChange={(e) => updateItem(item.id, { productCode: e.target.value })}
+                        />
                       </td>
-                      <td className="px-4 py-3 text-center">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-center"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                          />
+                      <td className="px-2 py-2.5">
+                        <Input
+                          variant="transparent"
+                          placeholder="Item description..."
+                          value={item.description}
+                          onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                        />
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end">
-                          <span className="text-[10px] font-bold text-slate-400 mr-1">{currencySymbol}</span>
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="w-20 text-right"
-                            value={item.price}
-                            onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })}
-                          />
-                        </div>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          variant="compact"
+                          placeholder="pcs"
+                          className="text-center"
+                          value={item.unit}
+                          onChange={(e) => updateItem(item.id, { unit: e.target.value })}
+                        />
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-bold px-2 py-1 rounded-md" style={{ backgroundColor: brand.soft + '50', color: brand.primary }}>
-                          {data.taxRate}%
-                        </span>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          variant="compact"
+                          placeholder="Details..."
+                          value={item.unitDetails}
+                          onChange={(e) => updateItem(item.id, { unitDetails: e.target.value })}
+                        />
                       </td>
-                      <td className="px-6 py-3 text-right font-black text-[13px] tracking-tight" style={{ color: brand.primary }}>
-                        {currencySymbol}{fmt(item.quantity * item.price)}
+                      <td className="px-2 py-2.5">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          className="text-center"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          className="text-right"
+                          value={item.price}
+                          onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          className="text-right text-red-500 font-bold"
+                          value={item.discount}
+                          onChange={(e) => updateItem(item.id, { discount: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          className="text-right text-green-600 font-bold"
+                          value={item.tax}
+                          onChange={(e) => updateItem(item.id, { tax: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          className="text-right text-blue-500 font-bold"
+                          value={item.furtherTax}
+                          onChange={(e) => updateItem(item.id, { furtherTax: parseFloat(e.target.value) || 0 })}
+                        />
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-black text-[10px] tracking-tight" style={{ color: brand.primary }}>
+                        {currencySymbol}{fmt((item.quantity * item.price) - item.discount + item.tax + item.furtherTax)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => removeItem(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 transition-all"
+                          className="p-1.5 rounded-lg hover:bg-red-50 transition-all"
                           style={{ color: brand.accent }}>
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -287,7 +326,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   ))}
                   {filteredItems.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest">
+                      <td colSpan={6} className="px-6 py-12 text-center text-[11px] font-bold text-slate-300">
                         {data.items.length === 0 ? 'No items yet — click "Add Item" to begin' : 'No items match your search'}
                       </td>
                     </tr>
@@ -304,33 +343,33 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             <div className="lg:col-span-7 flex flex-col gap-6">
 
               {/* Notes */}
-              <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col" style={{ borderColor: brand.dark + '10' }}>
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col flex-1" style={{ borderColor: brand.dark + '10' }}>
                 <SectionHeader title="Notes & Special Terms" />
                 <div className="p-6 flex-1">
-                  <TextArea placeholder="Enter payment terms, bank details, or special instructions..." rows={3}
+                  <TextArea placeholder="Enter payment terms, bank details, or special instructions..." className="h-full min-h-[100px]"
                     value={data.notes} onChange={(e) => onChange({ ...data, notes: e.target.value })} />
                 </div>
               </div>
 
               {/* Attachments */}
-              <div className="bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col" style={{ borderColor: brand.dark + '10' }}>
+              <div className="bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col flex-1" style={{ borderColor: brand.dark + '10' }}>
                 <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
                   <div className="flex items-center gap-2">
                     <Paperclip className="w-3.5 h-3.5" />
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Attachments</h3>
+                    <h3 className="text-[11px] font-bold">Attachments</h3>
                   </div>
                   <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: brand.soft, color: brand.dark }}>
                     {files.length} files
                   </span>
                 </div>
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50/30 min-h-[100px]"
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 items-stretch">
+                  <div className="border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50/30 h-full"
                     style={{ borderColor: brand.dark + '12', backgroundColor: brand.surface }}>
                     <Upload className="w-5 h-5" style={{ color: brand.primary }} />
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: brand.dark }}>Click to Upload</p>
-                    <p className="text-[8px] text-slate-400 uppercase">PDF, PNG, JPG — max 10MB</p>
+                    <p className="text-[11px] font-bold" style={{ color: brand.dark }}>Click to Upload</p>
+                    <p className="text-[10px] text-slate-400">PDF, PNG, JPG — max 10MB</p>
                   </div>
-                  <div className="space-y-2 max-h-[100px] overflow-y-auto pr-1">
+                  <div className="space-y-2 overflow-y-auto pr-1 h-full">
                     {files.map((file, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 border rounded-lg hover:border-blue-200 transition-colors" style={{ borderColor: brand.dark + '08' }}>
                         <div className="flex items-center gap-2 truncate">
@@ -356,64 +395,93 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             {/* Right: Financial Matrix */}
             <div className="lg:col-span-5 flex flex-col">
               <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col h-full" style={{ borderColor: brand.dark + '10' }}>
-                <SectionHeader title="Financial Matrix" badge={currency} />
+                <SectionHeader title="Financial Matrix" badge="PKR" />
 
-                <div className="p-6 flex-1 flex flex-col justify-between gap-5">
-
-                  {/* Adjustments */}
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { label: 'Tax (%)', key: 'taxRate' },
-                      { label: 'Disc (%)', key: 'discountPercentage' },
-                      { label: 'Shipping', key: 'shippingCharges' },
-                    ].map((field) => (
-                      <div key={field.key} className="w-full">
-                        <Input
-                          type="number"
-                          variant="compact"
-                          label={field.label}
-                          value={data[field.key as keyof InvoiceData] as number}
-                          onChange={(e) => onChange({ ...data, [field.key as any]: parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                    ))}
+                <div className="p-5 flex-1 flex flex-col gap-4">
+                  {/* Gross */}
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[11px] font-bold text-slate-500">Gross</span>
+                    <span className="text-[12px] font-black text-slate-700">{currencySymbol}{fmt(subtotal)}</span>
                   </div>
 
-                  {/* Breakdown Lines */}
-                  <div className="space-y-2 border-t pt-4" style={{ borderColor: brand.dark + '08' }}>
-                    {[
-                      { label: 'Subtotal', value: subtotal, color: brand.dark, bold: false },
-                      { label: `Tax (${data.taxRate}%)`, value: taxAmount, color: '#15803D', bold: false },
-                      { label: `Discount (${data.discountPercentage}%)`, value: -discountVal, color: brand.accent, bold: false },
-                      { label: 'Shipping', value: data.shippingCharges, color: brand.dark, bold: false },
-                    ].map(({ label, value, color, bold }) => (
-                      <div key={label} className="flex justify-between items-center text-[11px]">
-                        <span className="font-bold text-slate-400">{label}</span>
-                        <span className={`font-${bold ? 'black' : 'bold'}`} style={{ color }}>
-                          {value < 0 ? '-' : ''}{currencySymbol}{fmt(Math.abs(value))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Total */}
-                  <div className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: brand.primary }}>
-                    <div>
-                      <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/60 mb-1">Net Payable</p>
-                      <h2 className="text-2xl font-black tracking-tight text-white">
-                        {currencySymbol}{fmt(total)}
-                      </h2>
-                      <p className="text-[8px] font-bold mt-0.5" style={{ color: brand.soft }}>{currency} · {paymentMethods.find(m => m.value === paymentMethod)?.label}</p>
+                  {/* Discount Section */}
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-3">
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">Discount</span>
                     </div>
-                    <button className="h-11 px-6 text-white font-black rounded-xl shadow-xl text-[9px] uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
-                      style={{ backgroundColor: brand.accent }}>
-                      <Check className="w-4 h-4" /> Execute
-                    </button>
+                    <div className="col-span-4">
+                      <Input
+                        type="number"
+                        variant="compact"
+                        className="text-center"
+                        suffix="%"
+                        value={data.discountPercentage}
+                        onChange={(e) => onChange({ ...data, discountPercentage: parseFloat(e.target.value) || 0, discountAmount: 0 })}
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <Input
+                        type="number"
+                        variant="compact"
+                        className="text-right"
+                        placeholder="Amount"
+                        value={data.discountAmount}
+                        onChange={(e) => onChange({ ...data, discountAmount: parseFloat(e.target.value) || 0, discountPercentage: 0 })}
+                      />
+                    </div>
                   </div>
 
-                  <button className="w-full py-2.5 font-black rounded-xl text-[9px] uppercase tracking-widest border transition-all hover:shadow-sm"
-                    style={{ backgroundColor: brand.soft + '30', color: brand.primary, borderColor: brand.primary + '25' }}>
-                    Generate Shareable Link
+                  {/* Tax */}
+                  <div className="flex justify-between items-center px-1">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-slate-500">Tax</span>
+                      <span className="text-[9px] text-slate-400">Calculated ({data.taxRate}%)</span>
+                    </div>
+                    <span className="text-[12px] font-black text-slate-700">{currencySymbol}{fmt(taxAmount)}</span>
+                  </div>
+
+                  {/* Shipping Charges */}
+                  <div className="grid grid-cols-12 gap-3 items-center">
+                    <div className="col-span-5">
+                      <span className="text-[11px] font-bold text-slate-500">Shipping Charges</span>
+                    </div>
+                    <div className="col-span-7">
+                      <Input
+                        type="number"
+                        variant="compact"
+                        className="text-right"
+                        value={data.shippingCharges}
+                        onChange={(e) => onChange({ ...data, shippingCharges: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Round Off */}
+                  <div className="grid grid-cols-12 gap-3 items-center">
+                    <div className="col-span-5">
+                      <span className="text-[11px] font-bold text-slate-500">Round Off</span>
+                    </div>
+                    <div className="col-span-7">
+                      <Input
+                        type="number"
+                        variant="compact"
+                        className="text-right"
+                        value={data.roundOff}
+                        onChange={(e) => onChange({ ...data, roundOff: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="h-[1px] bg-slate-100 my-1" />
+
+                  {/* Net */}
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[11px] font-black text-slate-700">Net (PKR)</span>
+                    <span className="text-[16px] font-black" style={{ color: brand.primary }}>{currencySymbol}{fmt(netPayable)}</span>
+                  </div>
+
+                  <button className="w-full py-3 bg-[#EE4932] text-white font-black rounded-xl text-[12px] flex items-center justify-center gap-2 hover:opacity-90 transition-all mt-4">
+                    <Check className="w-4 h-4" /> Execute
                   </button>
                 </div>
               </div>
