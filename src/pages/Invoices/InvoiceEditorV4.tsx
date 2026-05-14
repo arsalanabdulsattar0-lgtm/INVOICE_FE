@@ -272,9 +272,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <input type="number"
-                          className="w-full bg-slate-50 border rounded-lg py-1.5 px-2 text-center text-[13px] font-bold outline-none focus:border-indigo-300 transition-all"
-                          style={{ color: brand.dark, borderColor: brand.dark + '10' }}
+                          <input type="number"
+                            className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-center text-[13px] font-bold outline-none focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] transition-all"
+                            style={{ color: brand.dark }}
                           value={item.quantity}
                           onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })} />
                       </td>
@@ -282,8 +282,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                         <div className="flex items-center justify-end">
                           <span className="text-[10px] font-bold text-slate-400 mr-1">{currencySymbol}</span>
                           <input type="number"
-                            className="w-20 bg-slate-50 border rounded-lg py-1.5 px-2 text-right text-[13px] font-bold outline-none focus:border-indigo-300 transition-all"
-                            style={{ color: brand.dark, borderColor: brand.dark + '10' }}
+                            className="w-20 bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-right text-[13px] font-bold outline-none focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] transition-all"
+                            style={{ color: brand.dark }}
                             value={item.price}
                             onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
                         </div>
