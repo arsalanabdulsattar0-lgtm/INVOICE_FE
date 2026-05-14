@@ -29,10 +29,10 @@ interface Props {
 type PaymentStatus = 'draft' | 'pending' | 'paid' | 'overdue';
 
 const statusConfig: Record<PaymentStatus, { label: string; icon: React.ElementType; bg: string; text: string; border: string }> = {
-  draft:   { label: 'Draft',   icon: FileEdit,     bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
-  pending: { label: 'Pending', icon: Clock,        bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  paid:    { label: 'Paid',    icon: CheckCircle,  bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
-  overdue: { label: 'Overdue', icon: AlertCircle,  bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
+  draft: { label: 'Draft', icon: FileEdit, bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
+  pending: { label: 'Pending', icon: Clock, bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
+  paid: { label: 'Paid', icon: CheckCircle, bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+  overdue: { label: 'Overdue', icon: AlertCircle, bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
 };
 
 const currencies = [
@@ -46,30 +46,30 @@ const currencies = [
 
 const paymentMethods = [
   { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'credit_card',   label: 'Credit Card' },
-  { value: 'cash',          label: 'Cash' },
-  { value: 'cheque',        label: 'Cheque' },
-  { value: 'stripe',        label: 'Stripe' },
-  { value: 'paypal',        label: 'PayPal' },
+  { value: 'credit_card', label: 'Credit Card' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'stripe', label: 'Stripe' },
+  { value: 'paypal', label: 'PayPal' },
 ];
 
 const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const brand = {
     primary: '#2759CD',
-    dark:    '#304166',
-    accent:  '#EE4932',
-    soft:    '#BDD1FF',
+    dark: '#304166',
+    accent: '#EE4932',
+    soft: '#BDD1FF',
     surface: '#EFF5FC',
-    white:   '#FFFFFF',
+    white: '#FFFFFF',
   };
 
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
-  const [currency, setCurrency]           = useState('USD');
+  const [currency, setCurrency] = useState('USD');
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
 
   const [files, setFiles] = useState([
     { name: 'project_brief.pdf', size: '1.2 MB' },
-    { name: 'logo_assets.zip',   size: '4.5 MB' },
+    { name: 'logo_assets.zip', size: '4.5 MB' },
   ]);
 
   const removeFile = (index: number) => setFiles(files.filter((_, i) => i !== index));
@@ -85,10 +85,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const updateItem = (id: string, updates: Partial<InvoiceItem>) =>
     onChange({ ...data, items: data.items.map((item) => (item.id === id ? { ...item, ...updates } : item)) });
 
-  const subtotal     = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  const taxAmount    = (subtotal * data.taxRate) / 100;
-  const discountVal  = (subtotal * data.discountPercentage) / 100;
-  const total        = subtotal + taxAmount - discountVal + data.shippingCharges;
+  const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  const taxAmount = (subtotal * data.taxRate) / 100;
+  const discountVal = (subtotal * data.discountPercentage) / 100;
+  const total = subtotal + taxAmount - discountVal + data.shippingCharges;
 
   const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
@@ -106,7 +106,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   );
 
   return (
-    <div className="min-h-screen p-4 lg:px-8 lg:py-8 font-sans [&_input]:!shadow-none [&_select]:!shadow-none [&_textarea]:!shadow-none" style={{ backgroundColor: brand.surface }}>
+    <div className="min-h-screen p-4 lg:px-8 lg:py-8 font-sans [&_input]:shadow-none [&_select]:shadow-none [&_textarea]:shadow-none" style={{ backgroundColor: brand.surface }}>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ── Header ── */}
@@ -181,8 +181,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   onChange={(e) => onChange({ ...data, bankAccount: e.target.value })}
                   options={[
                     { value: 'chase', label: 'Chase Bank (...4521)' },
-                    { value: 'hbl',   label: 'HBL Account (...9920)' },
-                    { value: 'stripe',label: 'Stripe Payouts' },
+                    { value: 'hbl', label: 'HBL Account (...9920)' },
+                    { value: 'stripe', label: 'Stripe Payouts' },
                   ]}
                 />
                 {/* Currency Selector */}
@@ -193,7 +193,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 appearance-none cursor-pointer focus:ring-4 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] outline-none transition-all"
                   >
                     {currencies.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
@@ -215,7 +215,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 appearance-none cursor-pointer focus:ring-4 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] outline-none transition-all"
                   >
                     {paymentMethods.map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
@@ -383,9 +383,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   {/* Adjustments */}
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: 'Tax (%)',   key: 'taxRate' },
-                      { label: 'Disc (%)',  key: 'discountPercentage' },
-                      { label: 'Shipping',  key: 'shippingCharges' },
+                      { label: 'Tax (%)', key: 'taxRate' },
+                      { label: 'Disc (%)', key: 'discountPercentage' },
+                      { label: 'Shipping', key: 'shippingCharges' },
                     ].map((field) => (
                       <div key={field.key} className="space-y-1.5">
                         <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">{field.label}</span>
@@ -401,10 +401,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   {/* Breakdown Lines */}
                   <div className="space-y-2 border-t pt-4" style={{ borderColor: brand.dark + '08' }}>
                     {[
-                      { label: 'Subtotal',       value: subtotal,      color: brand.dark,    bold: false },
-                      { label: `Tax (${data.taxRate}%)`,    value: taxAmount,     color: '#15803D',  bold: false },
+                      { label: 'Subtotal', value: subtotal, color: brand.dark, bold: false },
+                      { label: `Tax (${data.taxRate}%)`, value: taxAmount, color: '#15803D', bold: false },
                       { label: `Discount (${data.discountPercentage}%)`, value: -discountVal, color: brand.accent, bold: false },
-                      { label: 'Shipping',        value: data.shippingCharges, color: brand.dark, bold: false },
+                      { label: 'Shipping', value: data.shippingCharges, color: brand.dark, bold: false },
                     ].map(({ label, value, color, bold }) => (
                       <div key={label} className="flex justify-between items-center text-[11px]">
                         <span className="font-bold text-slate-400">{label}</span>
