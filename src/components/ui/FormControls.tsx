@@ -24,7 +24,7 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, classNam
             w-full bg-white border border-slate-200 rounded-xl py-3 
             ${Icon ? 'pl-11' : 'px-4'} pr-4 text-sm font-bold text-slate-900 
             placeholder:text-slate-300 focus:ring-4 focus:ring-indigo-500/5 
-            focus:border-indigo-500 transition-all outline-none shadow-sm
+            focus:border-indigo-500 transition-all outline-none
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
             ${className}
           `}
@@ -56,7 +56,7 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
             w-full bg-white border border-slate-200 rounded-xl py-3 px-4 
             text-sm font-bold text-slate-900 appearance-none cursor-pointer
             focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 
-            outline-none transition-all shadow-sm
+            outline-none transition-all
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
             ${className}
           `}
@@ -96,7 +96,7 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = ''
           w-full bg-white border border-slate-200 rounded-xl py-4 px-5 
           text-[13px] font-bold text-slate-600 placeholder:text-slate-300 
           focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 
-          outline-none transition-all shadow-sm resize-none
+          outline-none transition-all resize-none
           ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
           ${className}
         `}
