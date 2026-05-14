@@ -21,10 +21,10 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, classNam
         )}
         <input
           className={`
-            w-full bg-white border border-slate-200 rounded-xl py-3 
-            ${Icon ? 'pl-11' : 'px-4'} pr-4 text-sm font-bold text-slate-900 
+            w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 
+            ${Icon ? 'pl-11' : 'px-4'} pr-4 text-sm font-bold text-[#304166] 
             placeholder:text-slate-300 focus:ring-4 focus:ring-indigo-500/5 
-            focus:border-indigo-500 transition-all outline-none
+            focus:border-indigo-500 transition-all 
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
             ${className}
           `}
@@ -53,8 +53,8 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
       <div className="relative">
         <select
           className={`
-            w-full bg-white border border-slate-200 rounded-xl py-3 px-4 
-            text-sm font-bold text-slate-900 appearance-none cursor-pointer
+            w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 
+            text-sm font-bold text-[#304166] appearance-none cursor-pointer
             focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 
             outline-none transition-all
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
@@ -93,8 +93,8 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = ''
       )}
       <textarea
         className={`
-          w-full bg-white border border-slate-200 rounded-xl py-4 px-5 
-          text-[13px] font-bold text-slate-600 placeholder:text-slate-300 
+          w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-4 px-5 
+          text-[13px] font-bold text-[#304166] placeholder:text-slate-300 
           focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 
           outline-none transition-all resize-none
           ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
