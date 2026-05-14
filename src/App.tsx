@@ -16,7 +16,7 @@ type View = 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-i
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeView, setActiveView] = useState<View>('add-invoice');
+  const [activeView, setActiveView] = useState<View>('add-invoice-v4');
   const [invoice, setInvoice] = useState<InvoiceData>({
     invoiceNumber: 'SI-000248',
     date: '2026-05-12',
