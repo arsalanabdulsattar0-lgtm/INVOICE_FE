@@ -186,20 +186,12 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   ]}
                 />
                 {/* Currency Selector */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
-                    <DollarSign className="w-3 h-3" /> Currency
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all"
-                  >
-                    {currencies.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  label={<><DollarSign className="w-3 h-3" /> Currency</>}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  options={currencies}
+                />
               </div>
 
               {/* Row 3: Subject, Payment Method */}
@@ -208,20 +200,12 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   <Input label="Subject Specification" placeholder="Define invoice objective..." value={data.subject}
                     onChange={(e) => onChange({ ...data, subject: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
-                    <CreditCard className="w-3 h-3" /> Payment Method
-                  </label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all"
-                  >
-                    {paymentMethods.map((m) => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  label={<><CreditCard className="w-3 h-3" /> Payment Method</>}
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  options={paymentMethods}
+                />
               </div>
             </div>
           </div>
@@ -261,31 +245,33 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
                           <span className="text-[9px] font-black text-slate-300 w-4 shrink-0">{idx + 1}</span>
-                          <input
-                            type="text"
+                          <Input
+                            variant="transparent"
                             placeholder="Item description..."
-                            className="w-full bg-transparent border-none text-[13px] font-bold outline-none placeholder:text-slate-200"
-                            style={{ color: brand.dark }}
                             value={item.description}
                             onChange={(e) => updateItem(item.id, { description: e.target.value })}
                           />
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                          <input type="number"
-                            className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-center text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
-                            style={{ color: brand.dark }}
-                          value={item.quantity}
-                          onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })} />
+                          <Input
+                            type="number"
+                            variant="compact"
+                            className="text-center"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                          />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end">
                           <span className="text-[10px] font-bold text-slate-400 mr-1">{currencySymbol}</span>
-                          <input type="number"
-                            className="w-20 bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-right text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
-                            style={{ color: brand.dark }}
+                          <Input
+                            type="number"
+                            variant="compact"
+                            className="w-20 text-right"
                             value={item.price}
-                            onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
+                            onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })}
+                          />
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -387,13 +373,14 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                       { label: 'Disc (%)', key: 'discountPercentage' },
                       { label: 'Shipping', key: 'shippingCharges' },
                     ].map((field) => (
-                      <div key={field.key} className="space-y-1.5">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">{field.label}</span>
-                        <input type="number"
-                          className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-2 px-3 text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
-                          style={{ color: brand.dark }}
+                      <div key={field.key} className="w-full">
+                        <Input
+                          type="number"
+                          variant="compact"
+                          label={field.label}
                           value={data[field.key as keyof InvoiceData] as number}
-                          onChange={(e) => onChange({ ...data, [field.key as any]: parseFloat(e.target.value) || 0 })} />
+                          onChange={(e) => onChange({ ...data, [field.key as any]: parseFloat(e.target.value) || 0 })}
+                        />
                       </div>
                     ))}
                   </div>

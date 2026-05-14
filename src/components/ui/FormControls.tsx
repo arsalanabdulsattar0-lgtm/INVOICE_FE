@@ -1,17 +1,28 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  label?: React.ReactNode;
   icon?: LucideIcon;
   error?: string;
+  variant?: 'default' | 'compact' | 'transparent';
 }
 
-export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, className = '', ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant = 'default', className = '', ...props }) => {
+  const isTransparent = variant === 'transparent';
+  
+  const baseClasses = isTransparent 
+    ? "w-full bg-transparent border-none text-[13px] font-bold outline-none placeholder:text-slate-200 focus:border-[#2759CD]"
+    : variant === 'compact'
+      ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-[13px] font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all"
+      : "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 pr-4 text-sm font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all";
+
+  const paddingLeft = !isTransparent && Icon ? 'pl-11' : (!isTransparent && variant === 'default' ? 'px-4' : '');
+
   return (
-    <div className="space-y-2 w-full group">
+    <div className={`w-full ${!isTransparent ? 'space-y-2 group' : ''}`}>
       {label && (
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
           {label}
         </label>
       )}
@@ -20,13 +31,7 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, classNam
           <Icon className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
         )}
         <input
-          className={`
-            w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 
-            ${Icon ? 'pl-11' : 'px-4'} pr-4 text-sm font-bold text-[#304166] 
-            placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all
-            ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
-            ${className}
-          `}
+          className={`${baseClasses} ${paddingLeft} ${error ? 'border-red-500 focus:ring-red-500/5' : ''} ${className}`}
           {...props}
         />
       </div>
@@ -36,7 +41,7 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, classNam
 };
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
+  label?: React.ReactNode;
   options: { value: string; label: string }[];
   error?: string;
 }
@@ -45,7 +50,7 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
   return (
     <div className="space-y-2 w-full group">
       {label && (
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 flex items-center gap-1.5">
           {label}
         </label>
       )}
