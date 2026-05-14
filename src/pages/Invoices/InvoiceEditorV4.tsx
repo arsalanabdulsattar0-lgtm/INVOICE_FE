@@ -193,7 +193,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] outline-none transition-all"
+                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all"
                   >
                     {currencies.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
@@ -215,7 +215,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] outline-none transition-all"
+                    className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all"
                   >
                     {paymentMethods.map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
@@ -273,7 +273,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                       </td>
                       <td className="px-4 py-3 text-center">
                           <input type="number"
-                            className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-center text-[13px] font-bold outline-none focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] transition-all"
+                            className="w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-center text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
                             style={{ color: brand.dark }}
                           value={item.quantity}
                           onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })} />
@@ -282,7 +282,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                         <div className="flex items-center justify-end">
                           <span className="text-[10px] font-bold text-slate-400 mr-1">{currencySymbol}</span>
                           <input type="number"
-                            className="w-20 bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-right text-[13px] font-bold outline-none focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] transition-all"
+                            className="w-20 bg-[#EFF5FC] border border-[#304166]/10 rounded-lg py-1.5 px-2 text-right text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
                             style={{ color: brand.dark }}
                             value={item.price}
                             onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })} />
@@ -390,7 +390,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                       <div key={field.key} className="space-y-1.5">
                         <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">{field.label}</span>
                         <input type="number"
-                          className="w-full border rounded-lg py-2 px-3 text-[13px] font-bold outline-none focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] transition-all"
+                          className="w-full border rounded-lg py-2 px-3 text-[13px] font-bold outline-none focus:border-[#2759CD] transition-all"
                           style={{ color: brand.dark, borderColor: brand.dark + '12', backgroundColor: brand.surface }}
                           value={data[field.key as keyof InvoiceData] as number}
                           onChange={(e) => onChange({ ...data, [field.key as any]: parseFloat(e.target.value) || 0 })} />

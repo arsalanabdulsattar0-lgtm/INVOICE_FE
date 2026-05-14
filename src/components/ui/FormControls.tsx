@@ -23,8 +23,7 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, classNam
           className={`
             w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 
             ${Icon ? 'pl-11' : 'px-4'} pr-4 text-sm font-bold text-[#304166] 
-            placeholder:text-slate-300 focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] 
-            outline-none transition-all
+            placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
             ${className}
           `}
@@ -55,8 +54,7 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, className
           className={`
             w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-3 px-4 
             text-sm font-bold text-[#304166] appearance-none cursor-pointer
-            focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] 
-            outline-none transition-all
+            focus:border-[#2759CD] outline-none transition-all
             ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
             ${className}
           `}
@@ -95,8 +93,7 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = ''
         className={`
           w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-4 px-5 
           text-[13px] font-bold text-[#304166] placeholder:text-slate-300 
-          focus:border-[#2759CD] focus:ring-1 focus:ring-[#2759CD] 
-          outline-none transition-all resize-none
+          focus:border-[#2759CD] outline-none transition-all resize-none
           ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
           ${className}
         `}
