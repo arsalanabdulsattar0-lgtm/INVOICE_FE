@@ -384,7 +384,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                 <div className="p-6 flex-1 flex flex-col justify-between gap-5">
 
                   {/* Adjustments */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-3">
                     {[
                       { label: 'Tax (%)', key: 'taxRate' },
                       { label: 'Disc (%)', key: 'discountPercentage' },
