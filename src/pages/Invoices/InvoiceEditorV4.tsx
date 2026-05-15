@@ -144,8 +144,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   };
 
   // Section header helper
-  const SectionHeader = ({ title, badge }: { title: string; badge?: string }) => (
-    <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
+  const SectionHeader = ({ title, badge, className = "" }: { title: string; badge?: string; className?: string }) => (
+    <div className={`px-6 py-3 flex items-center justify-between text-white ${className}`} style={{ backgroundColor: brand.primary }}>
       <h3 className="text-[11px] font-bold">{title}</h3>
       {badge && <div className="px-2 py-0.5 bg-white/20 rounded text-[9px] font-bold">{badge}</div>}
     </div>
