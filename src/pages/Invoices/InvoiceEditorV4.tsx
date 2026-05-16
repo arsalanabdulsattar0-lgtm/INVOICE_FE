@@ -9,10 +9,6 @@ import {
   Upload,
   Search,
   X,
-  AlertCircle,
-  Clock,
-  CheckCircle,
-  FileEdit,
   Package
 } from 'lucide-react';
 import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/ui/FormControls';
@@ -42,7 +38,7 @@ interface Props {
   onChange: (data: InvoiceData) => void;
 }
 
-type PaymentStatus = 'draft' | 'pending' | 'paid' | 'overdue';
+
 
 
 
