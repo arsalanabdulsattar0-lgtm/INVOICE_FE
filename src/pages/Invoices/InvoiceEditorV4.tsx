@@ -5,11 +5,9 @@ import {
   Plus,
   Trash2,
   Save,
-  Zap,
   Paperclip,
   Upload,
   Search,
-  FileText,
   X,
   AlertCircle,
   Clock,
@@ -18,17 +16,14 @@ import {
   Package
 } from 'lucide-react';
 import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/ui/FormControls';
+import { Button } from '../../components/ui/Button';
 
 // Sample data for the ComboBoxes
 const sampleCustomers = [
-  { id: '1', name: 'Arsalan Abdul Sattar', subtitle: 'Premium Client · Karachi, PK', strn: 'STRN-042-2024', ntn: '1234567-8', creditLimit: 500000, balance: 125000, status: 'active' },
-  { id: '2', name: 'Google DeepMind', subtitle: 'Enterprise · London, UK', strn: 'STRN-UK-9821', ntn: '9876543-1', creditLimit: 2000000, balance: 0, status: 'active' },
-  { id: '3', name: 'Al-Madina Traders', subtitle: 'Wholesale · Lahore, PK', strn: 'STRN-LHR-3310', ntn: '4561237-5', creditLimit: 150000, balance: 89000, status: 'overdue' },
-  { id: '4', name: 'TechFlow Solutions', subtitle: 'SaaS · Dubai, UAE', strn: 'STRN-UAE-7821', ntn: '7894561-2', creditLimit: 750000, balance: 210000, status: 'active' },
-  { id: '5', name: 'Vertex Systems', subtitle: 'Hardware · Tokyo, JP', strn: 'STRN-JP-0011', ntn: '3214569-9', creditLimit: 300000, balance: 0, status: 'inactive' },
-  { id: '6', name: 'Blue Horizon Inc', subtitle: 'Logistics · Berlin, DE', strn: 'STRN-DE-5544', ntn: '6547893-4', creditLimit: 400000, balance: 55000, status: 'active' },
-  { id: '7', name: 'Nova Dynamics', subtitle: 'R&D · Toronto, CA', strn: 'STRN-CA-2298', ntn: '8523697-6', creditLimit: 600000, balance: 320000, status: 'overdue' },
-  { id: '8', name: 'Quantum Core', subtitle: 'Cybersecurity · Singapore', strn: 'STRN-SG-8812', ntn: '1597534-0', creditLimit: 1000000, balance: 0, status: 'active' },
+  { id: '1', name: 'Arsalan Abdul Sattar', subtitle: 'Premium Client · Karachi, PK', strn: 'STRN-042-2024', ntn: '1234567-8', province: 'Sindh', registrationType: 'Registered', creditLimit: 500000, balance: 125000, status: 'active' },
+  { id: '2', name: 'Google DeepMind', subtitle: 'Enterprise · London, UK', strn: 'STRN-UK-9821', ntn: '9876543-1', province: 'London', registrationType: 'Registered', creditLimit: 2000000, balance: 0, status: 'active' },
+  { id: '3', name: 'Al-Madina Traders', subtitle: 'Wholesale · Lahore, PK', strn: 'STRN-LHR-3310', ntn: '4561237-5', province: 'Punjab', registrationType: 'Unregistered', creditLimit: 150000, balance: 89000, status: 'overdue' },
+  { id: '4', name: 'TechFlow Solutions', subtitle: 'SaaS · Dubai, UAE', strn: 'STRN-UAE-7821', ntn: '7894561-2', province: 'Dubai', registrationType: 'Registered', creditLimit: 750000, balance: 210000, status: 'active' },
 ];
 
 const sampleProducts = [
@@ -49,12 +44,7 @@ interface Props {
 
 type PaymentStatus = 'draft' | 'pending' | 'paid' | 'overdue';
 
-const statusConfig: Record<PaymentStatus, { label: string; icon: React.ElementType; bg: string; text: string; border: string }> = {
-  draft: { label: 'Draft', icon: FileEdit, bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
-  pending: { label: 'Pending', icon: Clock, bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  paid: { label: 'Paid', icon: CheckCircle, bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
-  overdue: { label: 'Overdue', icon: AlertCircle, bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
-};
+
 
 const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const brand = {
@@ -66,21 +56,29 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
     white: '#FFFFFF',
   };
 
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
 
-  const [files, setFiles] = useState([
-    { name: 'project_brief.pdf', size: '1.2 MB' },
-    { name: 'logo_assets.zip', size: '4.5 MB' },
-  ]);
+  const [files, setFiles] = useState<{ name: string, size: string }[]>([]);
 
-  const removeFile = (index: number) => setFiles(files.filter((_, i) => i !== index));
+
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const selectedCustomer = sampleCustomers.find(c => c.id === selectedCustomerId) || null;
 
   const addItem = () => {
+    // Prevent adding new item if there's an existing empty item
+    const hasEmptyItem = data.items.some(item => !item.productCode);
+    if (hasEmptyItem) {
+      alert('Please fill the current product details before adding a new one.');
+      return;
+    }
+
     const id = crypto.randomUUID();
     const newItem: InvoiceItem = {
       id,
@@ -95,6 +93,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
       furtherTax: 0
     };
     onChange({ ...data, items: [...data.items, newItem] });
+    setLastAddedId(id);
 
     // Auto-scroll to bottom after state update
     setTimeout(() => {
@@ -122,16 +121,55 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
 
   const currencySymbol = '$';
 
-  const status = statusConfig[paymentStatus];
-  const StatusIcon = status.icon;
 
-  const filteredItems = data.items;
 
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return <FileText className="w-4 h-4" style={{ color: '#EF4444' }} />;
-    if (ext === 'zip' || ext === 'rar') return <Zap className="w-4 h-4" style={{ color: '#F59E0B' }} />;
-    return <FileText className="w-4 h-4" style={{ color: brand.primary }} />;
+
+  const filteredItems = data.items.filter(item =>
+    item.productCode.toLowerCase().includes(tableSearchQuery.toLowerCase()) ||
+    item.description.toLowerCase().includes(tableSearchQuery.toLowerCase())
+  );
+
+
+
+  // ── Action Handlers ──
+  const handleNewInvoice = () => {
+    if (window.confirm('Are you sure you want to create a new invoice? All unsaved changes will be lost.')) {
+      onChange({
+        invoiceNumber: 'INV-' + Math.floor(Math.random() * 100000).toString().padStart(5, '0'),
+        date: new Date().toISOString().split('T')[0],
+        dueDate: new Date().toISOString().split('T')[0],
+        senderName: '',
+        senderAddress: '',
+        clientName: '',
+        clientAddress: '',
+        subject: '',
+        reference: '',
+        productCode: '',
+        remarks: '',
+        type: 'Standard',
+        items: [],
+        taxRate: 0,
+        discountPercentage: 0,
+        discountAmount: 0,
+        shippingCharges: 0,
+        roundOff: 0,
+        receivedAmount: 0,
+        bankAccount: '',
+        notes: ''
+      });
+      setSelectedCustomerId('');
+    }
+  };
+
+  const handleSave = () => {
+    alert('Invoice ' + data.invoiceNumber + ' has been saved successfully!');
+    // Here you would typically call an API
+  };
+
+  const handleCancel = () => {
+    if (window.confirm('Discard all changes?')) {
+      window.location.reload(); // Simple way to reset for now
+    }
   };
 
   // Section header helper
@@ -149,36 +187,51 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
         {/* ── Header ── */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b pb-6" style={{ borderColor: brand.dark + '10' }}>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 font-bold text-[11px] mb-1" style={{ color: brand.primary }}>
-              <Zap className="w-3 h-3 fill-current" />
-              <span>System V4.0</span>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight flex items-center gap-4" style={{ color: brand.dark }}>
-              invoice node
-              <span className="h-5 w-[1px]" style={{ backgroundColor: brand.dark + '20' }} />
-              <span className="font-medium text-base opacity-40">#{data.invoiceNumber}</span>
+            <h1 className="text-2xl font-black tracking-tight flex items-center gap-4 " style={{ color: brand.dark }}>
+              Sales Invoice
+              <span className="h-8 w-[1px]" style={{ backgroundColor: brand.dark + '20' }} />
+              <div className="flex flex-col">
+                <span className="font-medium text-base opacity-40 leading-tight">#{data.invoiceNumber}</span>
+                <span className="font-medium text-base opacity-40 leading-tight">#DI-543869050</span>
+              </div>
             </h1>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Static Status Label remains on the left */}
+              <div className="flex items-center gap-2 rounded-xl border px-3 py-1 bg-slate-50 border-slate-200">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Draft</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Payment Status Badge — interactive */}
-            <div className="flex items-center gap-1 rounded-xl border px-3 py-1.5" style={{ backgroundColor: status.bg, borderColor: status.border }}>
-              <StatusIcon className="w-3.5 h-3.5" style={{ color: status.text }} />
-              <select
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
-                className="text-[10px] font-bold bg-transparent border-none outline-none cursor-pointer"
-                style={{ color: status.text }}
-              >
-                {(Object.keys(statusConfig) as PaymentStatus[]).map((s) => (
-                  <option key={s} value={s}>{statusConfig[s].label}</option>
-                ))}
-              </select>
-            </div>
+            <Button
+              onClick={handleNewInvoice}
+              icon={Plus}
+              className="bg-emerald-500 hover:bg-emerald-600 border-none shadow-emerald-500/20"
+              size="md"
+            >
+              New Invoice
+            </Button>
 
-            <button className="h-9 px-6 text-white font-bold rounded-lg text-[11px] shadow-lg transition-all flex items-center gap-2 hover:opacity-90" style={{ backgroundColor: brand.primary }}>
-              <Save className="w-3.5 h-3.5" /> Save
-            </button>
+            <Button
+              variant="primary"
+              icon={Save}
+              onClick={handleSave}
+              size="md"
+            >
+              Save
+            </Button>
+
+            <Button
+              variant="white"
+              icon={X}
+              onClick={handleCancel}
+              size="md"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
 
@@ -193,7 +246,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               <div className="p-4 space-y-3">
                 {/* Row 1 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                  <div className="lg:col-span-6">
+                  <div className="lg:col-span-5">
                     <ComboBox
                       variant="compact"
                       label="Customer Entity"
@@ -223,7 +276,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
 
                 {/* Row 2 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                  <div className="lg:col-span-6">
+                  <div className="lg:col-span-5">
                     <Input variant="compact" label="Customer Address" placeholder="Street, City, Country..." value={data.clientAddress || ''}
                       onChange={(e) => onChange({ ...data, clientAddress: e.target.value })} />
                   </div>
@@ -231,7 +284,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     <Input variant="compact" label="Due Date" type="date" value={data.dueDate}
                       onChange={(e) => onChange({ ...data, dueDate: e.target.value })} />
                   </div>
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-3">
                     <Select
                       variant="compact"
                       label="Invoice Type"
@@ -263,8 +316,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                 >
                   {/* Header */}
                   <div className="px-3 py-2.5 flex items-center justify-between" style={{ backgroundColor: brand.primary }}>
-                    <span className="text-[10px] font-black text-white tracking-widest">CLIENT PROFILE</span>
-                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${selectedCustomer.status === 'active' ? 'bg-emerald-400/30 text-emerald-100' :
+                    <span className="text-[10px] font-black text-white tracking-widest">Client Profile</span>
+                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black  tracking-wider ${selectedCustomer.status === 'active' ? 'bg-emerald-400/30 text-emerald-100' :
                       selectedCustomer.status === 'overdue' ? 'bg-red-400/30 text-red-100' :
                         'bg-slate-400/30 text-slate-100'
                       }`}>{selectedCustomer.status}</div>
@@ -275,9 +328,11 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     {[
                       { label: 'NTN', value: selectedCustomer.ntn },
                       { label: 'STRN', value: selectedCustomer.strn },
+                      { label: 'Province', value: (selectedCustomer as any).province },
+                      { label: 'Registration', value: (selectedCustomer as any).registrationType },
                     ].map(row => (
                       <div key={row.label} className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{row.label}</span>
+                        <span className="text-[9px] font-bold text-slate-400 tracking-wider">{row.label}</span>
                         <span className="text-[10px] font-black font-mono text-slate-700">{row.value}</span>
                       </div>
                     ))}
@@ -285,11 +340,11 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     <div className="h-[1px] bg-slate-200/60 my-1" />
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Credit Limit</span>
+                      <span className="text-[9px] font-bold text-slate-400  tracking-wider">Credit Limit</span>
                       <span className="text-[11px] font-black" style={{ color: brand.primary }}>PKR {selectedCustomer.creditLimit.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Balance</span>
+                      <span className="text-[9px] font-bold text-slate-400 tracking-wider">Current Balance</span>
                       <span className={`text-[11px] font-black ${selectedCustomer.balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                         {selectedCustomer.balance > 0 ? `PKR ${selectedCustomer.balance.toLocaleString()}` : 'Clear'}
                       </span>
@@ -316,278 +371,276 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             </AnimatePresence>
           </div>
 
-          {/* ── Scanner Bar (Reusable ComboBox) ── */}
-          <div className="relative z-30">
-            <div className="w-[35%]">
-              <ComboBox
-                variant="default"
-                className="!bg-white shadow-sm"
-                placeholder="Product Code / Barcode"
-                value=""
-                icon={Search}
-                options={sampleProducts}
-                onChange={(id) => {
-                  const prod = sampleProducts.find(p => p.id === id);
-                  if (prod) {
-                    const newItem: InvoiceItem = {
-                      id: Math.random().toString(36).substr(2, 9),
-                      productCode: prod.id,
-                      description: prod.name,
-                      unit: 'pcs',
-                      unitDetails: prod.subtitle || '',
-                      quantity: 1,
-                      price: parseFloat(prod.subtitle?.split('$')[1] || '0'),
-                      discount: 0,
-                      tax: 0,
-                      furtherTax: 0,
-                    };
-                    onChange({ ...data, items: [...data.items, newItem] });
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Transaction Entries ── */}
-          <div className="bg-white border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: brand.dark + '10' }}>
-            <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                <h3 className="text-[11px] font-bold">Transaction Entries</h3>
-                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: brand.soft, color: brand.dark }}>
-                  {filteredItems.length} Items
-                </span>
+          <div className="flex flex-col gap-1">
+            {/* ── Scanner Bar (Reusable ComboBox) ── */}
+            <div className="relative z-30">
+              <div className="w-[31%]">
+                <ComboBox
+                  variant="default"
+                  className="!bg-white shadow-sm"
+                  placeholder="Product Code / Barcode"
+                  value=""
+                  icon={Search}
+                  options={sampleProducts}
+                  onChange={(id) => {
+                    const prod = sampleProducts.find(p => p.id === id);
+                    if (prod) {
+                      const newId = Math.random().toString(36).substr(2, 9);
+                      const newItem: InvoiceItem = {
+                        id: newId,
+                        productCode: prod.id,
+                        description: prod.name,
+                        unit: 'pcs',
+                        unitDetails: prod.subtitle || '',
+                        quantity: 1,
+                        price: parseFloat(prod.subtitle?.split('$')[1] || '0'),
+                        discount: 0,
+                        tax: 0,
+                        furtherTax: 0,
+                      };
+                      onChange({ ...data, items: [...data.items, newItem] });
+                      setLastAddedId(newId);
+                    }
+                  }}
+                />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-64">
-                  <ComboBox
-                    variant="compact"
-                    placeholder="Global product search..."
-                    value=""
-                    options={sampleProducts}
-                    onChange={(id) => {
-                      const prod = sampleProducts.find(p => p.id === id);
-                      if (prod) {
-                        const newId = crypto.randomUUID();
-                        onChange({
-                          ...data,
-                          items: [...data.items, {
-                            id: newId,
-                            productCode: prod.id,
-                            description: prod.name,
-                            unit: 'pcs',
-                            unitDetails: 'Standard',
-                            quantity: 1,
-                            price: 450,
-                            discount: 0,
-                            tax: 0,
-                            furtherTax: 0
-                          }]
-                        });
-                      }
-                    }}
-                    className="!bg-white/10 !border-white/20 !text-white"
-                  />
+            </div>
+
+            {/* ── Transaction Entries ── */}
+            <div className="bg-white border rounded-xl shadow-sm !overflow-visible" style={{ borderColor: brand.dark + '10' }}>
+              <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <h3 className="text-[11px] font-bold">Transaction Entries</h3>
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: brand.soft, color: brand.dark }}>
+                    {filteredItems.length} Items
+                  </span>
                 </div>
-                <button onClick={addItem}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-white font-bold rounded-lg hover:bg-slate-50 transition-all text-[11px] shrink-0"
-                  style={{ color: brand.primary }}>
-                  <Plus className="w-3 h-3" /> Add Item
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-64">
+                    <ComboBox
+                      variant="compact"
+                      placeholder="Search items in table..."
+                      value={tableSearchQuery}
+                      onQueryChange={(q) => setTableSearchQuery(q)}
+                      options={data.items.filter(item => item.productCode).map(item => ({
+                        id: item.id,
+                        name: item.productCode,
+                        subtitle: item.description
+                      }))}
+
+                      onChange={(id) => {
+                        const item = data.items.find(i => i.id === id);
+                        if (item) setTableSearchQuery(item.productCode);
+                        else setTableSearchQuery("");
+                      }}
+                      className="!bg-white/10 !border-white/20 !text-white"
+                    />
+                  </div>
+                  <Button
+                    variant="white"
+                    icon={Plus}
+                    onClick={addItem}
+                  >
+                    Add Item
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <ScrollArea
-              maxHeight="320px"
-              className="overflow-x-auto"
-              ref={scrollContainerRef}
-              style={{ overscrollBehavior: 'contain' }}
-            >
-              <table className="w-full relative">
-                <thead className="sticky top-0 bg-white z-20 shadow-sm">
-                  <tr className="text-[10px] font-black tracking-wider border-b" style={{ color: brand.dark, borderColor: brand.dark + '10' }}>
-                    <th className="px-3 py-4 text-left w-10">#</th>
-                    <th className="px-3 py-4 text-left w-52 border-l border-slate-100">Product Code</th>
-                    <th className="px-3 py-4 text-left w-52 border-l border-slate-100">Description</th>
-                    <th className="px-3 py-4 text-left w-16 border-l border-slate-100">Unit</th>
-                    <th className="px-3 py-4 text-left w-24 border-l border-slate-100">Details</th>
-                    <th className="px-3 py-4 text-left w-16 border-l border-slate-100">Qty</th>
-                    <th className="px-3 py-4 text-left w-24 border-l border-slate-100">Price</th>
-                    <th className="px-3 py-4 text-left w-24 border-l border-slate-100">Discount</th>
-                    <th className="px-3 py-4 text-left w-24 border-l border-slate-100">Tax</th>
-                    <th className="px-3 py-4 text-left w-24 border-l border-slate-100">Further Tax</th>
-                    <th className="px-4 py-4 text-left w-24 border-l border-slate-100">Total</th>
-                    <th className="px-3 py-4 w-10 border-l border-slate-100" />
-                  </tr>
-                </thead>
-                <tbody style={{ borderColor: brand.dark + '10' }}>
-                  <AnimatePresence mode="popLayout">
-                    {filteredItems.map((item, idx) => (
-                      <motion.tr
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        layout
-                        className="group hover:bg-slate-50/60 transition-colors border-b last:border-0"
-                        style={{ borderColor: brand.dark + '08' }}
-                      >
-                        <td className="px-3 py-3 text-[10px] font-black text-slate-300 group-hover:text-indigo-400 transition-colors text-center">{idx + 1}</td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <ComboBox
-                            variant="compact"
-                            placeholder="P-CODE"
-                            value={item.productCode}
-                            options={sampleProducts.map(p => ({ id: p.id, name: p.id, subtitle: p.name }))}
-                            onChange={(id) => {
-                              const prod = sampleProducts.find(p => p.id === id);
-                              if (prod) {
-                                updateItem(item.id, {
-                                  productCode: prod.id,
-                                  description: prod.name,
-                                  price: 450 // Default rate
-                                });
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            variant="transparent"
-                            placeholder="Detailed description..."
-                            className="!font-bold text-slate-700"
-                            value={item.description}
-                            onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            variant="compact"
-                            placeholder="pcs"
-                            className="text-center !bg-white border-slate-200"
-                            value={item.unit}
-                            onChange={(e) => updateItem(item.id, { unit: e.target.value })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            variant="compact"
-                            placeholder="Details"
-                            className="!bg-white border-slate-200"
-                            value={item.unitDetails}
-                            onChange={(e) => updateItem(item.id, { unitDetails: e.target.value })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-center !bg-white border-slate-200"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-right !bg-white border-slate-200"
-                            value={item.price}
-                            onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-right text-red-500 font-black !bg-white border-slate-200"
-                            value={item.discount}
-                            onChange={(e) => updateItem(item.id, { discount: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-right text-green-600 font-black !bg-white border-slate-200"
-                            value={item.tax}
-                            onChange={(e) => updateItem(item.id, { tax: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="px-2 py-3 border-l border-slate-50">
-                          <Input
-                            type="number"
-                            variant="compact"
-                            className="text-right text-amber-500 font-black !bg-white border-slate-200"
-                            value={item.furtherTax}
-                            onChange={(e) => updateItem(item.id, { furtherTax: parseFloat(e.target.value) || 0 })}
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-right font-black text-[11px] tracking-tight text-indigo-600 border-l border-slate-50">
-                          {currencySymbol}{fmt((item.quantity * item.price) - item.discount + item.tax + item.furtherTax)}
-                        </td>
-                        <td className="px-4 py-3 text-center border-l border-slate-50">
-                          <button onClick={() => removeItem(item.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50/50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all shadow-sm"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-
-                  {filteredItems.length === 0 && (
-                    <tr>
-                      <td colSpan={12} className="px-6 py-16 text-center">
-                        <div className="flex flex-col items-center gap-3 opacity-20">
-                          <Plus className="w-12 h-12" />
-                          <p className="text-[11px] font-black uppercase tracking-widest">
-                            {data.items.length === 0 ? 'No entries found — Click "Add Item" to start' : 'No items match your search'}
-                          </p>
-                        </div>
-                      </td>
+              <ScrollArea
+                className="!overflow-visible"
+                ref={scrollContainerRef}
+                style={{ overscrollBehavior: 'contain' }}
+              >
+                <table className="w-full relative overflow-visible">
+                  <thead className="sticky top-0 bg-white z-20 shadow-sm">
+                    <tr className="text-[10px] font-black tracking-wider border-b" style={{ color: brand.dark, borderColor: brand.dark + '10' }}>
+                      <th className="px-3 py-2.5 text-left w-10">#</th>
+                      <th className="px-3 py-2.5 text-left w-32 border-l border-slate-100">Product Code</th>
+                      <th className="px-3 py-2.5 text-left w-52 border-l border-slate-100">Description</th>
+                      <th className="px-3 py-2.5 text-left w-16 border-l border-slate-100">Unit</th>
+                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Details</th>
+                      <th className="px-3 py-2.5 text-left w-16 border-l border-slate-100">Qty</th>
+                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Price</th>
+                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Discount</th>
+                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Tax</th>
+                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Further Tax</th>
+                      <th className="px-4 py-2.5 text-left w-24 border-l border-slate-100">Total</th>
+                      <th className="px-3 py-2.5 w-10 border-l border-slate-100" />
                     </tr>
+                  </thead>
+                  <tbody style={{ borderColor: brand.dark + '10' }}>
+                    <AnimatePresence mode="popLayout">
+                      {filteredItems.map((item, idx) => (
+                        <motion.tr
+                          key={item.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
+                          layout
+                          className="group hover:bg-slate-50/60 transition-colors border-b last:border-0"
+                          style={{ borderColor: brand.dark + '08' }}
+                        >
+                          <td className="px-3 py-3 text-[10px] font-black text-slate-300 group-hover:text-indigo-400 transition-colors text-center">{idx + 1}</td>
+                          <td className="px-2 py-3 border-l border-slate-50 w-32">
+                            <ComboBox
+                              autoFocus={item.id === lastAddedId}
+                              className='!w-[%]'
+                              variant="compact"
+                              placeholder="P-CODE"
+                              value={item.productCode}
+                              options={sampleProducts.map(p => ({ id: p.id, name: p.id, subtitle: p.name }))}
+                              onChange={(id) => {
+                                const prod = sampleProducts.find(p => p.id === id);
+                                if (prod) {
+                                  updateItem(item.id, {
+                                    productCode: prod.id,
+                                    description: prod.name,
+                                    price: 450 // Default rate
+                                  });
+                                }
+                              }}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              variant="transparent"
+                              placeholder="Detailed description..."
+                              className="!font-bold text-slate-700"
+                              value={item.description}
+                              onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              variant="compact"
+                              placeholder="pcs"
+                              className="text-center !bg-white border-slate-200"
+                              value={item.unit}
+                              onChange={(e) => updateItem(item.id, { unit: e.target.value })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              variant="compact"
+                              placeholder="Details"
+                              className="!bg-white border-slate-200"
+                              value={item.unitDetails}
+                              onChange={(e) => updateItem(item.id, { unitDetails: e.target.value })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              type="number"
+                              variant="compact"
+                              className="text-center !bg-white border-slate-200"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              type="number"
+                              variant="compact"
+                              className="text-right !bg-white border-slate-200"
+                              value={item.price}
+                              onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value) || 0 })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              type="number"
+                              variant="compact"
+                              className="text-right text-red-500 font-black !bg-white border-slate-200"
+                              value={item.discount}
+                              onChange={(e) => updateItem(item.id, { discount: parseFloat(e.target.value) || 0 })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              type="number"
+                              variant="compact"
+                              className="text-right text-green-600 font-black !bg-white border-slate-200"
+                              value={item.tax}
+                              onChange={(e) => updateItem(item.id, { tax: parseFloat(e.target.value) || 0 })}
+                            />
+                          </td>
+                          <td className="px-2 py-3 border-l border-slate-50">
+                            <Input
+                              type="number"
+                              variant="compact"
+                              className="text-right text-amber-500 font-black !bg-white border-slate-200"
+                              value={item.furtherTax}
+                              onChange={(e) => updateItem(item.id, { furtherTax: parseFloat(e.target.value) || 0 })}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-[11px] tracking-tight text-indigo-600 border-l border-slate-50">
+                            {currencySymbol}{fmt((item.quantity * item.price) - item.discount + item.tax + item.furtherTax)}
+                          </td>
+                          <td className="px-4 py-3 text-center border-l border-slate-50">
+                            <Button
+                              variant="danger"
+                              size="xs"
+                              icon={Trash2}
+                              onClick={() => removeItem(item.id)}
+                            />
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+
+                    {filteredItems.length === 0 && (
+                      <tr>
+                        <td colSpan={12} className="px-6 py-16 text-center">
+                          <div className="flex flex-col items-center gap-3 opacity-20">
+                            <Plus className="w-12 h-12" />
+                            <p className="text-[11px] font-black uppercase tracking-widest">
+                              {data.items.length === 0 ? 'No entries found — Click "Add Item" to start' : 'No items match your search'}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+
+                  {/* Sticky Summary Footer */}
+                  {data.items.length > 0 && (
+                    <tfoot className="sticky bottom-0 z-10 bg-white border-t-2 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]" style={{ borderColor: brand.dark + '10' }}>
+                      <tr className="font-black">
+                        <td className="px-3 py-3 text-[10px] text-slate-400 text-center">Σ</td>
+                        <td colSpan={4} className="px-4 py-3 text-[11px] text-slate-500 uppercase tracking-widest text-right pr-10 border-l border-slate-50">Total Summary</td>
+                        <td className="px-2 py-3 text-center text-[11px] text-slate-700 border-l border-slate-50">
+                          {data.items.reduce((sum, i) => sum + i.quantity, 0)}
+                        </td>
+                        <td className="px-2 py-3 text-right text-[11px] text-slate-700 border-l border-slate-50">
+                          {/* Price total removed as requested */}
+                        </td>
+                        <td className="px-2 py-3 text-right text-[11px] text-red-500 border-l border-slate-50">
+                          {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.discount, 0))}
+                        </td>
+                        <td className="px-2 py-3 text-right text-[11px] text-emerald-600 border-l border-slate-50">
+                          {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.tax, 0))}
+                        </td>
+                        <td className="px-2 py-3 text-right text-[11px] text-amber-600 border-l border-slate-50">
+                          {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.furtherTax, 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right text-[12px] text-indigo-700 underline decoration-indigo-200 underline-offset-4 border-l border-slate-50">
+                          {currencySymbol}{fmt(subtotal)}
+                        </td>
+                        <td className="border-l border-slate-50"></td>
+                      </tr>
+                    </tfoot>
                   )}
-                </tbody>
-
-                {/* Sticky Summary Footer */}
-                {data.items.length > 0 && (
-                  <tfoot className="sticky bottom-0 z-10 bg-white border-t-2 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]" style={{ borderColor: brand.dark + '10' }}>
-                    <tr className="font-black">
-                      <td className="px-3 py-3 text-[10px] text-slate-400 text-center">Σ</td>
-                      <td colSpan={4} className="px-4 py-3 text-[11px] text-slate-500 uppercase tracking-widest text-right pr-10 border-l border-slate-50">Total Summary</td>
-                      <td className="px-2 py-3 text-center text-[11px] text-slate-700 border-l border-slate-50">
-                        {data.items.reduce((sum, i) => sum + i.quantity, 0)}
-                      </td>
-                      <td className="px-2 py-3 text-right text-[11px] text-slate-700 border-l border-slate-50">
-                        {/* Price total removed as requested */}
-                      </td>
-                      <td className="px-2 py-3 text-right text-[11px] text-red-500 border-l border-slate-50">
-                        {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.discount, 0))}
-                      </td>
-                      <td className="px-2 py-3 text-right text-[11px] text-emerald-600 border-l border-slate-50">
-                        {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.tax, 0))}
-                      </td>
-                      <td className="px-2 py-3 text-right text-[11px] text-amber-600 border-l border-slate-50">
-                        {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.furtherTax, 0))}
-                      </td>
-                      <td className="px-4 py-3 text-right text-[12px] text-indigo-700 underline decoration-indigo-200 underline-offset-4 border-l border-slate-50">
-                        {currencySymbol}{fmt(subtotal)}
-                      </td>
-                      <td className="border-l border-slate-50"></td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </ScrollArea>
+                </table>
+              </ScrollArea>
+            </div>
           </div>
 
           {/* ── Bottom Tier ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* Left: Notes + Attachments */}
-            <div className="lg:col-span-8 flex flex-col gap-6">
+            {/* Left: Notes + Attachments (Side-by-Side) */}
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Notes */}
               <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col" style={{ borderColor: brand.dark + '10' }}>
@@ -611,83 +664,70 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     </div>
                   </div>
                   <div className="px-2.5 py-1 bg-white/15 rounded-full text-[9px] font-black tracking-wider uppercase">
-                    {files.length} {files.length === 1 ? 'File' : 'Files'}
+                    {uploadSuccess ? 'Upload Success!' : `${files.length} ${files.length === 1 ? 'File' : 'Files'}`}
                   </div>
                 </div>
 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Upload Zone */}
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className="group border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:bg-blue-50/40 relative overflow-hidden min-h-[180px]"
-                    style={{ borderColor: brand.primary + '20', backgroundColor: brand.surface + '40' }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      const newFiles = Array.from(e.target.files).map(f => ({
+                        name: f.name,
+                        size: (f.size / 1024 / 1024).toFixed(1) + ' MB'
+                      }));
+                      setFiles([...files, ...newFiles]);
+                      setUploadSuccess(true);
+                      setTimeout(() => setUploadSuccess(false), 3000);
+                    }
+                  }}
+                />
 
-                    <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:shadow-md transition-all group-hover:-translate-y-1">
-                      <Upload className="w-5 h-5" style={{ color: brand.primary }} />
-                    </div>
-
-                    <div className="text-center relative z-10 px-4">
-                      <p className="text-[11px] font-black tracking-tight" style={{ color: brand.dark }}>Click to Upload</p>
-                      <p className="text-[9px] font-bold text-slate-400 mt-1">or Drag & Drop files here</p>
-                    </div>
-
-                    <div className="flex gap-2 mt-2 pb-2">
-                      {['PDF', 'JPG', 'ZIP'].map(type => (
-                        <span key={type} className="text-[8px] font-black px-1.5 py-0.5 bg-white border border-slate-200 rounded uppercase" style={{ color: brand.dark }}>
-                          {type}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-
-                  {/* File List */}
-                  <ScrollArea maxHeight="220px" className="space-y-3 pr-2 pb-2">
-                    <AnimatePresence mode="popLayout">
-                      {files.map((file, idx) => (
-                        <motion.div
-                          key={file.name + idx}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          layout
-                          className="group flex items-center justify-between p-3 bg-[#EFF5FC]/40 border border-slate-200/60 rounded-xl hover:bg-white hover:shadow-md hover:border-blue-200 transition-all cursor-default"
-                        >
-                          <div className="flex items-center gap-3 truncate">
-                            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm group-hover:bg-blue-50 transition-colors border border-slate-100">
-                              {getFileIcon(file.name)}
-                            </div>
-                            <div className="truncate">
-                              <p className="text-[10px] font-black truncate" style={{ color: brand.dark }}>{file.name}</p>
-                              <p className="text-[9px] font-bold text-slate-400">{file.size}</p>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => removeFile(idx)}
-                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-
-                    {files.length === 0 && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="h-full flex flex-col items-center justify-center py-8 text-center"
-                      >
-                        <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                          <Paperclip className="w-4 h-4 text-slate-300" />
+                <div className="pt-3 px-3 pb-2 space-y-2">
+                  <div className="w-full">
+                    {/* Upload Zone */}
+                    <motion.div
+                      whileHover={{ scale: 1.002 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed rounded-[12px] flex flex-col items-center justify-center py-2 bg-white relative shadow-sm h-full min-h-[80px] cursor-pointer hover:bg-slate-50 transition-colors"
+                      style={{ borderColor: '#E2E8F0' }}
+                    >
+                      <div className="w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center border border-slate-50 mb-1">
+                        <div className="w-5 h-5 rounded-full bg-[#F0F7FF] flex items-center justify-center">
+                          <Upload className="w-3 h-3 text-[#2759CD]" />
                         </div>
-                        <p className="text-[10px] font-bold text-slate-300 italic">No files attached to this invoice</p>
-                      </motion.div>
-                    )}
-                  </ScrollArea>
+                      </div>
+
+                      <div className="text-center">
+                        <p className="text-[9px] font-black text-slate-800">Drop files</p>
+                        <p className="text-[6px] font-medium text-slate-400">PDF, JPG, ZIP</p>
+                      </div>
+                    </motion.div>
+
+                    {/* Right Side: Spacer or extra space if needed */}
+                    <div className="hidden md:block" />
+                  </div>
+
+                  {/* Compact Buttons */}
+                  <div className="flex justify-end gap-2 pt-0.5 border-t border-slate-50">
+                    <Button
+                      variant="white"
+                      size="xs"
+                      onClick={() => { }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="xs"
+                      onClick={() => { }}
+                    >
+                      Upload
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -697,7 +737,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col h-full" style={{ borderColor: brand.dark + '10' }}>
                 <SectionHeader title="Financial Matrix" badge="PKR" />
 
-                <div className="p-5 flex-1 flex flex-col gap-4">
+                <div className="p-3 flex-1 flex flex-col gap-2">
                   {/* Discount Section */}
                   <div className="grid grid-cols-12 gap-3 items-center">
                     <div className="col-span-8">
@@ -747,7 +787,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     </div>
                   </div>
 
-                  <div className="h-[1px] bg-slate-100 my-1" />
+                  <div className="h-[1px] bg-slate-100 my-0.5" />
 
                   {/* Gross */}
                   <div className="flex justify-between items-center px-1">
@@ -764,10 +804,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                     <span className="text-[12px] font-black text-slate-700">{currencySymbol}{fmt(taxAmount)}</span>
                   </div>
 
-                  <div className="h-[1px] bg-slate-100 my-1" />
+                  <div className="h-[1px] bg-slate-100 my-0.5" />
 
                   {/* Net */}
-                  <div className="flex justify-between items-center px-1 py-2">
+                  <div className="flex justify-between items-center px-1 py-1">
                     <span className="text-[11px] font-black text-slate-700">Net Total (PKR)</span>
                     <span className="text-[16px] font-black" style={{ color: brand.primary }}>{currencySymbol}{fmt(netPayable)}</span>
                   </div>
