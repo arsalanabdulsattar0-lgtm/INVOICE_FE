@@ -1,12 +1,12 @@
 import React from 'react';
-import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
+import { Search, Bell, ChevronDown } from 'lucide-react';
 
 interface Props {
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
 }
 
-const Header: React.FC<Props> = ({ onToggleSidebar, isSidebarOpen }) => {
+const Header: React.FC<Props> = () => {
   return (
     <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center gap-6 sticky top-0 z-40">
 

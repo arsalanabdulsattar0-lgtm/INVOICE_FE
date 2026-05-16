@@ -1,25 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { InvoiceData, InvoiceItem } from '../../types';
 import {
   Plus,
   Trash2,
-  History,
   Save,
   Zap,
   Paperclip,
   Upload,
   Search,
-  Check,
   FileText,
   X,
   AlertCircle,
   Clock,
   CheckCircle,
   FileEdit,
-  ArrowRight,
-  Package,
-  Printer
+  Package
 } from 'lucide-react';
 import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/ui/FormControls';
 
@@ -71,7 +67,6 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   };
 
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
-  const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
 
   const [files, setFiles] = useState([
@@ -82,7 +77,6 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const removeFile = (index: number) => setFiles(files.filter((_, i) => i !== index));
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
   const selectedCustomer = sampleCustomers.find(c => c.id === selectedCustomerId) || null;
 
@@ -101,7 +95,6 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
       furtherTax: 0
     };
     onChange({ ...data, items: [...data.items, newItem] });
-    setLastAddedId(id);
 
     // Auto-scroll to bottom after state update
     setTimeout(() => {
@@ -132,9 +125,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const status = statusConfig[paymentStatus];
   const StatusIcon = status.icon;
 
-  const filteredItems = data.items.filter(item =>
-    item.description.toLowerCase().includes(itemSearchQuery.toLowerCase())
-  );
+  const filteredItems = data.items;
 
   const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
@@ -393,7 +384,6 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                             furtherTax: 0
                           }]
                         });
-                        setLastAddedId(newId);
                       }
                     }}
                     className="!bg-white/10 !border-white/20 !text-white"

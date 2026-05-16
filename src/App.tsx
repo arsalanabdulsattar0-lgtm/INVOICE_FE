@@ -42,6 +42,9 @@ function App() {
     receivedAmount: 0,
     bankAccount: 'chase',
     notes: 'Please include the invoice number in your wire transfer reference.\nPayment via ACH or Wire Transfer to Chase Bank Account #....4521.',
+    productCode: '',
+    remarks: '',
+    type: 'Standard',
   });
 
   if (!isLoggedIn) {
