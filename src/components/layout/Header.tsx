@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface Props {
@@ -22,12 +22,8 @@ const Header: React.FC<Props> = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <Button variant="ghost" size="xs" className="relative h-10 w-10 p-0 rounded-xl" icon={Bell}>
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </Button>
-        
-        <div className="h-8 w-px bg-slate-200"></div>
+      <div className="flex items-center gap-6 ml-auto">
+
 
         <Button variant="ghost" size="xs" className="h-auto p-1.5 pr-3 rounded-2xl group flex items-center justify-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-100 shrink-0">
