@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { Input, Select, TextArea } from '../../components/ui/FormControls';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Props {
   data: InvoiceData;
@@ -21,15 +22,7 @@ interface Props {
 }
 
 const InvoiceEditorV3: React.FC<Props> = ({ data, onChange }) => {
-  // Brand Standard Design System
-  const brand = {
-    primary: '#2759CD',    // Core Blue
-    dark: '#304166',       // Deep Navy
-    accent: '#EE4932',     // Execute Orange
-    soft: '#BDD1FF',       // Soft Accent
-    surface: '#EFF5FC',    // Background
-    white: '#FFFFFF'
-  };
+  const { brand } = useTheme();
 
   const [files, setFiles] = useState([
     { name: 'project_brief.pdf', size: '1.2 MB' },

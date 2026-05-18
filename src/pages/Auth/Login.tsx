@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
 
 interface Props {
   onLogin: () => void;
@@ -63,13 +64,17 @@ const Login: React.FC<Props> = ({ onLogin }) => {
               </div>
             </div>
 
-            <button 
+            <Button 
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-600/20 active:scale-95 mt-4"
+              variant="primary"
+              size="lg"
+              fullWidth
+              icon={ArrowRight}
+              iconPosition="right"
+              className="bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20 py-4 rounded-2xl mt-4"
             >
               Sign In to Flow
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            </Button>
           </form>
 
           <div className="mt-10 text-center">

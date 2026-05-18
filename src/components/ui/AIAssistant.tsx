@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './Button';
 
 interface Message {
   id: string;
@@ -91,12 +92,11 @@ const AIAssistant: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <button
+              <Button
+                variant="ghost" size="xs" icon={X}
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+                className="p-2 hover:bg-white/10 rounded-xl text-white border-none"
+              />
             </div>
 
             {/* Messages */}
@@ -147,13 +147,12 @@ const AIAssistant: React.FC = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                   className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2759CD]/20 focus:border-[#2759CD] transition-all"
                 />
-                <button
+                <Button
+                  variant="primary" size="xs" icon={Send}
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="absolute right-2 p-2 bg-[#2759CD] text-white rounded-xl hover:bg-[#1e44a1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                  className="absolute right-2 p-2 bg-[#2759CD] hover:bg-[#1e44a1]"
+                />
               </div>
               <p className="text-[9px] text-center text-slate-400 mt-2 font-medium">
                 Powered by Generix Global
@@ -165,18 +164,17 @@ const AIAssistant: React.FC = () => {
 
       {/* Toggle Button - only visible when closed */}
       {!isOpen && (
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <Button
+          variant="primary"
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 bg-[#2759CD]"
+          className="w-14 h-14 rounded-2xl p-0 shadow-xl bg-[#2759CD] hover:bg-[#1e44a1]"
           style={{ boxShadow: '0 10px 25px -5px rgba(39, 89, 205, 0.4)' }}
         >
-          <div className="relative">
+          <div className="relative flex items-center justify-center w-full h-full">
             <MessageSquare className="w-6 h-6 text-white" />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#2759CD]" />
           </div>
-        </motion.button>
+        </Button>
       )}
     </div>
   );

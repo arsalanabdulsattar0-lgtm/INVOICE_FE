@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { InvoiceData, InvoiceItem } from '../../types';
+import type { Invoice } from './InvoiceList';
 import {
   Plus,
   Trash2,
@@ -9,17 +10,20 @@ import {
   Upload,
   Search,
   X,
-  Package
+  Package,
+  Printer,
+  Download
 } from 'lucide-react';
 import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
+import { useTheme } from '../../context/ThemeContext';
 
 // Sample data for the ComboBoxes
 const sampleCustomers = [
-  { id: '1', name: 'Arsalan Abdul Sattar', subtitle: 'Premium Client · Karachi, PK', strn: 'STRN-042-2024', ntn: '1234567-8', province: 'Sindh', registrationType: 'Registered', creditLimit: 500000, balance: 125000, status: 'active' },
-  { id: '2', name: 'Google DeepMind', subtitle: 'Enterprise · London, UK', strn: 'STRN-UK-9821', ntn: '9876543-1', province: 'London', registrationType: 'Registered', creditLimit: 2000000, balance: 0, status: 'active' },
-  { id: '3', name: 'Al-Madina Traders', subtitle: 'Wholesale · Lahore, PK', strn: 'STRN-LHR-3310', ntn: '4561237-5', province: 'Punjab', registrationType: 'Unregistered', creditLimit: 150000, balance: 89000, status: 'overdue' },
-  { id: '4', name: 'TechFlow Solutions', subtitle: 'SaaS · Dubai, UAE', strn: 'STRN-UAE-7821', ntn: '7894561-2', province: 'Dubai', registrationType: 'Registered', creditLimit: 750000, balance: 210000, status: 'active' },
+  { id: '1', name: 'Arsalan Abdul Sattar', subtitle: 'Premium Client · Karachi, PK', fullAddress: 'House 42, Street 5, Karachi, PK', strn: 'STRN-042-2024', ntn: '1234567-8', province: 'Sindh', registrationType: 'Registered', creditLimit: 500000, balance: 125000, status: 'active' },
+  { id: '2', name: 'Google DeepMind', subtitle: 'Enterprise · London, UK', fullAddress: '6 Pancras Square, London, UK', strn: 'STRN-UK-9821', ntn: '9876543-1', province: 'London', registrationType: 'Registered', creditLimit: 2000000, balance: 0, status: 'active' },
+  { id: '3', name: 'Al-Madina Traders', subtitle: 'Wholesale · Lahore, PK', fullAddress: 'Shop 12, Main Bazar, Lahore, PK', strn: 'STRN-LHR-3310', ntn: '4561237-5', province: 'Punjab', registrationType: 'Unregistered', creditLimit: 150000, balance: 89000, status: 'overdue' },
+  { id: '4', name: 'TechFlow Solutions', subtitle: 'SaaS · Dubai, UAE', fullAddress: 'Office 404, Tech Tower, Dubai, UAE', strn: 'STRN-UAE-7821', ntn: '7894561-2', province: 'Dubai', registrationType: 'Registered', creditLimit: 750000, balance: 210000, status: 'active' },
 ];
 
 const sampleProducts = [
@@ -36,26 +40,44 @@ const sampleProducts = [
 interface Props {
   data: InvoiceData;
   onChange: (data: InvoiceData) => void;
+  onSave?: (data: InvoiceData) => void;
+  onViewChange?: (view: string) => void;
+  onPrint?: (inv: Invoice) => void;
 }
 
 
 
 
 
-const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
-  const brand = {
-    primary: '#2759CD',
-    dark: '#304166',
-    accent: '#EE4932',
-    soft: '#BDD1FF',
-    surface: '#EFF5FC',
-    white: '#FFFFFF',
-  };
+const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange, onPrint }) => {
+  const { brand } = useTheme();
 
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>((window as any).isSidebarCollapsed || false);
+
+  useEffect(() => {
+    const handleToggle = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsSidebarCollapsed(customEvent.detail.isCollapsed);
+    };
+    window.addEventListener('sidebar-toggle', handleToggle);
+    return () => window.removeEventListener('sidebar-toggle', handleToggle);
+  }, []);
+
+  const unitWidth = isSidebarCollapsed ? 'w-20' : 'w-16';
+  const detailsWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const qtyWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const priceWidth = isSidebarCollapsed ? 'w-24' : 'w-24';
+  const discountWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const taxWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const furtherTaxWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const totalWidth = isSidebarCollapsed ? 'w-24' : 'w-20';
+  const descriptionWidth = '';
+  const tableMinW = isSidebarCollapsed ? 'min-w-[1130px]' : 'min-w-[980px]';
 
   const [files, setFiles] = useState<{ name: string, size: string }[]>([]);
 
@@ -64,6 +86,49 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  const downloadDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(e.target as Node)) {
+        setShowDownloadDropdown(false);
+      }
+    };
+    if (showDownloadDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDownloadDropdown]);
+
+  const handleDownloadExcel = () => {
+    // Generate CSV content
+    const headers = ['Product Code', 'Description', 'Unit', 'Details', 'Qty', 'Price', 'Discount', 'Tax', 'Further Tax', 'Total'];
+    const rows = data.items.map(item => [
+      item.productCode,
+      item.description,
+      item.unit,
+      item.unitDetails,
+      item.quantity,
+      item.price,
+      item.discount,
+      item.tax,
+      item.furtherTax,
+      (item.quantity * item.price) - item.discount + item.tax + item.furtherTax
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Invoice_${data.invoiceNumber || 'draft'}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const selectedCustomer = sampleCustomers.find(c => c.id === selectedCustomerId) || null;
 
@@ -158,13 +223,70 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
   };
 
   const handleSave = () => {
-    alert('Invoice ' + data.invoiceNumber + ' has been saved successfully!');
-    // Here you would typically call an API
+    if (onSave) {
+      onSave(data);
+    } else {
+      alert('Invoice ' + data.invoiceNumber + ' has been saved successfully!');
+    }
   };
 
-  const handleCancel = () => {
-    if (window.confirm('Discard all changes?')) {
-      window.location.reload(); // Simple way to reset for now
+  const getMappedInvoice = (): Invoice => {
+    const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.price) - item.discount + item.tax + item.furtherTax, 0);
+    const taxAmount = (subtotal * data.taxRate) / 100;
+    const discountVal = data.discountAmount || (subtotal * data.discountPercentage) / 100;
+    const netPayable = subtotal + taxAmount - discountVal + data.shippingCharges + data.roundOff;
+
+    const initials = data.clientName ? data.clientName.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : 'IV';
+    const colors = ['#2759CD', '#10B981', '#F59E0B', '#8B5CF6', '#EE4932', '#0EA5E9', '#EC4899', '#14B8A6'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    return {
+      id: data.invoiceNumber || 'INV-' + Math.floor(1000 + Math.random() * 9000),
+      client: data.clientName || 'Unnamed Client',
+      clientInitials: initials,
+      clientColor: randomColor,
+      issueDate: data.date || new Date().toISOString().split('T')[0],
+      dueDate: data.dueDate || new Date().toISOString().split('T')[0],
+      amount: `$${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      rawAmount: netPayable,
+      status: 'Draft',
+      payment: 'Net 30',
+      type: data.type || 'Standard'
+    };
+  };
+
+  const handleClose = () => {
+    if (window.confirm('Discard all changes and return to dashboard?')) {
+      onViewChange?.('dashboard');
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById('local-printable-container');
+    if (element) {
+      // Load html2pdf via CDN dynamically
+      const runHtml2Pdf = () => {
+        const opt = {
+          margin: 0,
+          filename: `Invoice_${data.invoiceNumber || 'Draft'}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        (window as any).html2pdf().from(element).set(opt).save();
+      };
+
+      if (!(window as any).html2pdf) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = runHtml2Pdf;
+        document.head.appendChild(script);
+      } else {
+        runHtml2Pdf();
+      }
+    } else {
+      // Fallback
+      window.print();
     }
   };
 
@@ -176,12 +298,47 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
     </div>
   );
 
-  return (
+  return (<>
+    <style dangerouslySetInnerHTML={{ __html: `
+      @media print {
+        .no-print, .no-print * {
+          display: none !important;
+        }
+        aside, nav, header {
+          display: none !important;
+        }
+        body {
+          background: white !important;
+          color: black !important;
+        }
+        .min-h-screen {
+          background: white !important;
+          padding: 0 !important;
+          min-height: auto !important;
+        }
+        .max-w-7xl {
+          max-width: 100% !important;
+        }
+        /* Make inputs look like flat text */
+        input, textarea, select {
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          appearance: none !important;
+          color: black !important;
+        }
+        /* Hide buttons or interactive elements */
+        button, .btn {
+          display: none !important;
+        }
+      }
+    `}} />
     <div className="min-h-screen p-4 lg:px-8 lg:py-8 font-sans [&_input]:shadow-none [&_select]:shadow-none [&_textarea]:shadow-none" style={{ backgroundColor: brand.surface }}>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b pb-6" style={{ borderColor: brand.dark + '10' }}>
+        <div className="relative z-50 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b pb-6" style={{ borderColor: brand.dark + '10' }}>
           <div className="space-y-1">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-4 " style={{ color: brand.dark }}>
               Sales Invoice
@@ -196,17 +353,17 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               {/* Static Status Label remains on the left */}
               <div className="flex items-center gap-2 rounded-xl border px-3 py-1 bg-slate-50 border-slate-200">
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Draft</span>
+                <span className="text-[10px] font-bold text-slate-500">Draft</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap no-print">
             <Button
               onClick={handleNewInvoice}
               icon={Plus}
               className="bg-emerald-500 hover:bg-emerald-600 border-none shadow-emerald-500/20"
-              size="md"
+              size="sm"
             >
               New Invoice
             </Button>
@@ -215,18 +372,79 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               variant="primary"
               icon={Save}
               onClick={handleSave}
-              size="md"
+              size="sm"
             >
               Save
             </Button>
 
             <Button
               variant="white"
-              icon={X}
-              onClick={handleCancel}
-              size="md"
+              icon={Printer}
+              onClick={() => {
+                if (onPrint) {
+                  onPrint(getMappedInvoice());
+                } else {
+                  window.print();
+                }
+              }}
+              size="sm"
             >
-              Cancel
+              Print
+            </Button>
+
+            <div className="relative">
+              <Button
+                variant="white"
+                icon={Download}
+                onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                size="sm"
+              >
+                PDF/Excel
+              </Button>
+              <AnimatePresence>
+                {showDownloadDropdown && (
+                  <motion.div
+                    ref={downloadDropdownRef}
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-11 z-30 bg-white rounded-xl shadow-xl border p-2 w-40"
+                    style={{ borderColor: brand.dark + '15' }}
+                  >
+                    <button
+                      onClick={() => {
+                        setShowDownloadDropdown(false);
+                        handlePrint();
+                      }}
+                      className="w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2"
+                      style={{ color: brand.dark }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      PDF Document
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDownloadDropdown(false);
+                        handleDownloadExcel();
+                      }}
+                      className="w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2"
+                      style={{ color: brand.dark }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Excel (CSV)
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <Button
+              variant="white"
+              icon={X}
+              onClick={handleClose}
+              size="sm"
+            >
+              Close
             </Button>
           </div>
         </div>
@@ -252,7 +470,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                       onChange={(id) => {
                         setSelectedCustomerId(id);
                         const client = sampleCustomers.find(c => c.id === id);
-                        if (client) onChange({ ...data, clientName: client.name });
+                        if (client) {
+                          onChange({ ...data, clientName: client.name, clientAddress: client.fullAddress });
+                        }
                       }}
                     />
                   </div>
@@ -273,8 +493,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                 {/* Row 2 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                   <div className="lg:col-span-5">
-                    <Input variant="compact" label="Customer Address" placeholder="Street, City, Country..." value={data.clientAddress || ''}
-                      onChange={(e) => onChange({ ...data, clientAddress: e.target.value })} />
+                    <Input variant="compact" label="Customer Address" placeholder="Street, City, Country..." value={data.clientAddress || ''} readOnly />
                   </div>
                   <div className="lg:col-span-2">
                     <Input variant="compact" label="Due Date" type="date" value={data.dueDate}
@@ -403,7 +622,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
             </div>
 
             {/* ── Transaction Entries ── */}
-            <div className="bg-white border rounded-xl shadow-sm !overflow-visible" style={{ borderColor: brand.dark + '10' }}>
+            <div className="bg-white border rounded-xl shadow-sm overflow-hidden w-full max-w-full" style={{ borderColor: brand.dark + '10' }}>
               <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -444,25 +663,26 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               </div>
 
               <ScrollArea
-                className="!overflow-visible"
+                className="overflow-x-auto custom-scrollbar w-full max-w-full"
+                maxHeight="290px"
                 ref={scrollContainerRef}
                 style={{ overscrollBehavior: 'contain' }}
               >
-                <table className="w-full relative overflow-visible">
-                  <thead className="sticky top-0 bg-white z-20 shadow-sm">
+                <table className={`w-full relative table-fixed ${tableMinW}`}>
+                  <thead className="sticky top-0 bg-white z-20">
                     <tr className="text-[10px] font-black tracking-wider border-b" style={{ color: brand.dark, borderColor: brand.dark + '10' }}>
                       <th className="px-3 py-2.5 text-left w-10">#</th>
-                      <th className="px-3 py-2.5 text-left w-32 border-l border-slate-100">Product Code</th>
-                      <th className="px-3 py-2.5 text-left w-52 border-l border-slate-100">Description</th>
-                      <th className="px-3 py-2.5 text-left w-16 border-l border-slate-100">Unit</th>
-                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Details</th>
-                      <th className="px-3 py-2.5 text-left w-16 border-l border-slate-100">Qty</th>
-                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Price</th>
-                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Discount</th>
-                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Tax</th>
-                      <th className="px-3 py-2.5 text-left w-24 border-l border-slate-100">Further Tax</th>
-                      <th className="px-4 py-2.5 text-left w-24 border-l border-slate-100">Total</th>
-                      <th className="px-3 py-2.5 w-10 border-l border-slate-100" />
+                      <th className="px-3 py-2.5 text-left w-36 border-l border-slate-100">Product Code</th>
+                      <th className={`px-3 py-2.5 text-left border-l border-slate-100 ${descriptionWidth}`}>Description</th>
+                      <th className={`px-3 py-2.5 text-left ${unitWidth} border-l border-slate-100`}>Unit</th>
+                      <th className={`px-3 py-2.5 text-left ${detailsWidth} border-l border-slate-100`}>Details</th>
+                      <th className={`px-3 py-2.5 text-left ${qtyWidth} border-l border-slate-100`}>Qty</th>
+                      <th className={`px-3 py-2.5 text-left ${priceWidth} border-l border-slate-100`}>Price</th>
+                      <th className={`px-3 py-2.5 text-left ${discountWidth} border-l border-slate-100`}>Discount</th>
+                      <th className={`px-3 py-2.5 text-left ${taxWidth} border-l border-slate-100`}>Tax</th>
+                      <th className={`px-3 py-2.5 text-left ${furtherTaxWidth} border-l border-slate-100`}>Further Tax</th>
+                      <th className={`px-4 py-2.5 text-left ${totalWidth} border-l border-slate-100`}>Total</th>
+                      <th className="px-3 py-2.5 w-12 border-l border-slate-100" />
                     </tr>
                   </thead>
                   <tbody style={{ borderColor: brand.dark + '10' }}>
@@ -478,10 +698,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                           style={{ borderColor: brand.dark + '08' }}
                         >
                           <td className="px-3 py-3 text-[10px] font-black text-slate-300 group-hover:text-indigo-400 transition-colors text-center">{idx + 1}</td>
-                          <td className="px-2 py-3 border-l border-slate-50 w-32">
+                          <td className="px-2 py-3 border-l border-slate-50">
                             <ComboBox
                               autoFocus={item.id === lastAddedId}
-                              className='!w-[%]'
                               variant="compact"
                               placeholder="P-CODE"
                               value={item.productCode}
@@ -547,7 +766,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                             <Input
                               type="number"
                               variant="compact"
-                              className="text-right text-red-500 font-black !bg-white border-slate-200"
+                              className="text-center text-red-500 font-black !bg-white border-slate-200"
                               value={item.discount}
                               onChange={(e) => updateItem(item.id, { discount: parseFloat(e.target.value) || 0 })}
                             />
@@ -556,7 +775,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                             <Input
                               type="number"
                               variant="compact"
-                              className="text-right text-green-600 font-black !bg-white border-slate-200"
+                              className="text-center text-green-600 font-black !bg-white border-slate-200"
                               value={item.tax}
                               onChange={(e) => updateItem(item.id, { tax: parseFloat(e.target.value) || 0 })}
                             />
@@ -565,18 +784,19 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                             <Input
                               type="number"
                               variant="compact"
-                              className="text-right text-amber-500 font-black !bg-white border-slate-200"
+                              className="text-center text-amber-500 font-black !bg-white border-slate-200"
                               value={item.furtherTax}
                               onChange={(e) => updateItem(item.id, { furtherTax: parseFloat(e.target.value) || 0 })}
                             />
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-[11px] tracking-tight text-indigo-600 border-l border-slate-50">
+                          <td className="px-4 py-3 text-left font-black text-[11px] tracking-tight text-indigo-600 border-l border-slate-50">
                             {currencySymbol}{fmt((item.quantity * item.price) - item.discount + item.tax + item.furtherTax)}
                           </td>
-                          <td className="px-4 py-3 text-center border-l border-slate-50">
+                          <td className="px-1 py-3 text-center border-l border-slate-50">
                             <Button
                               variant="danger"
                               size="xs"
+                              className="!px-0 !w-6 !h-6 flex items-center justify-center rounded-lg mx-auto"
                               icon={Trash2}
                               onClick={() => removeItem(item.id)}
                             />
@@ -611,16 +831,16 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                         <td className="px-2 py-3 text-right text-[11px] text-slate-700 border-l border-slate-50">
                           {/* Price total removed as requested */}
                         </td>
-                        <td className="px-2 py-3 text-right text-[11px] text-red-500 border-l border-slate-50">
+                        <td className="px-2 py-3 text-center text-[11px] text-red-500 border-l border-slate-50">
                           {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.discount, 0))}
                         </td>
-                        <td className="px-2 py-3 text-right text-[11px] text-emerald-600 border-l border-slate-50">
+                        <td className="px-2 py-3 text-center text-[11px] text-emerald-600 border-l border-slate-50">
                           {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.tax, 0))}
                         </td>
-                        <td className="px-2 py-3 text-right text-[11px] text-amber-600 border-l border-slate-50">
+                        <td className="px-2 py-3 text-center text-[11px] text-amber-600 border-l border-slate-50">
                           {currencySymbol}{fmt(data.items.reduce((sum, i) => sum + i.furtherTax, 0))}
                         </td>
-                        <td className="px-4 py-3 text-right text-[12px] text-indigo-700 underline decoration-indigo-200 underline-offset-4 border-l border-slate-50">
+                        <td className="px-4 py-3 text-left text-[12px] text-indigo-700 underline decoration-indigo-200 underline-offset-4 border-l border-slate-50">
                           {currencySymbol}{fmt(subtotal)}
                         </td>
                         <td className="border-l border-slate-50"></td>
@@ -648,18 +868,13 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
               </div>
 
               {/* Attachments */}
-              <div className="bg-white border rounded-2xl overflow-hidden shadow-sm flex flex-col" style={{ borderColor: brand.dark + '10' }}>
-                <div className="px-6 py-4 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-white/20 rounded-lg">
-                      <Paperclip className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <h3 className="text-[11px] font-bold">Document Attachments</h3>
-                      <p className="text-[8px] opacity-70">Supporting files & assets</p>
-                    </div>
+              <div className="bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col h-full" style={{ borderColor: brand.dark + '10' }}>
+                <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
+                  <div className="flex items-center gap-1.5">
+                    <Paperclip className="w-3 h-3 opacity-80" />
+                    <h3 className="text-[11px] font-bold">Document Attachments</h3>
                   </div>
-                  <div className="px-2.5 py-1 bg-white/15 rounded-full text-[9px] font-black tracking-wider uppercase">
+                  <div className="px-2 py-0.5 bg-white/20 rounded text-[9px] font-bold uppercase">
                     {uploadSuccess ? 'Upload Success!' : `${files.length} ${files.length === 1 ? 'File' : 'Files'}`}
                   </div>
                 </div>
@@ -682,8 +897,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
                   }}
                 />
 
-                <div className="pt-3 px-3 pb-2 space-y-2">
-                  <div className="w-full">
+                <div className="pt-3 px-3 pb-2 space-y-2 flex-1 flex flex-col">
+                  <p className="text-[10px] font-medium text-slate-500 px-1">Supporting files & assets</p>
+                  <div className="w-full flex-1">
                     {/* Upload Zone */}
                     <motion.div
                       whileHover={{ scale: 1.002 }}
@@ -815,6 +1031,97 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange }) => {
         </div>
       </div>
     </div>
+
+    {/* ── Hidden Printable Invoice for Direct Download ── */}
+    <div style={{ position: 'relative', height: 0, overflow: 'hidden' }}>
+      <div id="local-printable-container" style={{ fontFamily: 'Inter, system-ui, sans-serif', fontSize: '12px', lineHeight: '1.6', background: 'white', color: '#1e293b', padding: '40px', margin: 0, width: '210mm' }}>
+        {/* Header: Company & Invoice title */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: '24px', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>{data.senderName || 'Antigravity Creative Studio'}</h1>
+            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: '1.7' }}>
+              {data.senderAddress || '452 Innovation Blvd, San Francisco, CA 94107'}
+            </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#2759CD', margin: 0, letterSpacing: '2px' }}>INVOICE</h2>
+            <p style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginTop: '4px' }}>#{data.invoiceNumber}</p>
+            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px', lineHeight: '1.8' }}>
+              <div><strong>Issue Date:</strong> {data.date}</div>
+              <div><strong>Due Date:</strong> {data.dueDate}</div>
+              <div><strong>Status:</strong> Draft</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Billing Details Block */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
+          <div>
+            <h3 style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>FROM</h3>
+            <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{data.senderName || 'Antigravity Creative Studio'}</h4>
+            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: '1.7' }}>
+              {data.senderAddress}
+            </p>
+          </div>
+          <div>
+            <h3 style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>BILL TO</h3>
+            <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{data.clientName || 'Unnamed Client'}</h4>
+            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: '1.7' }}>
+              {data.clientAddress}
+            </p>
+          </div>
+        </div>
+
+        {/* Line Items Table */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+              <th style={{ padding: '12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: 'left' }}>Product Code</th>
+              <th style={{ padding: '12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: 'left' }}>Description</th>
+              <th style={{ padding: '12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: 'right' }}>Qty</th>
+              <th style={{ padding: '12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: 'right' }}>Price</th>
+              <th style={{ padding: '12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: 'right' }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map(item => (
+              <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '12px', color: '#475569', textAlign: 'left' }}>{item.productCode}</td>
+                <td style={{ padding: '12px', color: '#475569', textAlign: 'left' }}>{item.description}</td>
+                <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{item.quantity}</td>
+                <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{currencySymbol}{item.price.toFixed(2)}</td>
+                <td style={{ padding: '12px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>{currencySymbol}{(item.quantity * item.price).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Totals */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '300px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+              <span style={{ color: '#64748b' }}>Gross Subtotal:</span>
+              <span style={{ fontWeight: 700, color: '#1e293b' }}>{currencySymbol}{fmt(subtotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+              <span style={{ color: '#64748b' }}>Tax ({data.taxRate}%):</span>
+              <span style={{ fontWeight: 700, color: '#1e293b' }}>{currencySymbol}{fmt(taxAmount)}</span>
+            </div>
+            {data.discountAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ color: '#64748b' }}>Discount:</span>
+                <span style={{ fontWeight: 700, color: '#10B981' }}>-{currencySymbol}{fmt(data.discountAmount)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', fontSize: '14px', fontWeight: 900, color: '#0f172a' }}>
+              <span>Net Total:</span>
+              <span style={{ color: '#2759CD' }}>{currencySymbol}{fmt(netPayable)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </>
   );
 };
 

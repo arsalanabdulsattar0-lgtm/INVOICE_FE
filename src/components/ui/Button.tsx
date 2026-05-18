@@ -51,9 +51,9 @@ export const Button: React.FC<ButtonProps> = ({
         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
       ) : (
         <>
-          {Icon && iconPosition === 'left' && <Icon className="w-3.5 h-3.5 mr-1.5" />}
+          {Icon && iconPosition === 'left' && <Icon className={`w-3.5 h-3.5 ${children ? 'mr-1.5' : ''}`} />}
           {children}
-          {Icon && iconPosition === 'right' && <Icon className="w-3.5 h-3.5 ml-1.5" />}
+          {Icon && iconPosition === 'right' && <Icon className={`w-3.5 h-3.5 ${children ? 'ml-1.5' : ''}`} />}
         </>
       )}
     </motion.button>

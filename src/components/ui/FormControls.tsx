@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronDown, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface ScrollAreaProps {
   children: React.ReactNode;
@@ -162,6 +163,11 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const [openUpwards, setOpenUpwards] = useState(false);
 
   const isCompact = variant === 'compact';
   const selectedOption = options.find(opt => opt.id === value);
@@ -175,6 +181,42 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   );
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateCoords = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropdownHeight = 220; // estimated max height (200px ScrollArea + padding/border)
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const shouldOpenUpwards = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+
+      setOpenUpwards(shouldOpenUpwards);
+      setCoords({
+        top: shouldOpenUpwards
+          ? rect.top - dropdownHeight - 4
+          : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      const handleUpdate = () => updateCoords();
+      window.addEventListener('resize', handleUpdate);
+      window.addEventListener('scroll', handleUpdate, true); // true catches nested scrollbar scroll events
+      return () => {
+        window.removeEventListener('resize', handleUpdate);
+        window.removeEventListener('scroll', handleUpdate, true);
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus();
       setIsOpen(true);
@@ -183,7 +225,10 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const clickedContainer = containerRef.current && containerRef.current.contains(e.target as Node);
+      const clickedDropdown = dropdownRef.current && dropdownRef.current.contains(e.target as Node);
+
+      if (!clickedContainer && !clickedDropdown) {
         setIsOpen(false);
         setQuery("");
         if (onQueryChange) onQueryChange("");
@@ -241,52 +286,60 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
           </div>
         </div>
 
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              layout={false}
-              initial={{ opacity: 0, y: 5, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 5, scale: 0.98 }}
-              className="absolute left-0 right-0 top-[calc(100%+4px)] z-[100] bg-white border border-[#304166]/10 rounded-xl shadow-xl"
-              style={{}}
-            >
-              <ScrollArea maxHeight="200px" className="p-1.5">
-                {filtered.length > 0 ? (
-                  filtered.map((opt) => (
-                    <div
-                      key={opt.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onChange(opt.id);
-                        setIsOpen(false);
-                        setQuery("");
-                      }}
-                      className={`
-                        flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all
-                        ${value === opt.id ? 'bg-indigo-50' : 'hover:bg-slate-50'}
-                      `}
-                    >
-                      <div>
-                        <p className={`font-bold ${value === opt.id ? 'text-indigo-600' : 'text-[#304166]'} text-[12px]`}>
-                          {opt.name}
-                        </p>
-                        {opt.subtitle && (
-                          <p className="text-[10px] font-medium text-slate-400 mt-0.5">{opt.subtitle}</p>
-                        )}
+        {mounted && createPortal(
+          <AnimatePresence>
+            {isOpen && query.length >= 3 && (
+              <motion.div
+                ref={dropdownRef}
+                layout={false}
+                initial={{ opacity: 0, y: openUpwards ? -5 : 5, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: openUpwards ? -5 : 5, scale: 0.98 }}
+                className="fixed z-[99999] bg-white border border-[#304166]/10 rounded-xl shadow-xl overflow-hidden"
+                style={{
+                  top: coords.top,
+                  left: coords.left,
+                  width: coords.width,
+                }}
+              >
+                <ScrollArea maxHeight="200px" className="p-1.5">
+                  {filtered.length > 0 ? (
+                    filtered.map((opt) => (
+                      <div
+                        key={opt.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onChange(opt.id);
+                          setIsOpen(false);
+                          setQuery("");
+                        }}
+                        className={`
+                          flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all
+                          ${value === opt.id ? 'bg-indigo-50' : 'hover:bg-slate-50'}
+                        `}
+                      >
+                        <div>
+                          <p className={`font-bold ${value === opt.id ? 'text-indigo-600' : 'text-[#304166]'} text-[12px]`}>
+                            {opt.name}
+                          </p>
+                          {opt.subtitle && (
+                            <p className="text-[10px] font-medium text-slate-400 mt-0.5">{opt.subtitle}</p>
+                          )}
+                        </div>
+                        {value === opt.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
                       </div>
-                      {value === opt.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                    ))
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p className="text-[11px] font-bold text-slate-400">No results found</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="py-8 text-center">
-                    <p className="text-[11px] font-bold text-slate-400">No results found</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  )}
+                </ScrollArea>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </div>
 
       {error && <p className="text-[11px] font-bold text-red-500 ml-1">{error}</p>}

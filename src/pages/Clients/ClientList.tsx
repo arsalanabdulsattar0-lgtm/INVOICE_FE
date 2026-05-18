@@ -1,14 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Plus, Mail, Phone, MapPin, MoreHorizontal } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+
+interface Client {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  totalInvoiced: string;
+}
 
 const ClientList: React.FC = () => {
-  const clients = [
-    { name: 'BlueRitt Technologies', email: 'billing@blueritt.com', phone: '+1 234 567 890', location: 'Austin, TX', totalInvoiced: '$45,200' },
-    { name: 'Acme Corp', email: 'finance@acme.com', phone: '+1 987 654 321', location: 'New York, NY', totalInvoiced: '$12,800' },
-    { name: 'Global Solutions', email: 'hello@globalsol.com', phone: '+1 555 123 456', location: 'San Francisco, CA', totalInvoiced: '$8,900' },
-    { name: 'Starlight Media', email: 'accounts@starlight.io', phone: '+1 444 777 888', location: 'London, UK', totalInvoiced: '$2,450' },
-  ];
+  const [clients] = useState<Client[]>(() => {
+    try {
+      const stored = localStorage.getItem('client_list');
+      return stored ? JSON.parse(stored) : [
+        { name: 'BlueRitt Technologies', email: 'billing@blueritt.com', phone: '+1 234 567 890', location: 'Austin, TX', totalInvoiced: '$45,200' },
+        { name: 'Acme Corp', email: 'finance@acme.com', phone: '+1 987 654 321', location: 'New York, NY', totalInvoiced: '$12,800' },
+        { name: 'Global Solutions', email: 'hello@globalsol.com', phone: '+1 555 123 456', location: 'San Francisco, CA', totalInvoiced: '$8,900' },
+        { name: 'Starlight Media', email: 'accounts@starlight.io', phone: '+1 444 777 888', location: 'London, UK', totalInvoiced: '$2,450' },
+        { name: 'Ahmed', email: 'ahmed@example.com', phone: '+92 300 1234567', location: 'Lahore, Pakistan', totalInvoiced: '$0.00' },
+      ];
+    } catch {
+      return [
+        { name: 'BlueRitt Technologies', email: 'billing@blueritt.com', phone: '+1 234 567 890', location: 'Austin, TX', totalInvoiced: '$45,200' },
+        { name: 'Acme Corp', email: 'finance@acme.com', phone: '+1 987 654 321', location: 'New York, NY', totalInvoiced: '$12,800' },
+        { name: 'Global Solutions', email: 'hello@globalsol.com', phone: '+1 555 123 456', location: 'San Francisco, CA', totalInvoiced: '$8,900' },
+        { name: 'Starlight Media', email: 'accounts@starlight.io', phone: '+1 444 777 888', location: 'London, UK', totalInvoiced: '$2,450' },
+        { name: 'Ahmed', email: 'ahmed@example.com', phone: '+92 300 1234567', location: 'Lahore, Pakistan', totalInvoiced: '$0.00' },
+      ];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('client_list', JSON.stringify(clients));
+    } catch { /* ignore */ }
+  }, [clients]);
 
   return (
     <div className="p-4 space-y-4">
@@ -27,10 +56,9 @@ const ClientList: React.FC = () => {
               className="w-full sm:w-64 bg-slate-50 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/10"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-100">
-            <Plus className="w-4 h-4" />
+          <Button variant="primary" size="md" icon={Plus} className="bg-indigo-600 hover:bg-indigo-500 shadow-indigo-100">
             Add Client
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -48,9 +76,7 @@ const ClientList: React.FC = () => {
               <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                 <span className="text-xl font-bold">{client.name[0]}</span>
               </div>
-              <button className="p-2 text-slate-300 hover:text-slate-600 rounded-xl transition-colors">
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
+              <Button variant="ghost" size="xs" icon={MoreHorizontal} className="px-2 py-2 text-slate-300 hover:text-slate-600 hover:bg-slate-50" />
             </div>
             
             <h3 className="text-lg font-bold text-slate-900 mb-4">{client.name}</h3>
@@ -75,9 +101,9 @@ const ClientList: React.FC = () => {
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Invoiced</p>
                 <p className="text-lg font-bold text-slate-900">{client.totalInvoiced}</p>
               </div>
-              <button className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+              <Button variant="ghost" size="xs" className="text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 font-bold px-3 py-1.5">
                 View Profile
-              </button>
+              </Button>
             </div>
           </motion.div>
         ))}

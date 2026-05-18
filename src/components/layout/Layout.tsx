@@ -12,6 +12,11 @@ interface Props {
 const Layout: React.FC<Props> = ({ children, activeView, onViewChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  React.useEffect(() => {
+    (window as any).isSidebarCollapsed = isCollapsed;
+    window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { isCollapsed } }));
+  }, [isCollapsed]);
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar 

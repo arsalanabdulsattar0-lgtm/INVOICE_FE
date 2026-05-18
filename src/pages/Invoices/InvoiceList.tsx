@@ -6,28 +6,20 @@ import {
   ArrowUpDown, Printer, Trash2, Edit3,
   ChevronLeft, ChevronRight, SlidersHorizontal, X
 } from 'lucide-react';
-import { Input } from '../../components/ui/FormControls';
-
-// ─── Brand ───────────────────────────────────────────────────────────────────
-const brand = {
-  primary:  '#2759CD',
-  dark:     '#304166',
-  accent:   '#EE4932',
-  soft:     '#BDD1FF',
-  surface:  '#EFF5FC',
-  white:    '#FFFFFF',
-};
+import { ScrollArea } from '../../components/ui/FormControls';
+import { Button } from '../../components/ui/Button';
+import { useTheme } from '../../context/ThemeContext';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
-type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
+export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
 
-interface Invoice {
+export interface Invoice {
   id: string; client: string; clientInitials: string; clientColor: string;
   issueDate: string; dueDate: string; amount: string; rawAmount: number;
   status: InvoiceStatus; payment: string; type: string;
 }
 
-const invoices: Invoice[] = [
+export const initialInvoices: Invoice[] = [
   { id: 'SI-000248', client: 'BlueRitt Technologies Inc.', clientInitials: 'BT', clientColor: '#2759CD', issueDate: '2026-05-12', dueDate: '2026-06-12', amount: '$8,450.00',  rawAmount: 8450,  status: 'Draft',   payment: 'Net 30',  type: 'Service'  },
   { id: 'SI-000247', client: 'Acme Corporation',           clientInitials: 'AC', clientColor: '#10B981', issueDate: '2026-05-10', dueDate: '2026-05-25', amount: '$1,200.00',  rawAmount: 1200,  status: 'Paid',    payment: 'Cleared', type: 'Product'  },
   { id: 'SI-000246', client: 'Global Solutions Ltd.',      clientInitials: 'GS', clientColor: '#F59E0B', issueDate: '2026-05-08', dueDate: '2026-05-23', amount: '$3,500.00',  rawAmount: 3500,  status: 'Pending', payment: 'Net 15',  type: 'Standard' },
@@ -46,33 +38,84 @@ const statusConfig: Record<InvoiceStatus, { bg: string; text: string; border: st
   Draft:   { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1', icon: FileText    },
 };
 
-// ─── Stats Cards Data ─────────────────────────────────────────────────────────
-const stats = [
-  { label: 'Total Invoices', value: '248',       sub: '+12 this month',  icon: FileText,    color: brand.primary, bg: '#EFF5FC' },
-  { label: 'Paid',           value: '186',       sub: '75% collection',  icon: CheckCircle, color: '#15803D',     bg: '#F0FDF4' },
-  { label: 'Pending',        value: '42',        sub: '$28,450 waiting', icon: Clock,       color: '#C2410C',     bg: '#FFF7ED' },
-  { label: 'Total Revenue',  value: '$142,800',  sub: '+8.2% vs last mo',icon: TrendingUp,  color: brand.primary, bg: '#EFF5FC' },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+type SortKey   = 'id' | 'client' | 'issueDate' | 'dueDate' | 'amount' | 'status' | 'type';
+type SortDir   = 'asc' | 'desc';
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const InvoiceList: React.FC = () => {
+interface InvoiceListProps {
+  onViewChange?: (view: 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'settings' | 'help') => void;
+  invoiceItems: Invoice[];
+  setInvoiceItems: React.Dispatch<React.SetStateAction<Invoice[]>>;
+  onPrintInvoice?: (inv: Invoice) => void;
+  onEditInvoice?: (id: string) => void;
+}
+
+const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, setInvoiceItems, onPrintInvoice, onEditInvoice }) => {
+  const { brand } = useTheme();
+
+  // ─── Stats Cards Data ─────────────────────────────────────────────────────────
+  const stats = [
+    { label: 'Total Invoices', value: '248',       sub: '+12 this month',  icon: FileText,    color: brand.primary, bg: brand.surface },
+    { label: 'Paid',           value: '186',       sub: '75% collection',  icon: CheckCircle, color: '#15803D',     bg: '#F0FDF4' },
+    { label: 'Pending',        value: '42',        sub: '$28,450 waiting', icon: Clock,       color: '#C2410C',     bg: '#FFF7ED' },
+    { label: 'Total Revenue',  value: '$142,800',  sub: '+8.2% vs last mo',icon: TrendingUp,  color: brand.primary, bg: brand.surface },
+  ];
+
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
+  const [typeFilter, setTypeFilter]     = useState<string>('All');
   const [openAction, setOpenAction]     = useState<string | null>(null);
   const [currentPage, setCurrentPage]   = useState(1);
+  const [sortKey, setSortKey]           = useState<SortKey>('issueDate');
+  const [sortDir, setSortDir]           = useState<SortDir>('desc');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showSortPanel, setShowSortPanel]     = useState(false);
   const perPage = 6;
 
-  const filtered = invoices.filter(inv => {
-    const matchSearch = inv.id.toLowerCase().includes(search.toLowerCase()) ||
-                        inv.client.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || inv.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const typeOptions = ['All', ...Array.from(new Set(invoiceItems.map(i => i.type)))];
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+    setShowSortPanel(false);
+  };
+
+  const filtered = invoiceItems
+    .filter(inv => {
+      const matchSearch = inv.id.toLowerCase().includes(search.toLowerCase()) ||
+                          inv.client.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = statusFilter === 'All' || inv.status === statusFilter;
+      const matchType   = typeFilter === 'All' || inv.type === typeFilter;
+      return matchSearch && matchStatus && matchType;
+    })
+    .sort((a, b) => {
+      let av: string | number = a[sortKey] as string | number;
+      let bv: string | number = b[sortKey] as string | number;
+      if (sortKey === 'amount') { av = a.rawAmount; bv = b.rawAmount; }
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated  = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
-
   const statusTabs: (InvoiceStatus | 'All')[] = ['All', 'Paid', 'Pending', 'Overdue', 'Draft'];
+
+  const sortOptions: { key: SortKey; label: string }[] = [
+    { key: 'id',        label: 'Invoice ID'  },
+    { key: 'client',    label: 'Client Name' },
+    { key: 'issueDate', label: 'Issue Date'  },
+    { key: 'dueDate',   label: 'Due Date'    },
+    { key: 'amount',    label: 'Amount'      },
+    { key: 'status',    label: 'Status'      },
+    { key: 'type',      label: 'Type'        },
+  ];
+
+  const SortArrow = ({ col }: { col: SortKey }) => (
+    <span className="ml-1 inline-block opacity-50" style={{ color: sortKey === col ? brand.primary : brand.dark }}>
+      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
+  );
 
   return (
     <div className="min-h-full p-6 space-y-5" style={{ background: '#F4F7FD' }}>
@@ -87,14 +130,18 @@ const InvoiceList: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <button className="h-9 px-4 flex items-center gap-2 bg-white border rounded-xl text-[12px] font-bold transition-all hover:bg-slate-50 shadow-sm"
-            style={{ color: brand.dark, borderColor: brand.dark + '15' }}>
-            <Download className="w-3.5 h-3.5" /> Export
-          </button>
-          <button className="h-9 px-5 flex items-center gap-2 rounded-xl text-[12px] font-bold text-white shadow-lg transition-all hover:opacity-90"
-            style={{ background: `linear-gradient(135deg, ${brand.primary}, #1a45b0)` }}>
-            <Plus className="w-3.5 h-3.5" /> Create Invoice
-          </button>
+          <Button variant="white" size="md" icon={Download}>
+            Export
+          </Button>
+          <Button
+            onClick={() => onViewChange?.('add-invoice-v4')}
+            variant="primary"
+            size="md"
+            icon={Plus}
+            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+          >
+            Create Invoice
+          </Button>
         </div>
       </motion.div>
 
@@ -125,29 +172,122 @@ const InvoiceList: React.FC = () => {
       {/* ── Table Card ── */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
         className="bg-white rounded-2xl border shadow-sm overflow-hidden"
-        style={{ borderColor: brand.dark + '10', minHeight: '480px' }}>
+        style={{ borderColor: brand.dark + '10' }}>
 
-        {/* Table Top Bar */}
-        <div className="p-4 border-b flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between"
-          style={{ borderColor: brand.dark + '08' }}>
-
-          {/* Search */}
-          <div className="w-full sm:w-72">
-            <Input
-              variant="compact"
-              icon={Search}
-              placeholder="Search invoices or clients..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              suffix={search ? (
-                <button onClick={() => setSearch('')} className="flex items-center">
-                  <X className="w-3 h-3 text-slate-400 hover:text-slate-600" />
-                </button>
-              ) : undefined}
-            />
+        {/* ── Solid Header Bar (reference image style) ── */}
+        <div className="px-4 py-2.5 flex items-center justify-between text-white"
+          style={{ backgroundColor: brand.primary }}>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <h3 className="text-[11px] font-black tracking-wide">Invoice Records</h3>
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{ backgroundColor: brand.soft, color: brand.dark }}>
+              {filtered.length} Invoices
+            </span>
           </div>
 
-          {/* Status Tabs */}
+          {/* Search inside header bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60" />
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Search invoices or clients..."
+                className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
+                style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+              />
+            </div>
+
+            {/* Filter Button */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowFilterPanel(p => !p); setShowSortPanel(false); }}
+                className={`border ${showFilterPanel ? 'bg-white/25 border-white/25' : 'bg-white/10 border-white/20'} text-white hover:bg-white/20`}
+              >
+                <SlidersHorizontal className="w-3 h-3 mr-1" /> Filter
+                {(typeFilter !== 'All') && (
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ml-1 text-white"
+                    style={{ background: brand.accent }}>1</span>
+                )}
+              </Button>
+              <AnimatePresence>
+                {showFilterPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-9 z-30 bg-white rounded-xl shadow-xl border p-4 w-56"
+                    style={{ borderColor: brand.dark + '15' }}>
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: brand.dark + '60' }}>Filter by Type</p>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {typeOptions.map(t => (
+                        <button key={t} onClick={() => { setTypeFilter(t); setCurrentPage(1); }}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all"
+                          style={typeFilter === t
+                            ? { background: brand.primary, color: '#fff', borderColor: brand.primary }
+                            : { background: '#f8fafc', color: brand.dark, borderColor: brand.dark + '15' }}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                    {typeFilter !== 'All' && (
+                      <Button onClick={() => setTypeFilter('All')}
+                        variant="ghost"
+                        size="xs"
+                        fullWidth
+                        className="text-red-500 hover:bg-red-50"
+                        icon={X}
+                      >
+                        Clear Filter
+                      </Button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Sort Button */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowSortPanel(p => !p); setShowFilterPanel(false); }}
+                className={`border ${showSortPanel ? 'bg-white/25 border-white/25' : 'bg-white/10 border-white/20'} text-white hover:bg-white/20`}
+                icon={ArrowUpDown}
+              >
+                Sort
+              </Button>
+              <AnimatePresence>
+                {showSortPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-9 z-30 bg-white rounded-xl shadow-xl border overflow-hidden w-44"
+                    style={{ borderColor: brand.dark + '15' }}>
+                    {sortOptions.map(opt => (
+                      <button key={opt.key} onClick={() => handleSort(opt.key)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold hover:bg-slate-50 transition-all"
+                        style={{ color: sortKey === opt.key ? brand.primary : brand.dark }}>
+                        {opt.label}
+                        {sortKey === opt.key && (
+                          <span>{sortDir === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="px-4 py-2 border-b flex items-center justify-between"
+          style={{ borderColor: brand.dark + '08', background: brand.surface + '40' }}>
           <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: brand.surface }}>
             {statusTabs.map(tab => (
               <button key={tab}
@@ -168,172 +308,187 @@ const InvoiceList: React.FC = () => {
               </button>
             ))}
           </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            <button className="h-8 px-3 flex items-center gap-1.5 rounded-xl text-[11px] font-bold border transition-all hover:bg-slate-50"
-              style={{ color: brand.dark, borderColor: brand.dark + '15' }}>
-              <SlidersHorizontal className="w-3 h-3" /> Filter
-            </button>
-            <button className="h-8 px-3 flex items-center gap-1.5 rounded-xl text-[11px] font-bold border transition-all hover:bg-slate-50"
-              style={{ color: brand.dark, borderColor: brand.dark + '15' }}>
-              <ArrowUpDown className="w-3 h-3" /> Sort
-            </button>
-          </div>
+          <p className="text-[10px] font-medium text-slate-400">
+            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+            {typeFilter !== 'All' && <span className="ml-1 font-bold" style={{ color: brand.primary }}>· {typeFilter}</span>}
+          </p>
         </div>
 
         {/* Table */}
         <AnimatePresence mode="popLayout">
           <motion.div
-            key={`${statusFilter}-${currentPage}-${search}`}
+            key={`${statusFilter}-${typeFilter}-${sortKey}-${sortDir}-${currentPage}-${search}`}
             className="overflow-x-auto"
-            style={{ minHeight: '280px' }}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
           >
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: `linear-gradient(135deg, ${brand.dark}08, ${brand.primary}08)` }}>
-                {['Invoice ID', 'Client', 'Issue Date', 'Due Date', 'Amount', 'Type', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3.5 text-left">
-                    <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: brand.dark + '80' }}>{h}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-                {paginated.map((inv, i) => {
-                  const cfg = statusConfig[inv.status];
-                  const StatusIcon = cfg.icon;
-                  return (
-                    <motion.tr key={inv.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 350, damping: 30, delay: i * 0.04 }}
-                      className="group border-b transition-colors hover:bg-blue-50/40 cursor-pointer"
-                      style={{ borderColor: brand.dark + '06' }}
-                    >
-                      {/* Invoice ID */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[12px] font-black font-mono" style={{ color: brand.primary }}>
-                          {inv.id}
+            <ScrollArea className="w-full max-w-full" maxHeight="340px" style={{ overscrollBehavior: 'contain' }}>
+              <table className="w-full">
+                <thead className="sticky top-0 z-10 bg-white">
+                  <tr className="border-b" style={{ borderColor: brand.dark + '10' }}>
+                    {([
+                      { label: 'Invoice ID', key: 'id'        },
+                      { label: 'Client',     key: 'client'    },
+                      { label: 'Issue Date', key: 'issueDate' },
+                      { label: 'Due Date',   key: 'dueDate'   },
+                      { label: 'Amount',     key: 'amount'    },
+                      { label: 'Type',       key: 'type'      },
+                      { label: 'Status',     key: 'status'    },
+                      { label: 'Actions',    key: null        },
+                    ] as { label: string; key: SortKey | null }[]).map((h, idx) => (
+                      <th key={h.label}
+                        className={`px-4 py-3 text-left border-b ${h.key ? 'cursor-pointer hover:bg-blue-50/40 select-none' : ''} transition-colors ${idx !== 0 ? 'border-l border-slate-100' : ''}`}
+                        style={{ borderColor: brand.dark + '10' }}
+                        onClick={() => h.key && handleSort(h.key)}>
+                        <span className="text-[10px] font-black tracking-widest uppercase"
+                          style={{ color: sortKey === h.key ? brand.primary : brand.dark + '70' }}>
+                          {h.label}
+                          {h.key && <SortArrow col={h.key} />}
                         </span>
-                      </td>
-
-                      {/* Client */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-black flex-shrink-0"
-                            style={{ background: inv.clientColor }}>
-                            {inv.clientInitials}
-                          </div>
-                          <span className="text-[12px] font-bold truncate max-w-[150px]" style={{ color: brand.dark }}>
-                            {inv.client}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Issue Date */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[12px] font-medium text-slate-500">{inv.issueDate}</span>
-                      </td>
-
-                      {/* Due Date */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[12px] font-medium" style={{
-                          color: inv.status === 'Overdue' ? '#BE123C' : 'rgb(100 116 139)'
-                        }}>{inv.dueDate}</span>
-                      </td>
-
-                      {/* Amount */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[13px] font-black" style={{ color: brand.dark }}>{inv.amount}</span>
-                      </td>
-
-                      {/* Type */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[10px] font-bold px-2 py-1 rounded-lg"
-                          style={{ background: brand.soft + '40', color: brand.primary }}>
-                          {inv.type}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg w-fit border"
-                          style={{ background: cfg.bg, borderColor: cfg.border }}>
-                          <StatusIcon className="w-3 h-3" style={{ color: cfg.text }} />
-                          <span className="text-[10px] font-black tracking-wide" style={{ color: cfg.text }}>
-                            {inv.status}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 rounded-lg transition-all hover:bg-blue-50"
-                            title="View" style={{ color: brand.primary }}>
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                          <button className="p-1.5 rounded-lg transition-all hover:bg-blue-50"
-                            title="Edit" style={{ color: brand.primary }}>
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button className="p-1.5 rounded-lg transition-all hover:bg-blue-50"
-                            title="Download" style={{ color: brand.primary }}>
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                          <div className="relative">
-                            <button
-                              onClick={() => setOpenAction(openAction === inv.id ? null : inv.id)}
-                              className="p-1.5 rounded-lg transition-all hover:bg-slate-100 text-slate-400">
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
-                            <AnimatePresence>
-                              {openAction === inv.id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                                  className="absolute right-0 top-8 z-20 bg-white border rounded-xl shadow-xl overflow-hidden w-36"
-                                  style={{ borderColor: brand.dark + '10' }}
-                                >
-                                  {[
-                                    { icon: Eye,      label: 'View Details', color: brand.primary },
-                                    { icon: Download, label: 'Download PDF', color: brand.dark    },
-                                    { icon: Trash2,   label: 'Delete',       color: '#EE4932'     },
-                                  ].map(item => (
-                                    <button key={item.label}
-                                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-bold hover:bg-slate-50 transition-all"
-                                      style={{ color: item.color }}>
-                                      <item.icon className="w-3.5 h-3.5" />
-                                      {item.label}
-                                    </button>
-                                  ))}
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-
-                {paginated.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="py-16 text-center">
-                      <FileText className="w-10 h-10 mx-auto mb-3 text-slate-200" />
-                      <p className="text-[13px] font-bold text-slate-400">No invoices found</p>
-                      <p className="text-[11px] text-slate-300 mt-1">Try adjusting your search or filter</p>
-                    </td>
+                      </th>
+                    ))}
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginated.map((inv, i) => {
+                    const cfg = statusConfig[inv.status];
+                    const StatusIcon = cfg.icon;
+                    return (
+                      <motion.tr key={inv.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 30, delay: i * 0.04 }}
+                        className="group border-b transition-colors hover:bg-slate-50/60 cursor-pointer last:border-0"
+                        style={{ borderColor: brand.dark + '08' }}
+                      >
+                        {/* Invoice ID */}
+                        <td className="px-4 py-3 border-l border-slate-50 first:border-0">
+                          <span className="text-[12px] font-black font-mono" style={{ color: brand.primary }}>
+                            {inv.id}
+                          </span>
+                        </td>
+
+                        {/* Client */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-black flex-shrink-0"
+                              style={{ background: inv.clientColor }}>
+                              {inv.clientInitials}
+                            </div>
+                            <span className="text-[12px] font-bold truncate max-w-[150px]" style={{ color: brand.dark }}>
+                              {inv.client}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Issue Date */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <span className="text-[12px] font-medium text-slate-500">{inv.issueDate}</span>
+                        </td>
+
+                        {/* Due Date */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <span className="text-[12px] font-medium"
+                            style={{ color: inv.status === 'Overdue' ? '#BE123C' : 'rgb(100 116 139)' }}>
+                            {inv.dueDate}
+                          </span>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <span className="text-[13px] font-black" style={{ color: brand.dark }}>{inv.amount}</span>
+                        </td>
+
+                        {/* Type */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <span className="text-[10px] font-bold px-2 py-1 rounded-lg"
+                            style={{ background: brand.soft + '40', color: brand.primary }}>
+                            {inv.type}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg w-fit border"
+                            style={{ background: cfg.bg, borderColor: cfg.border }}>
+                            <StatusIcon className="w-3 h-3" style={{ color: cfg.text }} />
+                            <span className="text-[10px] font-black tracking-wide" style={{ color: cfg.text }}>
+                              {inv.status}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3 border-l border-slate-50">
+                          <div className="flex items-center gap-1">
+                            <Button onClick={() => onViewChange?.('add-invoice-v4')}
+                              variant="ghost" size="xs" icon={Eye} title="View"
+                              className="px-2 text-blue-600 hover:bg-blue-50" />
+                            <Button onClick={() => onEditInvoice?.(inv.id)}
+                              variant="ghost" size="xs" icon={Edit3} title="Edit"
+                              className="px-2 text-blue-600 hover:bg-blue-50" />
+                            <Button onClick={() => onPrintInvoice?.(inv)}
+                              variant="ghost" size="xs" icon={Printer} title="Print"
+                              className="px-2 text-blue-600 hover:bg-blue-50" />
+                            <div className="relative">
+                              <Button
+                                onClick={(e) => { e.stopPropagation(); setOpenAction(openAction === inv.id ? null : inv.id); }}
+                                variant="ghost" size="xs" icon={MoreVertical}
+                                className="px-2 text-slate-400 hover:bg-slate-100" />
+                              <AnimatePresence>
+                                {openAction === inv.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                                    className="absolute right-0 top-8 z-20 bg-white border rounded-xl shadow-xl overflow-hidden w-36"
+                                    style={{ borderColor: brand.dark + '10' }}>
+                                    {[
+                                      { icon: Eye,      label: 'View Details', color: brand.primary },
+                                      { icon: Download, label: 'Download PDF', color: brand.dark    },
+                                      { icon: Trash2,   label: 'Delete',       color: '#EE4932'     },
+                                    ].map(item => (
+                                      <Button key={item.label}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (item.label === 'View Details') onViewChange?.('add-invoice-v4');
+                                          if (item.label === 'Download PDF') onPrintInvoice?.(inv);
+                                          if (item.label === 'Delete') {
+                                            setInvoiceItems(prev => prev.filter(x => x.id !== inv.id));
+                                          }
+                                          setOpenAction(null);
+                                        }}
+                                        variant="ghost" size="sm" icon={item.icon}
+                                        className="w-full justify-start hover:bg-slate-50 rounded-none px-3 font-bold"
+                                        style={{ color: item.color }}
+                                      >
+                                        {item.label}
+                                      </Button>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+
+                  {paginated.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-16 text-center">
+                        <FileText className="w-10 h-10 mx-auto mb-3 text-slate-200" />
+                        <p className="text-[13px] font-bold text-slate-400">No invoices found</p>
+                        <p className="text-[11px] text-slate-300 mt-1">Try adjusting your search or filters</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </ScrollArea>
           </motion.div>
         </AnimatePresence>
 
@@ -345,28 +500,22 @@ const InvoiceList: React.FC = () => {
               Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length}
             </p>
             <div className="flex items-center gap-1">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border transition-all disabled:opacity-40 hover:bg-white"
-                style={{ borderColor: brand.dark + '12', color: brand.dark }}>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+                variant="white" size="xs" icon={ChevronLeft}
+                className="w-8 h-8 px-0" />
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => setCurrentPage(p)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[11px] font-bold transition-all"
-                  style={currentPage === p
-                    ? { background: brand.primary, color: '#fff' }
-                    : { color: brand.dark + 'aa', borderColor: brand.dark + '12' }
-                  }>
+                <Button key={p} onClick={() => setCurrentPage(p)}
+                  variant={currentPage === p ? 'primary' : 'white'} size="xs"
+                  className="w-8 h-8 px-0 border-none"
+                >
                   {p}
-                </button>
+                </Button>
               ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border transition-all disabled:opacity-40 hover:bg-white"
-                style={{ borderColor: brand.dark + '12', color: brand.dark }}>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                variant="white" size="xs" icon={ChevronRight}
+                className="w-8 h-8 px-0" />
             </div>
           </div>
         )}

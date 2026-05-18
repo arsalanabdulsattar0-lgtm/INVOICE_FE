@@ -11,7 +11,6 @@ import {
   Zap,
   Menu
 } from 'lucide-react';
-
 interface Props {
   activeView: string;
   onViewChange: (view: string) => void;
