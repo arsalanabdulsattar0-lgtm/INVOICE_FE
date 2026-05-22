@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { motion, AnimatePresence } from 'framer-motion';
 import AIInlinePanel from '../ui/AIInlinePanel';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Props {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface Props {
 
 const Layout: React.FC<Props> = ({ children, activeView, onViewChange, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { brand } = useTheme();
 
   React.useEffect(() => {
     (window as any).isSidebarCollapsed = isCollapsed;
@@ -20,17 +22,28 @@ const Layout: React.FC<Props> = ({ children, activeView, onViewChange, onLogout 
   }, [isCollapsed]);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <Sidebar 
-        activeView={activeView} 
-        onViewChange={onViewChange} 
+    <div
+      className="flex h-screen overflow-hidden transition-colors duration-300"
+      style={{ backgroundColor: brand.mainBg }}
+    >
+      <Sidebar
+        activeView={activeView}
+        onViewChange={onViewChange}
         isCollapsed={isCollapsed}
         onToggleSidebar={() => setIsCollapsed(!isCollapsed)}
         onLogout={onLogout}
       />
       <div className="flex-grow flex flex-col min-w-0">
-        <Header onToggleSidebar={() => setIsCollapsed(!isCollapsed)} isSidebarOpen={!isCollapsed} activeView={activeView} onViewChange={onViewChange} />
-        <main className="flex-grow relative overflow-y-auto bg-slate-50/50">
+        <Header
+          onToggleSidebar={() => setIsCollapsed(!isCollapsed)}
+          isSidebarOpen={!isCollapsed}
+          activeView={activeView}
+          onViewChange={onViewChange}
+        />
+        <main
+          className="flex-grow relative overflow-y-auto transition-colors duration-300"
+          style={{ backgroundColor: brand.mainBg }}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}

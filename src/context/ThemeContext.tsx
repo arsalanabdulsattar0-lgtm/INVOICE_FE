@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export type ThemeType = 'indigo' | 'emerald' | 'sunset' | 'midnight' | 'rose';
+export type ThemeType =
+  | 'sky'
+  | 'violet'
+  | 'mint'
+  | 'peach'
+  | 'lavender'
+  | 'gold'
+  | 'teal';
 
 export interface BrandTokens {
   primary: string;
@@ -9,48 +16,154 @@ export interface BrandTokens {
   soft: string;
   surface: string;
   white: string;
+  // Layout tokens for full-app theming
+  sidebarBg: string;
+  sidebarText: string;
+  sidebarActiveBg: string;
+  sidebarActiveText: string;
+  headerBg: string;
+  mainBg: string;
+  cardBg: string;
+  border: string;
+  textPrimary: string;
+  textSecondary: string;
+  isLight: boolean; // true = light theme, false = dark
 }
 
 export const themes: Record<ThemeType, BrandTokens> = {
-  indigo: {
-    primary: '#2759CD',
-    dark: '#304166',
-    accent: '#EE4932',
-    soft: '#BDD1FF',
-    surface: '#EFF5FC',
+  // ── LIGHT THEMES ──────────────────────────────────────────────────────────
+  sky: {
+    primary: '#0EA5E9',
+    dark: '#0C4A6E',
+    accent: '#F97316',
+    soft: '#BAE6FD',
+    surface: '#F0F9FF',
     white: '#FFFFFF',
+    sidebarBg: '#F0F9FF',
+    sidebarText: '#0369A1',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#0EA5E9',
+    headerBg: '#FFFFFF',
+    mainBg: '#F0F9FF',
+    cardBg: '#FFFFFF',
+    border: '#BAE6FD',
+    textPrimary: '#0C4A6E',
+    textSecondary: '#0369A1',
+    isLight: true,
   },
-  emerald: {
-    primary: '#10B981',
-    dark: '#065F46',
+  violet: {
+    primary: '#7C3AED',
+    dark: '#4C1D95',
     accent: '#F59E0B',
-    soft: '#A7F3D0',
-    surface: '#ECFDF5',
+    soft: '#DDD6FE',
+    surface: '#F5F3FF',
     white: '#FFFFFF',
+    sidebarBg: '#F5F3FF',
+    sidebarText: '#5B21B6',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#7C3AED',
+    headerBg: '#FFFFFF',
+    mainBg: '#F5F3FF',
+    cardBg: '#FFFFFF',
+    border: '#DDD6FE',
+    textPrimary: '#2E1065',
+    textSecondary: '#5B21B6',
+    isLight: true,
   },
-  sunset: {
-    primary: '#F59E0B',
-    dark: '#78350F',
-    accent: '#EF4444',
-    soft: '#FDE68A',
-    surface: '#FFFBEB',
+  mint: {
+    primary: '#14B8A6',
+    dark: '#134E4A',
+    accent: '#F43F5E',
+    soft: '#99F6E4',
+    surface: '#F0FDFA',
     white: '#FFFFFF',
+    sidebarBg: '#F0FDFA',
+    sidebarText: '#0F766E',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#14B8A6',
+    headerBg: '#FFFFFF',
+    mainBg: '#F0FDFA',
+    cardBg: '#FFFFFF',
+    border: '#99F6E4',
+    textPrimary: '#042F2E',
+    textSecondary: '#0F766E',
+    isLight: true,
   },
-  midnight: {
-    primary: '#6366F1',
-    dark: '#0F172A',
-    accent: '#EC4899',
-    soft: '#C7D2FE',
-    surface: '#EFF1F5', // Keep a light surface for readable tables but slate-ish
-    white: '#FFFFFF',
-  },
-  rose: {
-    primary: '#F43F5E',
-    dark: '#881337',
-    accent: '#10B981',
+  peach: {
+    primary: '#FB7185',
+    dark: '#9F1239',
+    accent: '#38BDF8',
     soft: '#FECDD3',
-    surface: '#FFF1F2',
+    surface: '#FFF5F6',
     white: '#FFFFFF',
+    sidebarBg: '#FFF5F6',
+    sidebarText: '#BE123C',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#FB7185',
+    headerBg: '#FFFFFF',
+    mainBg: '#FFF5F6',
+    cardBg: '#FFFFFF',
+    border: '#FECDD3',
+    textPrimary: '#4C0519',
+    textSecondary: '#BE123C',
+    isLight: true,
+  },
+  lavender: {
+    primary: '#A855F7',
+    dark: '#581C87',
+    accent: '#34D399',
+    soft: '#E9D5FF',
+    surface: '#FAF5FF',
+    white: '#FFFFFF',
+    sidebarBg: '#FAF5FF',
+    sidebarText: '#6B21A8',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#A855F7',
+    headerBg: '#FFFFFF',
+    mainBg: '#FAF5FF',
+    cardBg: '#FFFFFF',
+    border: '#E9D5FF',
+    textPrimary: '#3B0764',
+    textSecondary: '#6B21A8',
+    isLight: true,
+  },
+  gold: {
+    primary: '#D97706',
+    dark: '#78350F',
+    accent: '#0EA5E9',
+    soft: '#FDE68A',
+    surface: '#FFFDF0',
+    white: '#FFFFFF',
+    sidebarBg: '#FFFDF0',
+    sidebarText: '#92400E',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#D97706',
+    headerBg: '#FFFFFF',
+    mainBg: '#FFFDF0',
+    cardBg: '#FFFFFF',
+    border: '#FDE68A',
+    textPrimary: '#451A03',
+    textSecondary: '#92400E',
+    isLight: true,
+  },
+  teal: {
+    primary: '#0D9488',
+    dark: '#134E4A',
+    accent: '#F59E0B',
+    soft: '#CCFBF1',
+    surface: '#F0FDFA',
+    white: '#FFFFFF',
+    sidebarBg: '#F0FDFA',
+    sidebarText: '#0F766E',
+    sidebarActiveBg: '#FFFFFF',
+    sidebarActiveText: '#0D9488',
+    headerBg: '#FFFFFF',
+    mainBg: '#F0FDFA',
+    cardBg: '#FFFFFF',
+    border: '#CCFBF1',
+    textPrimary: '#042F2E',
+    textSecondary: '#0F766E',
+    isLight: true,
   },
 };
 
@@ -66,9 +179,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<ThemeType>(() => {
     try {
       const stored = localStorage.getItem('app_theme');
-      return (stored as ThemeType) || 'indigo';
+      return (stored as ThemeType) || 'sky';
     } catch {
-      return 'indigo';
+      return 'sky';
     }
   });
 

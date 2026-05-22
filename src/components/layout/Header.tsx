@@ -1,5 +1,6 @@
 import React from 'react';
 import AICommandBar from '../ui/AICommandBar';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Props {
   onToggleSidebar: () => void;
@@ -9,14 +10,19 @@ interface Props {
 }
 
 const Header: React.FC<Props> = ({ activeView, onViewChange }) => {
-  return (
-    <header className="relative z-[100] min-h-[110px] bg-white border-b border-slate-200 px-8 pt-6 pb-4 flex items-start sticky top-0">
+  const { brand } = useTheme();
 
+  return (
+    <header
+      className="relative z-[100] min-h-[110px] px-8 pt-6 pb-4 flex items-start sticky top-0 transition-colors duration-300"
+      style={{
+        backgroundColor: brand.headerBg,
+        borderBottom: `1px solid ${brand.border}`,
+      }}
+    >
       <div className="flex-grow w-full">
         <AICommandBar activeView={activeView} onViewChange={onViewChange} />
       </div>
-
-
     </header>
   );
 };
