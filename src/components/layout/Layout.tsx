@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { motion, AnimatePresence } from 'framer-motion';
+import AIInlinePanel from '../ui/AIInlinePanel';
 
 interface Props {
   children: React.ReactNode;
   activeView: string;
   onViewChange: (view: string) => void;
+  onLogout: () => void;
 }
 
-const Layout: React.FC<Props> = ({ children, activeView, onViewChange }) => {
+const Layout: React.FC<Props> = ({ children, activeView, onViewChange, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   React.useEffect(() => {
@@ -24,9 +26,10 @@ const Layout: React.FC<Props> = ({ children, activeView, onViewChange }) => {
         onViewChange={onViewChange} 
         isCollapsed={isCollapsed}
         onToggleSidebar={() => setIsCollapsed(!isCollapsed)}
+        onLogout={onLogout}
       />
       <div className="flex-grow flex flex-col min-w-0">
-        <Header onToggleSidebar={() => setIsCollapsed(!isCollapsed)} isSidebarOpen={!isCollapsed} />
+        <Header onToggleSidebar={() => setIsCollapsed(!isCollapsed)} isSidebarOpen={!isCollapsed} activeView={activeView} onViewChange={onViewChange} />
         <main className="flex-grow relative overflow-y-auto bg-slate-50/50">
           <AnimatePresence mode="wait">
             <motion.div
@@ -41,6 +44,7 @@ const Layout: React.FC<Props> = ({ children, activeView, onViewChange }) => {
             </motion.div>
           </AnimatePresence>
         </main>
+        <AIInlinePanel />
       </div>
     </div>
   );

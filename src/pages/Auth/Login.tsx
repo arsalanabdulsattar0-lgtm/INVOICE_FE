@@ -1,22 +1,50 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Lock, Mail, ArrowRight, User, Building } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/FormControls';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Props {
   onLogin: () => void;
 }
 
 const Login: React.FC<Props> = ({ onLogin }) => {
+  const { brand } = useTheme();
+  
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('admin@invoiceflow.com');
   const [password, setPassword] = useState('password123');
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSignUp) {
+      if (!name || !email || !password) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+      alert(`Account created successfully for ${name} (${company || 'Personal'})!`);
+    }
+    onLogin();
+  };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Decor */}
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500"
+      style={{ backgroundColor: brand.surface }}
+    >
+      {/* Background Decor with dynamic theme colors */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] animate-pulse delay-1000" />
+        <div 
+          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[120px] animate-pulse" 
+          style={{ background: `${brand.primary}12` }}
+        />
+        <div 
+          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-[120px] animate-pulse delay-1000" 
+          style={{ background: `${brand.accent || brand.primary}12` }}
+        />
       </div>
 
       <motion.div 
@@ -25,45 +53,163 @@ const Login: React.FC<Props> = ({ onLogin }) => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="bg-slate-900/50 backdrop-blur-2xl border border-slate-800 p-10 rounded-[2.5rem] shadow-2xl">
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/20">
+        <div 
+          className="bg-white/80 backdrop-blur-2xl border p-10 rounded-[2.5rem] shadow-2xl transition-all duration-300"
+          style={{ 
+            borderColor: brand.primary + '15',
+            boxShadow: `0 20px 40px -15px ${brand.primary}15`
+          }}
+        >
+          
+          {/* Logo / Brand Header */}
+          <div className="text-center mb-8">
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transition-all duration-300"
+              style={{ 
+                background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent || brand.primary})`,
+                boxShadow: `0 10px 20px ${brand.primary}30`
+              }}
+            >
               <span className="text-white font-bold text-3xl">I</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Welcome Back</h1>
-            <p className="text-slate-400 text-sm font-medium">Log in to manage your professional invoices</p>
+            <h1 
+              className="text-3xl font-extrabold tracking-tight mb-2 transition-colors duration-300"
+              style={{ color: brand.dark }}
+            >
+              {isSignUp ? 'Get Started' : 'Welcome Back'}
+            </h1>
+            <p className="text-slate-400 text-sm font-medium">
+              {isSignUp ? 'Create your account to start invoicing' : 'Log in to manage your professional invoices'}
+            </p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); onLogin(); }}>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
-              <div className="relative group">
-                <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                <input 
-                  type="email" 
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+          {/* Switch Tab (Login vs SignUp) */}
+          <div 
+            className="flex p-1.5 rounded-2xl mb-8 relative border transition-all"
+            style={{ 
+              backgroundColor: brand.surface, 
+              borderColor: brand.dark + '0c' 
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(false);
+                setEmail('admin@invoiceflow.com');
+                setPassword('password123');
+              }}
+              className="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all relative z-10"
+              style={{ color: !isSignUp ? '#fff' : brand.dark + 'aa' }}
+            >
+              {!isSignUp && (
+                <motion.div
+                  layoutId="activeAuthTab"
+                  className="absolute inset-0 rounded-lg"
+                  style={{ background: brand.primary }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
-                <a href="#" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">Forgot?</a>
-              </div>
-              <div className="relative group">
-                <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                <input 
-                  type="password" 
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+              )}
+              <span className="relative z-10">Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(true);
+                setEmail('');
+                setPassword('');
+              }}
+              className="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all relative z-10"
+              style={{ color: isSignUp ? '#fff' : brand.dark + 'aa' }}
+            >
+              {isSignUp && (
+                <motion.div
+                  layoutId="activeAuthTab"
+                  className="absolute inset-0 rounded-lg"
+                  style={{ background: brand.primary }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
-              </div>
-            </div>
+              )}
+              <span className="relative z-10">Create Account</span>
+            </button>
+          </div>
 
+          {/* Form */}
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <AnimatePresence mode="wait">
+              {isSignUp ? (
+                <motion.div
+                  key="signup-fields"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-5"
+                >
+                  {/* Name field */}
+                  <Input
+                    label="Full Name *"
+                    icon={User}
+                    type="text"
+                    required
+                    placeholder="John Doe"
+                    size="lg"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+
+                  {/* Company/Business field */}
+                  <Input
+                    label="Company Name"
+                    icon={Building}
+                    type="text"
+                    placeholder="Acme Corp"
+                    size="lg"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                  />
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+
+            {/* Email Address field */}
+            <Input
+              label="Email Address *"
+              icon={Mail}
+              type="email"
+              required
+              placeholder="admin@invoiceflow.com"
+              size="lg"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            {/* Password field */}
+            <Input
+              label={
+                <div className="flex justify-between items-center w-full">
+                  <span>Password *</span>
+                  {!isSignUp && (
+                    <a 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); alert('Password reset link sent (Simulation).'); }}
+                      className="text-[10px] font-bold hover:underline transition-colors ml-auto"
+                      style={{ color: brand.primary }}
+                    >
+                      Forgot?
+                    </a>
+                  )}
+                </div>
+              }
+              icon={Lock}
+              type="password"
+              required
+              placeholder="••••••••"
+              size="lg"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            {/* Action button */}
             <Button 
               type="submit"
               variant="primary"
@@ -71,15 +217,39 @@ const Login: React.FC<Props> = ({ onLogin }) => {
               fullWidth
               icon={ArrowRight}
               iconPosition="right"
-              className="bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20 py-4 rounded-2xl mt-4"
+              style={{ backgroundColor: brand.primary, boxShadow: `0 8px 24px -5px ${brand.primary}40` }}
+              className="py-3.5 rounded-2xl mt-4 hover:opacity-95 transition-opacity"
             >
-              Sign In to Flow
+              {isSignUp ? 'Create Account' : 'Sign In to Flow'}
             </Button>
           </form>
 
-          <div className="mt-10 text-center">
-            <p className="text-slate-500 text-sm">
-              Don't have an account? <a href="#" className="text-white font-bold hover:text-indigo-400 transition-colors underline underline-offset-4 decoration-slate-700">Get Started</a>
+          {/* Toggle label at the bottom */}
+          <div className="mt-8 text-center">
+            <p className="text-slate-500 text-xs">
+              {isSignUp ? (
+                <>
+                  Already have an account?{' '}
+                  <button 
+                    onClick={() => setIsSignUp(false)}
+                    className="font-bold hover:underline transition-all"
+                    style={{ color: brand.primary }}
+                  >
+                    Sign In
+                  </button>
+                </>
+              ) : (
+                <>
+                  Don't have an account?{' '}
+                  <button 
+                    onClick={() => setIsSignUp(true)}
+                    className="font-bold hover:underline transition-all"
+                    style={{ color: brand.primary }}
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>

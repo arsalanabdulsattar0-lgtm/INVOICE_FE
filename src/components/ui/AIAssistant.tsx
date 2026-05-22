@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Message {
   id: string;
@@ -11,6 +12,7 @@ interface Message {
 }
 
 const AIAssistant: React.FC = () => {
+  const { brand } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -22,6 +24,7 @@ const AIAssistant: React.FC = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [inputFocus, setInputFocus] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -31,6 +34,26 @@ const AIAssistant: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  // ── Listen for AI command detail events ──
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = e.detail?.query;
+      if (q) {
+        setIsOpen(true);
+        setInput(q);
+        // Trigger send after opening
+        setTimeout(() => {
+          handleSend();
+        }, 0);
+      }
+    };
+    window.addEventListener('ai-command-detail', handler as EventListener);
+    return () => {
+      window.removeEventListener('ai-command-detail', handler as EventListener);
+    };
+  }, []);
+
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -79,7 +102,7 @@ const AIAssistant: React.FC = () => {
             style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
           >
             {/* Header */}
-            <div className="p-4 bg-[#2759CD] text-white flex items-center justify-between">
+            <div className="p-4 text-white flex items-center justify-between" style={{ backgroundColor: brand.primary }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
                   <Bot className="w-6 h-6 text-white" />
@@ -95,7 +118,7 @@ const AIAssistant: React.FC = () => {
               <Button
                 variant="ghost" size="xs" icon={X}
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/10 rounded-xl text-white border-none"
+                className="p-2 hover:bg-white/10 rounded-xl text-white border-none cursor-pointer"
               />
             </div>
 
@@ -109,9 +132,10 @@ const AIAssistant: React.FC = () => {
                   <div
                     className={`max-w-[80%] p-3 rounded-2xl text-sm ${
                       msg.sender === 'user'
-                        ? 'bg-[#2759CD] text-white rounded-tr-none'
+                        ? 'text-white rounded-tr-none'
                         : 'bg-slate-100 text-slate-700 rounded-tl-none'
                     }`}
+                    style={msg.sender === 'user' ? { backgroundColor: brand.primary } : {}}
                   >
                     {msg.text}
                     <div
@@ -145,13 +169,20 @@ const AIAssistant: React.FC = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2759CD]/20 focus:border-[#2759CD] transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none transition-all"
+                  style={{
+                    borderColor: inputFocus ? brand.primary : undefined,
+                    boxShadow: inputFocus ? `0 0 0 2px ${brand.primary}22` : undefined
+                  }}
+                  onFocus={() => setInputFocus(true)}
+                  onBlur={() => setInputFocus(false)}
                 />
                 <Button
                   variant="primary" size="xs" icon={Send}
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="absolute right-2 p-2 bg-[#2759CD] hover:bg-[#1e44a1]"
+                  className="absolute right-2 p-2 cursor-pointer"
+                  style={{ backgroundColor: brand.primary }}
                 />
               </div>
               <p className="text-[9px] text-center text-slate-400 mt-2 font-medium">
@@ -167,12 +198,15 @@ const AIAssistant: React.FC = () => {
         <Button
           variant="primary"
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-2xl p-0 shadow-xl bg-[#2759CD] hover:bg-[#1e44a1]"
-          style={{ boxShadow: '0 10px 25px -5px rgba(39, 89, 205, 0.4)' }}
+          className="w-14 h-14 rounded-2xl p-0 shadow-xl cursor-pointer"
+          style={{ 
+            backgroundColor: brand.primary,
+            boxShadow: `0 10px 25px -5px ${brand.primary}66`
+          }}
         >
           <div className="relative flex items-center justify-center w-full h-full">
             <MessageSquare className="w-6 h-6 text-white" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#2759CD]" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2" style={{ borderColor: brand.primary }} />
           </div>
         </Button>
       )}

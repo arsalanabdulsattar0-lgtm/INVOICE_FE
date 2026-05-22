@@ -7,27 +7,33 @@ import {
   Settings, 
   HelpCircle, 
   LogOut,
-  PlusCircle,
   Zap,
-  Menu
+  Menu,
+  Sparkles,
+  ChevronDown,
+  Box
 } from 'lucide-react';
 interface Props {
   activeView: string;
   onViewChange: (view: string) => void;
   isCollapsed: boolean;
   onToggleSidebar: () => void;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onToggleSidebar }) => {
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'invoices', label: 'Invoices', icon: FileText },
-    { id: 'add-invoice', label: 'Create New', icon: PlusCircle },
-    { id: 'add-invoice-v2', label: 'Create V2', icon: Zap },
-    { id: 'add-invoice-v3', label: 'Create V3', icon: Zap },
-    { id: 'add-invoice-v4', label: 'Create V4', icon: Zap },
-    { id: 'clients', label: 'Clients', icon: Users },
-  ];
+const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onToggleSidebar, onLogout }) => {
+    const handleMenuClick = (id: string) => {
+      onViewChange(id);
+    };
+
+    const menuItems = [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'dashboard1', label: 'Dashboard 1', icon: Sparkles },
+      { id: 'invoices', label: 'Invoices', icon: FileText },
+      { id: 'add-invoice-v4', label: 'Create V4', icon: Zap },
+      { id: 'clients', label: 'Clients', icon: Users },
+      { id: 'products', label: 'Products', icon: Box },
+    ];
 
   const bottomItems = [
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -66,11 +72,11 @@ const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onTog
         )}
       </div>
 
-      <nav className={`flex-grow ${isCollapsed ? 'px-2' : 'px-3'} space-y-1.5 py-4`}>
+      <nav className={`flex-grow ${isCollapsed ? 'px-2' : 'px-3'} space-y-1.5 py-4 overflow-y-auto custom-scrollbar`}>
         {menuItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onViewChange(item.id)}
+            onClick={() => handleMenuClick(item.id)}
             className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-11' : 'gap-2.5 px-4 py-2.5'} rounded-xl text-[13px] font-medium transition-all relative ${
               activeView === item.id 
                 ? 'text-indigo-600' 
@@ -104,10 +110,31 @@ const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onTog
           </button>
         ))}
         
-        <button className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-11' : 'gap-2.5 px-4 py-2.5'} rounded-xl text-[13px] font-medium text-red-500 hover:bg-red-50 transition-all`}>
+        <button 
+          onClick={onLogout}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-11' : 'gap-2.5 px-4 py-2.5'} rounded-xl text-[13px] font-medium text-red-500 hover:bg-red-50 transition-all`}
+        >
           <LogOut className={`${isCollapsed ? 'w-6 h-6' : 'w-4 h-4'}`} />
           {!isCollapsed && <span>Logout</span>}
         </button>
+
+        {/* PROFILE CARD */}
+        <div className={`mt-4 pt-4 border-t border-slate-100`}>
+          <button className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-2'} group cursor-pointer`}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-100 shrink-0">
+                JD
+              </div>
+              {!isCollapsed && (
+                <div className="text-left">
+                  <p className="text-sm font-bold text-slate-900 leading-tight">John Doe</p>
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Admin Account</p>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && <ChevronDown className="w-4 h-4 text-slate-400 group-hover:translate-y-0.5 transition-transform shrink-0" />}
+          </button>
+        </div>
       </div>
     </motion.aside>
   );

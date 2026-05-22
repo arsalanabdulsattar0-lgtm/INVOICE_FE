@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import type { InvoiceData } from './types';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
-import InvoiceEditor from './pages/Invoices/InvoiceEditor';
-import InvoiceEditorV2 from './pages/Invoices/InvoiceEditorV2';
-import InvoiceEditorV3 from './pages/Invoices/InvoiceEditorV3';
+import Dashboard1 from './pages/Dashboard/Dashboard1';
+// Removed missing InvoiceEditor imports (components now handled via AIInlinePanel)
 import InvoiceEditorV4 from './pages/Invoices/InvoiceEditorV4';
 import InvoiceList, { initialInvoices } from './pages/Invoices/InvoiceList';
 import type { Invoice } from './pages/Invoices/InvoiceList';
@@ -14,15 +13,28 @@ import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
 import AIAssistant from './components/ui/AIAssistant';
 
-type View = 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'settings' | 'help';
+import ProductList from './pages/Products/ProductList';
+import InlineProductForm from './components/ui/InlineProductForm';
+
+type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'products' | 'settings' | 'help';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeView, setActiveView] = useState<View>('add-invoice');
+  const [activeView, setActiveView] = useState<View>('dashboard');
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [productFormInitialData, setProductFormInitialData] = useState<any>(undefined);
   const [invoiceList, setInvoiceList] = useState<Invoice[]>(() => {
     try {
       const stored = localStorage.getItem('invoice_list');
-      return stored ? (JSON.parse(stored) as Invoice[]) : initialInvoices;
+      if (stored) {
+        const parsed = JSON.parse(stored) as Invoice[];
+        // If it's the old default list (length <= 8), reset to the new 30 initialInvoices
+        if (parsed.length <= 8) {
+          return initialInvoices;
+        }
+        return parsed;
+      }
+      return initialInvoices;
     } catch {
       return initialInvoices;
     }
@@ -32,6 +44,15 @@ function App() {
   useEffect(() => {
     try { localStorage.setItem('invoice_list', JSON.stringify(invoiceList)); } catch { /* ignore */ }
   }, [invoiceList]);
+
+  useEffect(() => {
+    const handleOpenProductForm = (e: any) => {
+      setProductFormInitialData(e.detail?.product);
+      setIsProductFormOpen(true);
+    };
+    window.addEventListener('open-product-form', handleOpenProductForm);
+    return () => window.removeEventListener('open-product-form', handleOpenProductForm);
+  }, []);
 
   const generatedItems = Array.from({ length: 30 }, (_, i) => ({
     id: `gen-${i + 1}`,
@@ -101,6 +122,8 @@ function App() {
     setPrintInvoiceData(inv);
     setTimeout(() => {
       window.print();
+      setPrintInvoiceData(null);
+      setPrintInvoiceFullData(null);
     }, 150);
   };
 
@@ -153,7 +176,49 @@ function App() {
         setInvoice(JSON.parse(stored) as InvoiceData);
         setActiveView('add-invoice-v4');
       } else {
-        alert('Full invoice data not found!');
+        const inv = invoiceList.find(i => i.id === id);
+        if (inv) {
+          const fallback: InvoiceData = {
+            invoiceNumber: inv.id,
+            date: inv.issueDate,
+            dueDate: inv.dueDate,
+            senderName: 'Antigravity Creative Studio',
+            senderAddress: '452 Innovation Blvd, San Francisco, CA 94107',
+            clientName: inv.client,
+            clientAddress: 'Enterprise Client Account',
+            subject: 'Services Rendered',
+            reference: '',
+            productCode: '',
+            remarks: '',
+            type: inv.type || 'Standard',
+            items: [
+              {
+                id: '1',
+                productCode: 'BC-001',
+                description: `${inv.type || 'Standard'} Services & Deliverables`,
+                unit: 'Job',
+                unitDetails: '',
+                quantity: 1,
+                price: inv.rawAmount || 0,
+                discount: 0,
+                tax: 0,
+                furtherTax: 0
+              }
+            ],
+            taxRate: 0,
+            discountPercentage: 0,
+            discountAmount: 0,
+            shippingCharges: 0,
+            roundOff: 0,
+            receivedAmount: 0,
+            bankAccount: '',
+            notes: `Please include the invoice number ${inv.id} in your wire transfer reference.`
+          };
+          setInvoice(fallback);
+          setActiveView('add-invoice-v4');
+        } else {
+          alert('Invoice not found!');
+        }
       }
     } catch {
       alert('Failed to load invoice data!');
@@ -163,19 +228,26 @@ function App() {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard />;
-      case 'add-invoice':
-        return <InvoiceEditor data={invoice} onChange={setInvoice} />;
-      case 'add-invoice-v2':
-        return <InvoiceEditorV2 data={invoice} onChange={setInvoice} />;
-      case 'add-invoice-v3':
-        return <InvoiceEditorV3 data={invoice} onChange={setInvoice} />;
-      case 'add-invoice-v4':
-        return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
+        return <Dashboard invoiceItems={invoiceList} />;
+      case 'dashboard1':
+        return <Dashboard1 invoiceItems={invoiceList} onViewChange={(v) => setActiveView(v as View)} />;
+        case 'add-invoice':
+          return <div>Invoice creation is handled via AI Inline Panel.</div>;
+        case 'add-invoice-v2':
+          return <div>Invoice creation v2 handled via AI Inline Panel.</div>;
+        case 'add-invoice-v3':
+          return <div>Invoice creation v3 handled via AI Inline Panel.</div>;
+        case 'add-invoice-v4':
+          return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
       case 'invoices':
         return <InvoiceList invoiceItems={invoiceList} setInvoiceItems={setInvoiceList} onViewChange={(v) => setActiveView(v as View)} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
       case 'clients':
         return <ClientList />;
+      case 'products':
+        return <ProductList onAddProductClick={() => {
+          setProductFormInitialData(undefined);
+          setIsProductFormOpen(true);
+        }} />;
       case 'settings':
         return <Settings />;
       case 'help':
@@ -187,10 +259,16 @@ function App() {
 
   return (
     <>
-      <Layout activeView={activeView} onViewChange={(v) => setActiveView(v as View)}>
+      <Layout activeView={activeView} onViewChange={(v) => setActiveView(v as View)} onLogout={() => setIsLoggedIn(false)}>
         {renderView()}
         <AIAssistant />
       </Layout>
+
+      <InlineProductForm 
+        isOpen={isProductFormOpen} 
+        onClose={() => setIsProductFormOpen(false)} 
+        initialData={productFormInitialData} 
+      />
 
       {/* Hidden Printable Invoice Area */}
       {printInvoiceData && (
@@ -215,6 +293,11 @@ function App() {
                 margin: 0 !important;
                 box-shadow: none !important;
                 border: none !important;
+              }
+            }
+            @media screen {
+              #printable-invoice-container {
+                display: none !important;
               }
             }
           `}} />

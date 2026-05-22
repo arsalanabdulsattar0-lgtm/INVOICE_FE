@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronDown, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ScrollAreaProps {
   children: React.ReactNode;
@@ -34,18 +35,49 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   error?: string;
   variant?: 'default' | 'compact' | 'transparent';
   suffix?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant = 'default', suffix, className = '', ...props }) => {
+export const Input: React.FC<InputProps> = ({ 
+  label, 
+  icon: Icon, 
+  error, 
+  variant = 'default', 
+  suffix, 
+  size = 'sm', 
+  className = '', 
+  style, 
+  ...props 
+}) => {
+  const { brand } = useTheme();
+  const [isFocused, setIsFocused] = useState(false);
   const isTransparent = variant === 'transparent';
 
-  const baseClasses = isTransparent
-    ? "w-full bg-transparent border-none text-[11px] font-bold outline-none placeholder:text-slate-200 focus:border-[#2759CD]"
-    : variant === 'compact'
-      ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg h-7 px-2 py-0 text-[11px] font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all"
-      : "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl h-7 pr-4 py-0 text-sm font-bold text-[#304166] placeholder:text-slate-300 focus:border-[#2759CD] outline-none transition-all";
+  let baseClasses = "";
+  if (isTransparent) {
+    baseClasses = "w-full bg-transparent border-none text-[11px] font-bold outline-none placeholder:text-slate-200";
+  } else {
+    const sizeClasses = {
+      sm: variant === 'compact' 
+        ? "h-7 px-2 py-0 text-[11px] rounded-lg" 
+        : "h-7 px-4 py-0 text-sm rounded-xl",
+      md: "h-9 px-4 py-1.5 text-sm rounded-xl",
+      lg: "h-12 px-5 py-3 text-sm rounded-2xl",
+    };
+    baseClasses = `w-full bg-[#EFF5FC] border border-[#304166]/10 font-bold text-[#304166] placeholder:text-slate-300 outline-none transition-all ${sizeClasses[size]}`;
+  }
 
-  const paddingLeft = !isTransparent && Icon ? 'pl-11' : (!isTransparent && variant === 'default' ? 'px-4' : '');
+  const paddingLeft = !isTransparent && Icon ? 'pl-11' : (!isTransparent ? (size === 'lg' ? 'px-5' : 'px-4') : '');
+
+  // Dynamic focus styles matching current theme
+  const focusStyle = !isTransparent && isFocused
+    ? { borderColor: brand.primary, boxShadow: `0 0 0 2px ${brand.primary}20`, backgroundColor: '#FFFFFF' }
+    : {};
+
+  const inputStyle = {
+    ...style,
+    ...focusStyle,
+  };
 
   return (
     <div className={`w-full ${!isTransparent ? 'space-y-1 group' : ''}`}>
@@ -56,10 +88,22 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant 
       )}
       <div className="relative">
         {Icon && (
-          <Icon className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+          <Icon 
+            className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors" 
+            style={isFocused ? { color: brand.primary } : {}}
+          />
         )}
         <input
           className={`${baseClasses} ${paddingLeft} ${suffix ? 'pr-8' : ''} ${error ? 'border-red-500 focus:ring-red-500/5' : ''} ${className}`}
+          style={inputStyle}
+          onFocus={(e) => {
+            setIsFocused(true);
+            if (props.onFocus) props.onFocus(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            if (props.onBlur) props.onBlur(e);
+          }}
           {...props}
         />
         {suffix && (
@@ -73,19 +117,35 @@ export const Input: React.FC<InputProps> = ({ label, icon: Icon, error, variant 
   );
 };
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
-  label?: React.ReactNode;
-  options: { value: string; label: string }[];
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  options: SelectOption[];
   error?: string;
   variant?: 'default' | 'compact';
 }
 
-export const Select: React.FC<SelectProps> = ({ label, options, error, variant = 'default', className = '', ...props }) => {
+export const Select: React.FC<SelectProps> = ({ label, options, error, variant = 'default', className = '', style, ...props }) => {
+  const { brand } = useTheme();
+  const [isFocused, setIsFocused] = useState(false);
   const isCompact = variant === 'compact';
 
   const baseClasses = isCompact
-    ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg h-7 px-3 text-[11px] font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all"
-    : "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl h-7 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer focus:border-[#2759CD] outline-none transition-all";
+    ? "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-lg h-7 px-3 text-[11px] font-bold text-[#304166] appearance-none cursor-pointer outline-none transition-all"
+    : "w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl h-7 px-4 text-sm font-bold text-[#304166] appearance-none cursor-pointer outline-none transition-all";
+
+  const focusStyle = isFocused
+    ? { borderColor: brand.primary, boxShadow: `0 0 0 2px ${brand.primary}20`, backgroundColor: '#FFFFFF' }
+    : {};
+
+  const selectStyle = {
+    ...style,
+    ...focusStyle,
+  };
 
   return (
     <div className={`w-full ${!isCompact ? 'space-y-1' : 'space-y-1'} group`}>
@@ -97,9 +157,18 @@ export const Select: React.FC<SelectProps> = ({ label, options, error, variant =
       <div className="relative">
         <select
           className={`${baseClasses} ${error ? 'border-red-500 focus:ring-red-500/5' : ''} ${className}`}
+          style={selectStyle}
+          onFocus={(e) => {
+            setIsFocused(true);
+            if (props.onFocus) props.onFocus(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            if (props.onBlur) props.onBlur(e);
+          }}
           {...props}
         >
-          {options.map((opt) => (
+          {options.map((opt: SelectOption) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -120,7 +189,19 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string;
 }
 
-export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = '', ...props }) => {
+export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = '', style, ...props }) => {
+  const { brand } = useTheme();
+  const [isFocused, setIsFocused] = useState(false);
+
+  const focusStyle = isFocused
+    ? { borderColor: brand.primary, boxShadow: `0 0 0 2px ${brand.primary}20`, backgroundColor: '#FFFFFF' }
+    : {};
+
+  const textAreaStyle = {
+    ...style,
+    ...focusStyle,
+  };
+
   return (
     <div className="space-y-1 w-full group">
       {label && (
@@ -132,10 +213,19 @@ export const TextArea: React.FC<TextAreaProps> = ({ label, error, className = ''
         className={`
           w-full bg-[#EFF5FC] border border-[#304166]/10 rounded-xl py-2 px-5 
           text-[13px] font-bold text-[#304166] placeholder:text-slate-300 
-          focus:border-[#2759CD] outline-none transition-all resize-none
+          outline-none transition-all resize-none
           ${error ? 'border-red-500 focus:ring-red-500/5' : ''}
           ${className}
         `}
+        style={textAreaStyle}
+        onFocus={(e) => {
+          setIsFocused(true);
+          if (props.onFocus) props.onFocus(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          if (props.onBlur) props.onBlur(e);
+        }}
         {...props}
       />
     </div>
@@ -159,31 +249,32 @@ interface ComboBoxProps {
 export const ComboBox: React.FC<ComboBoxProps> = ({
   label, value, onChange, options, placeholder = "Search...", variant = 'default', icon: Icon = Search, error, className = '', autoFocus, onQueryChange
 }) => {
+  const { brand } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
+ 
   const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const [openUpwards, setOpenUpwards] = useState(false);
-
+ 
   const isCompact = variant === 'compact';
   const selectedOption = options.find(opt => opt.id === value);
-
+ 
   // When closed, we show the selected option name. When open, we show the search query.
   const displayValue = isOpen ? query : (selectedOption?.name || "");
-
+ 
   const filtered = options.filter(opt =>
     opt.name.toLowerCase().includes(query.toLowerCase()) ||
     opt.subtitle?.toLowerCase().includes(query.toLowerCase())
   );
-
+ 
   useEffect(() => {
     setMounted(true);
   }, []);
-
+ 
   const updateCoords = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -191,7 +282,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
       const shouldOpenUpwards = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
-
+ 
       setOpenUpwards(shouldOpenUpwards);
       setCoords({
         top: shouldOpenUpwards
@@ -202,7 +293,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       });
     }
   };
-
+ 
   useEffect(() => {
     if (isOpen) {
       updateCoords();
@@ -215,19 +306,19 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       };
     }
   }, [isOpen]);
-
+ 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
       inputRef.current.focus();
       setIsOpen(true);
     }
   }, [autoFocus]);
-
+ 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const clickedContainer = containerRef.current && containerRef.current.contains(e.target as Node);
       const clickedDropdown = dropdownRef.current && dropdownRef.current.contains(e.target as Node);
-
+ 
       if (!clickedContainer && !clickedDropdown) {
         setIsOpen(false);
         setQuery("");
@@ -237,7 +328,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
+ 
   return (
     <div className="w-full flex flex-col gap-1" ref={containerRef}>
       {label && (
@@ -245,21 +336,25 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
           {label}
         </label>
       )}
-
+ 
       <div className="relative">
         <div
           className={`
             relative flex items-center transition-all border overflow-hidden
             ${isCompact ? 'rounded-lg h-7' : 'rounded-md h-8'}
-            ${isOpen ? 'border-[#2759CD] shadow-[0_0_0_4px_rgba(39,89,205,0.05)] bg-white' : 'border-[#304166]/10 bg-[#EFF5FC]'}
             ${error ? 'border-red-500' : ''}
             ${className}
           `}
+          style={
+            isOpen 
+              ? { borderColor: brand.primary, boxShadow: `0 0 0 4px ${brand.primary}10`, backgroundColor: '#FFFFFF' }
+              : { borderColor: brand.dark + '1a', backgroundColor: '#EFF5FC' }
+          }
         >
           <div className="shrink-0 pl-3 flex items-center justify-center">
-            <Icon className={`text-slate-300 ${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+            <Icon className={`text-slate-300 ${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} style={isOpen ? { color: brand.primary } : {}} />
           </div>
-
+ 
           <input
             ref={inputRef}
             type="text"
@@ -278,14 +373,15 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
               if (!isOpen) setIsOpen(true);
             }}
           />
-
+ 
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 flex items-center">
             <ChevronDown
               className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} ${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+              style={isOpen ? { color: brand.primary } : {}}
             />
           </div>
         </div>
-
+ 
         {mounted && createPortal(
           <AnimatePresence>
             {isOpen && query.length >= 3 && (
@@ -313,20 +409,21 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                           setIsOpen(false);
                           setQuery("");
                         }}
-                        className={`
-                          flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all
-                          ${value === opt.id ? 'bg-indigo-50' : 'hover:bg-slate-50'}
-                        `}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all hover:bg-slate-50"
+                        style={value === opt.id ? { backgroundColor: brand.soft + '25' } : {}}
                       >
                         <div>
-                          <p className={`font-bold ${value === opt.id ? 'text-indigo-600' : 'text-[#304166]'} text-[12px]`}>
+                          <p 
+                            className="font-bold text-[12px]"
+                            style={value === opt.id ? { color: brand.primary } : { color: '#304166' }}
+                          >
                             {opt.name}
                           </p>
                           {opt.subtitle && (
                             <p className="text-[10px] font-medium text-slate-400 mt-0.5">{opt.subtitle}</p>
                           )}
                         </div>
-                        {value === opt.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                        {value === opt.id && <Check className="w-3.5 h-3.5" style={{ color: brand.primary }} />}
                       </div>
                     ))
                   ) : (
@@ -341,7 +438,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
           document.body
         )}
       </div>
-
+ 
       {error && <p className="text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </div>
   );
