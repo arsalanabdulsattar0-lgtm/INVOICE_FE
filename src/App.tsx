@@ -1,20 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import type { InvoiceData } from './types';
 import Layout from './components/layout/Layout';
-import Dashboard from './pages/Dashboard/Dashboard';
-import Dashboard1 from './pages/Dashboard/Dashboard1';
-// Removed missing InvoiceEditor imports (components now handled via AIInlinePanel)
-import InvoiceEditorV4 from './pages/Invoices/InvoiceEditorV4';
-import InvoiceList, { initialInvoices } from './pages/Invoices/InvoiceList';
-import type { Invoice } from './pages/Invoices/InvoiceList';
-import CustomerManagement from './pages/Clients/CustomerManagement';
-import Settings from './pages/Settings/Settings';
-import Help from './pages/Help/Help';
-import Login from './pages/Auth/Login';
-import AIAssistant from './components/ui/AIAssistant';
 
-import ProductList from './pages/Products/ProductList';
-import InlineProductForm from './components/ui/InlineProductForm';
+// Lazy-loaded pages — each becomes its own async chunk
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Dashboard1 = lazy(() => import('./pages/Dashboard/Dashboard1'));
+const InvoiceEditorV4 = lazy(() => import('./pages/Invoices/InvoiceEditorV4'));
+const InvoiceListModule = lazy(() => import('./pages/Invoices/InvoiceList'));
+const CustomerManagement = lazy(() => import('./pages/Clients/CustomerManagement'));
+const Settings = lazy(() => import('./pages/Settings/Settings'));
+const Help = lazy(() => import('./pages/Help/Help'));
+const Login = lazy(() => import('./pages/Auth/Login'));
+const AIAssistant = lazy(() => import('./components/ui/AIAssistant'));
+const ProductList = lazy(() => import('./pages/Products/ProductList'));
+const InlineProductForm = lazy(() => import('./components/ui/InlineProductForm'));
+
+// Static imports for types / initial data only
+import { initialInvoices } from './pages/Invoices/invoiceTypes';
+import type { Invoice } from './pages/Invoices/invoiceTypes';
 
 type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'products' | 'settings' | 'help';
 
@@ -105,7 +108,11 @@ function App() {
   const [printInvoiceFullData, setPrintInvoiceFullData] = useState<InvoiceData | null>(null);
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    return (
+      <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f172a', color: '#94a3b8', fontFamily: 'Inter, sans-serif' }}>Loading…</div>}>
+        <Login onLogin={() => setIsLoggedIn(true)} />
+      </Suspense>
+    );
   }
 
   const handlePrintInvoice = (inv: Invoice) => {
@@ -240,7 +247,7 @@ function App() {
         case 'add-invoice-v4':
           return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
       case 'invoices':
-        return <InvoiceList invoiceItems={invoiceList} setInvoiceItems={setInvoiceList} onViewChange={(v) => setActiveView(v as View)} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
+        return <InvoiceListModule invoiceItems={invoiceList} setInvoiceItems={setInvoiceList} onViewChange={(v) => setActiveView(v as View)} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
       case 'clients':
           return <CustomerManagement />;
       case 'products':
@@ -257,10 +264,16 @@ function App() {
     }
   };
 
+  const loadingFallback = (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8', fontFamily: 'Inter, sans-serif' }}>Loading…</div>
+  );
+
   return (
-    <>
+    <Suspense fallback={loadingFallback}>
       <Layout activeView={activeView} onViewChange={(v) => setActiveView(v as View)} onLogout={() => setIsLoggedIn(false)}>
-        {renderView()}
+        <Suspense fallback={loadingFallback}>
+          {renderView()}
+        </Suspense>
         <AIAssistant />
       </Layout>
 
@@ -412,7 +425,7 @@ function App() {
           </div>
         </>
       )}
-    </>
+    </Suspense>
   );
 }
 

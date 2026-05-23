@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
-import type { Invoice } from '../Invoices/InvoiceList';
+import type { Invoice } from '../Invoices/invoiceTypes';
 
 interface Dashboard1Props {
   invoiceItems?: Invoice[];

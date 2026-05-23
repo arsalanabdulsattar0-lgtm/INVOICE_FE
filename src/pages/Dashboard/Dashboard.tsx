@@ -7,7 +7,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  type TooltipProps,
 } from "recharts";
 
 interface InvoiceItem {
@@ -35,7 +34,12 @@ const statusStyle: Record<InvoiceItem['status'], { bg: string; text: string }> =
   Draft: { bg: "#f1f5f9", text: "#64748b" },
 };
 
-const CustomTooltip: React.FC<TooltipProps<any, string>> = ({ active, payload, label }) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
