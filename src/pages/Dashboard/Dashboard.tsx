@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  type TooltipProps,
 } from "recharts";
 
 interface InvoiceItem {
@@ -34,13 +35,13 @@ const statusStyle: Record<InvoiceItem['status'], { bg: string; text: string }> =
   Draft: { bg: "#f1f5f9", text: "#64748b" },
 };
 
-const CustomTooltip: React.FC<{ active: boolean; payload: any; label: string }> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<TooltipProps<any, string>> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#111" }}>{label}</p>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>Revenue: ${payload[0]?.value?.toLocaleString()}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Target: ${payload[1]?.value?.toLocaleString()}</p>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>Revenue: ${payload?.[0]?.value?.toLocaleString()}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Target: ${payload?.[1]?.value?.toLocaleString()}</p>
       </div>
     );
   }
@@ -230,7 +231,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                    <Tooltip content={<CustomTooltip active={false} payload={undefined} label={""} />} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2.5} fill="url(#revGrad)" dot={false} activeDot={{ r: 5, fill: "#16a34a" }} />
                     <Area type="monotone" dataKey="target" stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="4 4" fill="url(#targGrad)" dot={false} />
                   </AreaChart>

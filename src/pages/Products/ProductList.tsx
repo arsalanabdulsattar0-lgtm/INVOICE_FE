@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Plus, Search, DollarSign, Percent, Trash2, Edit2, LayoutGrid, List, Check } from 'lucide-react';
+import { Box, Plus, Search, DollarSign, Percent, Trash2, Edit2, LayoutGrid, List } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
 
