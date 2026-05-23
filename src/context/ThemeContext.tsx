@@ -175,11 +175,15 @@ interface ThemeContextProps {
 
 const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 
+const isValidTheme = (value: string | null): value is ThemeType => {
+  return value !== null && value in themes;
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>(() => {
     try {
       const stored = localStorage.getItem('app_theme');
-      return (stored as ThemeType) || 'sky';
+      return isValidTheme(stored) ? stored : 'sky';
     } catch {
       return 'sky';
     }
@@ -194,7 +198,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const brand = themes[theme];
+  const brand = themes[theme] ?? themes.sky;
 
   return (
     <ThemeContext.Provider value={{ theme, brand, setTheme }}>
