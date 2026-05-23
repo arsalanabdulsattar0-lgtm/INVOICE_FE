@@ -27,14 +27,14 @@ interface DashboardProps {
   invoiceItems?: InvoiceItem[];
 }
 
-const statusStyle = {
+const statusStyle: Record<InvoiceItem['status'], { bg: string; text: string }> = {
   Paid: { bg: "#dcfce7", text: "#15803d" },
   Pending: { bg: "#fef9c3", text: "#a16207" },
   Overdue: { bg: "#fee2e2", text: "#b91c1c" },
   Draft: { bg: "#f1f5f9", text: "#64748b" },
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<{ active: boolean; payload: any; label: string }> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
@@ -61,20 +61,20 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
       })();
 
   // 1. Compute stats dynamically
-  const outstandingInvoices = invoicesToUse.filter(inv => inv.status === 'Pending' || inv.status === 'Overdue');
-  const outstandingSum = outstandingInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const outstandingInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Pending' || inv.status === 'Overdue');
+  const outstandingSum = outstandingInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
   const outstandingCount = outstandingInvoices.length;
 
-  const paidInvoices = invoicesToUse.filter(inv => inv.status === 'Paid');
-  const paidSum = paidInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const paidInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Paid');
+  const paidSum = paidInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
   const paidCount = paidInvoices.length;
 
-  const overdueInvoices = invoicesToUse.filter(inv => inv.status === 'Overdue');
-  const overdueSum = overdueInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const overdueInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Overdue');
+  const overdueSum = overdueInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
   const overdueCount = overdueInvoices.length;
 
   const avgInvoiceVal = invoicesToUse.length > 0
-    ? invoicesToUse.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0) / invoicesToUse.length
+    ? invoicesToUse.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0) / invoicesToUse.length
     : 0;
 
   const stats = [
@@ -91,7 +91,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
     return acc;
   }, {} as { [month: string]: number });
 
-  invoicesToUse.forEach(inv => {
+  invoicesToUse.forEach((inv: InvoiceItem) => {
     if (inv.issueDate) {
       const parts = inv.issueDate.split('-');
       const mIdx = parseInt(parts[1], 10) - 1;
@@ -102,7 +102,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
     }
   });
 
-  const hasAnyRevenue = invoicesToUse.some(inv => (inv.rawAmount || 0) > 0);
+  const hasAnyRevenue = invoicesToUse.some((inv: InvoiceItem) => (inv.rawAmount || 0) > 0);
   const revenueChartData = monthsList.map((m, idx) => {
     const real = monthlyRev[m] || 0;
     // Fallback baseline curve to look visually stunning if no real data is populated yet
@@ -116,10 +116,10 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
   });
 
   // 3. Compute breakdown donut chart dynamically
-  const totalInvoiceSum = invoicesToUse.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const totalInvoiceSum = invoicesToUse.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
   const hasInvoices = invoicesToUse.length > 0;
   const displayPaidSum = hasInvoices ? paidSum : 48920;
-  const displayPendingSum = hasInvoices ? (invoicesToUse.filter(inv => inv.status === 'Pending').reduce((sum, inv) => sum + (inv.rawAmount || 0), 0)) : 9270;
+  const displayPendingSum = hasInvoices ? (invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Pending').reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0)) : 9270;
   const displayOverdueSum = hasInvoices ? overdueSum : 3210;
   const displayTotalSum = hasInvoices ? totalInvoiceSum : 61400;
 
@@ -132,13 +132,12 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
   const pendingStroke = (displayPendingPercent / 100) * circ;
   const overdueStroke = (displayOverduePercent / 100) * circ;
 
-  const paidDashOffset = 0;
   const pendingDashOffset = -paidStroke;
   const overdueDashOffset = -(paidStroke + pendingStroke);
 
   // 4. Compute top clients dynamically
   const clientTotals: { [name: string]: { name: string; amount: number; color: string } } = {};
-  invoicesToUse.forEach(inv => {
+  invoicesToUse.forEach((inv: InvoiceItem) => {
     if (!clientTotals[inv.client]) {
       clientTotals[inv.client] = {
         name: inv.client,
@@ -231,7 +230,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                    <Tooltip content={<CustomTooltip active={undefined} payload={undefined} label={undefined} />} />
+                    <Tooltip content={<CustomTooltip active={false} payload={undefined} label={""} />} />
                     <Area type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2.5} fill="url(#revGrad)" dot={false} activeDot={{ r: 5, fill: "#16a34a" }} />
                     <Area type="monotone" dataKey="target" stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="4 4" fill="url(#targGrad)" dot={false} />
                   </AreaChart>
@@ -262,13 +261,13 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentInvoices.map((inv: any, i) => (
+                  {recentInvoices.map((inv: InvoiceItem, i: number) => (
                     <tr key={inv.id} style={{ borderTop: "1px solid #f1f5f9", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                       <td style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: "#374151", fontFamily: "monospace" }}>{inv.id}</td>
                       <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 500 }}>{inv.client}</td>
-                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.issueDate || inv.date}</td>
-                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.dueDate || inv.due}</td>
-                      <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700 }}>${(inv.rawAmount || inv.amount || 0).toLocaleString()}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.issueDate}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.dueDate}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700 }}>${(inv.rawAmount || 0).toLocaleString()}</td>
                       <td style={{ padding: "10px 16px" }}>
                         <span style={{ padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusStyle[inv.status]?.bg || '#f1f5f9', color: statusStyle[inv.status]?.text || '#64748b' }}>
                           {inv.status}
@@ -323,7 +322,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {topClientsData.map((c, i) => (
+                {topClientsData.map((c) => (
                   <div key={c.name}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>

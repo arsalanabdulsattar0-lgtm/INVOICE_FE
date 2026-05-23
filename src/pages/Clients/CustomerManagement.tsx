@@ -11,7 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Check, X, Mail, Phone, LayoutGrid, List } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { Input, TextArea, ComboBox } from '../../components/ui/FormControls';
+import { Input, TextArea } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
 
 // ---------------------------------------------------------------------------
@@ -53,9 +53,7 @@ const Toggle: React.FC<{
 }> = ({ checked, onChange, label }) => {
   const { brand } = useTheme();
   const toggleClasses = `relative inline-flex flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none`;
-  const track = checked
-    ? `bg-${brand.primary.replace('#', '')} w-10 h-6`
-    : `bg-gray-300 w-10 h-6`;
+// duplicate removed
   const thumb = checked
     ? `translate-x-4`
     : `translate-x-0`;
