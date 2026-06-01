@@ -7,6 +7,7 @@ import {
   Package, Save, ArrowRight,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { Input } from './FormControls';
 
 /* ── Types ── */
 interface LineItem {
@@ -174,7 +175,7 @@ const AIInlinePanel: React.FC = () => {
       clientColor: color,
       issueDate: now,
       dueDate: form.dueDate || now,
-      amount: `$${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      amount: `Rs. ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
       rawAmount: total,
       status: 'Draft',
       payment: 'Net 30',
@@ -267,65 +268,46 @@ const AIInlinePanel: React.FC = () => {
                 {/* Row 1: Client + Subject */}
                 <div className="grid grid-cols-2 gap-4">
                   {/* Client */}
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mb-1.5">
-                      <User className="w-3 h-3" /> Client Name
-                    </label>
-                    <input
-                      value={form.client}
-                      onChange={e => setForm(p => ({ ...p, client: e.target.value }))}
-                      placeholder="e.g. BlueRitt Technologies"
-                      className="w-full h-10 px-4 rounded-xl text-[13px] font-semibold text-slate-700 placeholder:text-slate-300 outline-none border transition-all"
-                      style={{ background: '#F8FAFF', borderColor: '#e2e8f0', ...fieldGlow('client') }}
-                    />
-                  </div>
+                  <Input
+                    label={<span className="flex items-center gap-1.5"><User className="w-3 h-3" /> Client Name</span>}
+                    value={form.client}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, client: e.target.value }))}
+                    placeholder="e.g. BlueRitt Technologies"
+                    size="md"
+                    style={fieldGlow('client')}
+                  />
                   {/* Subject */}
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mb-1.5">
-                      <FileText className="w-3 h-3" /> Subject / Project
-                    </label>
-                    <input
-                      value={form.subject}
-                      onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-                      placeholder="e.g. Website Redesign Phase 1"
-                      className="w-full h-10 px-4 rounded-xl text-[13px] font-semibold text-slate-700 placeholder:text-slate-300 outline-none border transition-all"
-                      style={{ background: '#F8FAFF', borderColor: '#e2e8f0' }}
-                    />
-                  </div>
+                  <Input
+                    label={<span className="flex items-center gap-1.5"><FileText className="w-3 h-3" /> Subject / Project</span>}
+                    value={form.subject}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, subject: e.target.value }))}
+                    placeholder="e.g. Website Redesign Phase 1"
+                    size="md"
+                  />
                 </div>
 
                 {/* Row 2: Due Date + Discount */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mb-1.5">
-                      <Calendar className="w-3 h-3" /> Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={form.dueDate}
-                      onChange={e => setForm(p => ({ ...p, dueDate: e.target.value }))}
-                      className="w-full h-10 px-4 rounded-xl text-[13px] font-semibold text-slate-700 outline-none border transition-all"
-                      style={{ background: '#F8FAFF', borderColor: '#e2e8f0', ...fieldGlow('dueDate') }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mb-1.5">
-                      <Tag className="w-3 h-3" /> Discount %
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={form.discount || ''}
-                        onChange={e => setForm(p => ({ ...p, discount: Number(e.target.value) }))}
-                        placeholder="0"
-                        className="w-full h-10 pl-4 pr-10 rounded-xl text-[13px] font-semibold text-slate-700 placeholder:text-slate-300 outline-none border transition-all"
-                        style={{ background: '#F8FAFF', borderColor: '#e2e8f0', ...fieldGlow('discount') }}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">%</span>
-                    </div>
-                  </div>
+                  <Input
+                    label={<span className="flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Due Date</span>}
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, dueDate: e.target.value }))}
+                    size="md"
+                    style={fieldGlow('dueDate')}
+                  />
+                  <Input
+                    label={<span className="flex items-center gap-1.5"><Tag className="w-3 h-3" /> Discount %</span>}
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.discount || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, discount: Number(e.target.value) }))}
+                    placeholder="0"
+                    size="md"
+                    suffix="%"
+                    style={fieldGlow('discount')}
+                  />
                 </div>
 
                 {/* Line Items */}
@@ -367,7 +349,7 @@ const AIInlinePanel: React.FC = () => {
                             gridTemplateColumns: '1fr 60px 90px 60px 28px',
                             background: idx % 2 === 0 ? '#F8FAFF' : '#FFFFFF',
                             borderColor: highlightField === 'items' ? `${brand.primary}30` : '#e2e8f0',
-                            ...( highlightField === 'items' ? { boxShadow: `0 0 0 1px ${brand.primary}20` } : {}),
+                            ...(highlightField === 'items' ? { boxShadow: `0 0 0 1px ${brand.primary}20` } : {}),
                           }}
                         >
                           <input
@@ -384,14 +366,14 @@ const AIInlinePanel: React.FC = () => {
                             className="bg-transparent text-[12px] font-bold text-center text-slate-700 outline-none w-full"
                           />
                           <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">$</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">Rs.</span>
                             <input
                               type="number"
                               min="0"
                               value={item.price || ''}
                               onChange={e => updateItem(item.id, 'price', Number(e.target.value))}
                               placeholder="0.00"
-                              className="bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 pl-5 pr-2 py-1 outline-none w-full"
+                              className="bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 pl-8 pr-2 py-1 outline-none w-full"
                             />
                           </div>
                           <input
@@ -406,7 +388,7 @@ const AIInlinePanel: React.FC = () => {
                           <button
                             onClick={() => removeItem(item.id)}
                             disabled={form.items.length === 1}
-                            className="flex items-center justify-center w-6 h-6 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all disabled:opacity-30 cursor-pointer"
+                            className="flex items-center justify-center w-6 h-6 rounded-lg text-red-500 transition-all disabled:opacity-30 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -423,17 +405,17 @@ const AIInlinePanel: React.FC = () => {
                 >
                   <div className="flex justify-between text-[12px] text-slate-500 font-semibold">
                     <span>Subtotal</span>
-                    <span>${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>Rs. {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                   {form.discount > 0 && (
                     <div className="flex justify-between text-[12px] font-semibold" style={{ color: '#10B981' }}>
                       <span>Discount ({form.discount}%)</span>
-                      <span>-${discountAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span>-Rs. {discountAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                   <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between font-black text-[15px]" style={{ color: brand.primary }}>
                     <span>Total</span>
-                    <span>${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>Rs. {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>

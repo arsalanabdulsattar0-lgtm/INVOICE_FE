@@ -278,7 +278,7 @@ function executeCommand(
         prods.push({ id: crypto.randomUUID(), name: pName, price: pPrice, tax: 0, description: '' });
         localStorage.setItem('products_list', JSON.stringify(prods));
         window.dispatchEvent(new CustomEvent('ai-sync-data'));
-        return { type: 'success', icon: Box, color: '#10B981', title: `Created product "${pName}"`, subtitle: `Price set to $${pPrice}` };
+        return { type: 'success', icon: Box, color: '#10B981', title: `Created product "${pName}"`, subtitle: `Price set to Rs. ${pPrice}` };
       } catch {
         return { type: 'error', icon: AlertCircle, color: '#EF4444', title: 'Failed to create product' };
       }
@@ -295,7 +295,7 @@ function executeCommand(
           prods[idx].price = pPrice;
           localStorage.setItem('products_list', JSON.stringify(prods));
           window.dispatchEvent(new CustomEvent('ai-sync-data'));
-          return { type: 'success', icon: Pencil, color: '#10B981', title: `Updated price of "${prods[idx].name}" to $${pPrice}` };
+          return { type: 'success', icon: Pencil, color: '#10B981', title: `Updated price of "${prods[idx].name}" to Rs. ${pPrice}` };
         }
         return { type: 'error', icon: AlertCircle, color: '#EF4444', title: 'Product not found' };
       } catch {
@@ -388,7 +388,7 @@ function executeCommand(
         email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
         phone: '+1 000 000 0000',
         location: 'Not specified',
-        totalInvoiced: '$0.00',
+        totalInvoiced: 'Rs. 0.00',
       };
       const updated = [newClient, ...clients];
       writeClients(updated);
@@ -483,7 +483,7 @@ function executeCommand(
       return {
         type: 'data', icon: AlertCircle, color: '#EF4444',
         title: `${overdue.length} Overdue Invoice${overdue.length > 1 ? 's' : ''}`,
-        subtitle: `Total overdue: $${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        subtitle: `Total overdue: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         chartBars: overdueChartBars,
         columns: ['ID', 'Client', 'Amount', 'Due'],
         rows: overdue.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Due: i.dueDate })),
@@ -498,7 +498,7 @@ function executeCommand(
       return {
         type: 'data', icon: Clock, color: '#F59E0B',
         title: `${pending.length} Pending Invoice${pending.length > 1 ? 's' : ''}`,
-        subtitle: `Total pending: $${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        subtitle: `Total pending: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         columns: ['ID', 'Client', 'Amount', 'Due'],
         rows: pending.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Due: i.dueDate })),
         actions: [{ label: 'View All Invoices', action: () => onViewChange('invoices') }],
@@ -517,7 +517,7 @@ function executeCommand(
       return {
         type: 'stat', icon: DollarSign, color: '#F59E0B',
         title: 'Total Pending Amount',
-        stat: `$${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        stat: `Rs. ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         subtitle: `Across ${pendingInvs.length} unpaid invoices (${invoices.filter(i => i.status === 'Overdue').length} overdue)`,
         chartBars: pendingBars,
       };
@@ -542,8 +542,8 @@ function executeCommand(
       return {
         type: 'stat', icon: TrendingUp, color: '#10B981',
         title: 'Revenue Summary',
-        stat: `$${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        subtitle: `Total collected • This month: $${thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} from ${thisMonthPaid.length} invoices`,
+        stat: `Rs. ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        subtitle: `Total collected • This month: Rs. ${thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} from ${thisMonthPaid.length} invoices`,
         chartBars: revBars,
         actions: [{ label: 'Go to Dashboard', action: () => onViewChange('dashboard1') }],
       };
@@ -555,7 +555,7 @@ function executeCommand(
       return {
         type: 'data', icon: CheckCircle, color: '#10B981',
         title: `${paid.length} Paid Invoice${paid.length > 1 ? 's' : ''}`,
-        subtitle: `Total: $${paid.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        subtitle: `Total: Rs. ${paid.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         columns: ['ID', 'Client', 'Amount'],
         rows: paid.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount })),
       };
@@ -567,8 +567,8 @@ function executeCommand(
       return {
         type: 'data', icon: FileText, color: '#64748B',
         title: `${drafts.length} Draft Invoice${drafts.length > 1 ? 's' : ''}`,
-        columns: ['ID', 'Client', 'Amount'],
-        rows: drafts.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount })),
+        columns: ['ID', 'Client', 'Amount (Rs.)'],
+        rows: drafts.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '') })),
       };
     }
 
@@ -606,8 +606,8 @@ function executeCommand(
         type: 'data', icon: Users, color: '#8B5CF6',
         title: 'Top Clients by Revenue',
         chartBars: clientBars,
-        columns: ['Client', 'Total Revenue'],
-        rows: sorted.map(([name, amt]) => ({ Client: name, 'Total Revenue': `$${amt.toLocaleString(undefined, { minimumFractionDigits: 2 })}` })),
+        columns: ['Client', 'Total Revenue (Rs.)'],
+        rows: sorted.map(([name, amt]) => ({ Client: name, 'Total Revenue (Rs.)': amt.toLocaleString(undefined, { minimumFractionDigits: 2 }) })),
       };
     }
 
@@ -666,8 +666,8 @@ function executeCommand(
       return {
         type: 'data', icon: TrendingUp, color: '#8B5CF6',
         title: 'Invoices by Highest Amount',
-        columns: ['ID', 'Client', 'Amount', 'Status'],
-        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Status: i.status })),
+        columns: ['ID', 'Client', 'Amount (Rs.)', 'Status'],
+        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
         actions: [{ label: 'View All', action: () => onViewChange('invoices') }],
       };
     }
@@ -678,8 +678,8 @@ function executeCommand(
       return {
         type: 'data', icon: TrendingUp, color: '#0EA5E9',
         title: 'Invoices by Lowest Amount',
-        columns: ['ID', 'Client', 'Amount', 'Status'],
-        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Status: i.status })),
+        columns: ['ID', 'Client', 'Amount (Rs.)', 'Status'],
+        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
       };
     }
 
@@ -690,9 +690,9 @@ function executeCommand(
       return {
         type: 'data', icon: CalendarDays, color: '#0EA5E9',
         title: `${recent.length} Invoices (Last 30 Days)`,
-        subtitle: `Total: $${recent.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        columns: ['ID', 'Client', 'Amount', 'Date'],
-        rows: recent.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Date: i.issueDate })),
+        subtitle: `Total: Rs. ${recent.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        columns: ['ID', 'Client', 'Amount (Rs.)', 'Date'],
+        rows: recent.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Date: i.issueDate })),
       };
     }
 
@@ -1194,7 +1194,7 @@ const AICommandBar: React.FC<Props> = ({ activeView, onViewChange }) => {
                                   transition={{ delay: idx * 0.08 + 0.3 }}
                                   className="text-[10px] font-bold text-slate-500 truncate max-w-full"
                                 >
-                                  {bar.value > 0 ? (bar.value >= 1000 ? `$${(bar.value / 1000).toFixed(1)}k` : bar.value < 100 ? bar.value : `$${bar.value}`) : '—'}
+                                  {bar.value > 0 ? (bar.value >= 1000 ? `Rs. ${(bar.value / 1000).toFixed(1)}k` : `Rs. ${bar.value}`) : '—'}
                                 </motion.span>
                                 <motion.div
                                   initial={{ height: 0 }}

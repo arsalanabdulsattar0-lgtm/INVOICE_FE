@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { InvoiceData } from './types';
 import Layout from './components/layout/Layout';
 
@@ -11,7 +12,6 @@ const CustomerManagement = lazy(() => import('./pages/Clients/CustomerManagement
 const Settings = lazy(() => import('./pages/Settings/Settings'));
 const Help = lazy(() => import('./pages/Help/Help'));
 const Login = lazy(() => import('./pages/Auth/Login'));
-const AIAssistant = lazy(() => import('./components/ui/AIAssistant'));
 const ProductList = lazy(() => import('./pages/Products/ProductList'));
 const InlineProductForm = lazy(() => import('./components/ui/InlineProductForm'));
 
@@ -152,7 +152,7 @@ function App() {
       clientColor: randomColor,
       issueDate: data.date || new Date().toISOString().split('T')[0],
       dueDate: data.dueDate || new Date().toISOString().split('T')[0],
-      amount: `$${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       rawAmount: netPayable,
       status: 'Draft',
       payment: 'Net 30',
@@ -272,9 +272,19 @@ function App() {
     <Suspense fallback={loadingFallback}>
       <Layout activeView={activeView} onViewChange={(v) => setActiveView(v as View)} onLogout={() => setIsLoggedIn(false)}>
         <Suspense fallback={loadingFallback}>
-          {renderView()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeView}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+              className="h-full"
+            >
+              {renderView()}
+            </motion.div>
+          </AnimatePresence>
         </Suspense>
-        <AIAssistant />
       </Layout>
 
       <InlineProductForm 
@@ -362,31 +372,38 @@ function App() {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '32px' }}>
               <thead>
                 <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
-                  {['Code', 'Description', 'Unit', 'Qty', 'Unit Price', 'Total'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: h === 'Description' ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
+                  {['Code', 'Description', 'Unit', 'Qty', 'Rate (Rs.)', 'Tax (Rs.)', 'Discount (Rs.)', 'Total (Rs.)'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: (h === 'Description' || h === 'Code') ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {printInvoiceFullData ? (
-                  printInvoiceFullData.items.map(item => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px', fontWeight: 700, color: '#334155', textAlign: 'right' }}>{item.productCode}</td>
-                      <td style={{ padding: '12px', color: '#475569', textAlign: 'left' }}>{item.description}</td>
-                      <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{item.unit}</td>
-                      <td style={{ padding: '12px', color: '#334155', textAlign: 'right' }}>{item.quantity}</td>
-                      <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>${item.price.toFixed(2)}</td>
-                      <td style={{ padding: '12px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>${(item.quantity * item.price).toFixed(2)}</td>
-                    </tr>
-                  ))
+                  printInvoiceFullData.items.map(item => {
+                    const itemTotal = (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0);
+                    return (
+                      <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px', color: '#1e293b', textAlign: 'left', fontFamily: 'monospace' }}>{item.productCode}</td>
+                        <td style={{ padding: '12px', color: '#475569', textAlign: 'left' }}>{item.description}</td>
+                        <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{item.unit}</td>
+                        <td style={{ padding: '12px', color: '#334155', textAlign: 'right' }}>{item.quantity}</td>
+                        <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{item.price.toFixed(2)}</td>
+                        <td style={{ padding: '12px', color: '#16a34a', textAlign: 'right' }}>+{item.tax + (item.furtherTax || 0) === 0 ? '0.00' : (item.tax + (item.furtherTax || 0)).toFixed(2)}</td>
+                        <td style={{ padding: '12px', color: '#dc2626', textAlign: 'right' }}>-{item.discount === 0 ? '0.00' : item.discount.toFixed(2)}</td>
+                        <td style={{ padding: '12px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>{itemTotal.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px', fontWeight: 700, color: '#334155', textAlign: 'right' }}>BC-001</td>
+                    <td style={{ padding: '12px', color: '#1e293b', textAlign: 'left', fontFamily: 'monospace' }}>BC-001</td>
                     <td style={{ padding: '12px', color: '#475569', textAlign: 'left' }}>{printInvoiceData.type} Services & Deliverables</td>
                     <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>Job</td>
                     <td style={{ padding: '12px', color: '#334155', textAlign: 'right' }}>1</td>
-                    <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{printInvoiceData.amount}</td>
-                    <td style={{ padding: '12px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>{printInvoiceData.amount}</td>
+                    <td style={{ padding: '12px', color: '#64748b', textAlign: 'right' }}>{printInvoiceData.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '')}</td>
+                    <td style={{ padding: '12px', color: '#16a34a', textAlign: 'right' }}>+0.00</td>
+                    <td style={{ padding: '12px', color: '#dc2626', textAlign: 'right' }}>-0.00</td>
+                    <td style={{ padding: '12px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>{printInvoiceData.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '')}</td>
                   </tr>
                 )}
               </tbody>
@@ -395,21 +412,68 @@ function App() {
             {/* Summary Totals */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '40px' }}>
               <div style={{ width: '280px' }}>
-                {[
-                  { label: 'Gross Subtotal', value: printInvoiceData.amount },
-                  { label: 'Tax (0%)', value: '$0.00' },
-                  { label: 'Discount', value: '$0.00' },
-                  { label: 'Shipping', value: '$0.00' },
-                ].map(row => (
-                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 4px', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>{row.label}</span>
-                    <span style={{ color: '#334155', fontWeight: 700 }}>{row.value}</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 4px', marginTop: '4px', background: '#2759CD', borderRadius: '6px' }}>
-                  <span style={{ color: 'white', fontWeight: 900, fontSize: '13px' }}>Net Total (USD)</span>
-                  <span style={{ color: 'white', fontWeight: 900, fontSize: '15px' }}>{printInvoiceData.amount}</span>
-                </div>
+                {(() => {
+                  let subtotal = 0;
+                  let taxRate = 0;
+                  let taxAmount = 0;
+                  let discountVal = 0;
+                  let shippingCharges = 0;
+                  let roundOff = 0;
+                  let netPayable = 0;
+                  let receivedAmount = 0;
+                  let balanceDue = 0;
+
+                  if (printInvoiceFullData) {
+                    subtotal = printInvoiceFullData.items.reduce((sum, item) => sum + (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0), 0);
+                    taxRate = printInvoiceFullData.taxRate || 0;
+                    taxAmount = (subtotal * taxRate) / 100;
+                    discountVal = printInvoiceFullData.discountAmount || (subtotal * (printInvoiceFullData.discountPercentage || 0)) / 100;
+                    shippingCharges = printInvoiceFullData.shippingCharges || 0;
+                    roundOff = printInvoiceFullData.roundOff || 0;
+                    netPayable = subtotal + taxAmount - discountVal + shippingCharges + roundOff;
+                    receivedAmount = printInvoiceFullData.receivedAmount || 0;
+                    balanceDue = netPayable - receivedAmount;
+                  } else {
+                    const rawStr = printInvoiceData.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '');
+                    netPayable = parseFloat(rawStr) || 0;
+                    subtotal = netPayable;
+                    balanceDue = netPayable;
+                  }
+
+                  const rows = [
+                    { label: 'Gross Subtotal (Rs.)', value: subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                    { label: `Tax (${taxRate}%) (Rs.)`, value: `+${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+                    { label: 'Discount (Rs.)', value: `-${discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+                    { label: 'Shipping (Rs.)', value: `+${shippingCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+                  ];
+
+                  return (
+                    <>
+                      {rows.map(row => (
+                        <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 4px', borderBottom: '1px solid #f1f5f9', fontSize: '11px' }}>
+                          <span style={{ color: '#64748b', fontWeight: 600 }}>{row.label}</span>
+                          <span style={{ color: '#334155', fontWeight: 700 }}>{row.value}</span>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 4px', marginTop: '4px', background: '#2759CD', borderRadius: '6px' }}>
+                        <span style={{ color: 'white', fontWeight: 900, fontSize: '13px' }}>Net Total (Rs.)</span>
+                        <span style={{ color: 'white', fontWeight: 900, fontSize: '15px' }}>{netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      {receivedAmount > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 4px', borderBottom: '1px solid #f1f5f9', fontSize: '11px', marginTop: '4px' }}>
+                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Amount Received (Rs.)</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700 }}>-{receivedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {balanceDue !== netPayable && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px', marginTop: '4px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '6px' }}>
+                          <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '11px' }}>Balance Due (Rs.)</span>
+                          <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '12px' }}>{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

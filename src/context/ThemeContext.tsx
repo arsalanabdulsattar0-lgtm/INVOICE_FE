@@ -200,6 +200,29 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const brand = themes[theme] ?? themes.sky;
 
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--brand-primary', brand.primary);
+    root.style.setProperty('--brand-dark', brand.dark);
+    root.style.setProperty('--brand-accent', brand.accent);
+    root.style.setProperty('--brand-soft', brand.soft);
+    root.style.setProperty('--brand-surface', brand.surface);
+    root.style.setProperty('--brand-border', brand.border);
+    root.style.setProperty('--brand-text-primary', brand.textPrimary);
+    root.style.setProperty('--brand-text-secondary', brand.textSecondary);
+
+    // Dynamic alpha/transparency variations
+    root.style.setProperty('--brand-primary-10', brand.primary + '10');
+    root.style.setProperty('--brand-primary-20', brand.primary + '20');
+    root.style.setProperty('--brand-primary-30', brand.primary + '30');
+    root.style.setProperty('--brand-soft-25', brand.soft + '25');
+    root.style.setProperty('--brand-dark-08', brand.dark + '08');
+    root.style.setProperty('--brand-dark-10', brand.dark + '10');
+    root.style.setProperty('--brand-dark-15', brand.dark + '15');
+    root.style.setProperty('--brand-dark-20', brand.dark + '20');
+    root.style.setProperty('--brand-dark-70', brand.dark + '70');
+  }, [brand]);
+
   return (
     <ThemeContext.Provider value={{ theme, brand, setTheme }}>
       {children}

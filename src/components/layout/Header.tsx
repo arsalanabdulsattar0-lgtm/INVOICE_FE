@@ -12,6 +12,8 @@ interface Props {
 const Header: React.FC<Props> = ({ activeView, onViewChange }) => {
   const { brand } = useTheme();
 
+  if (activeView === 'settings') return null;
+
   return (
     <header
       className="relative z-[100] min-h-[110px] px-8 pt-6 pb-4 flex items-start sticky top-0 transition-colors duration-300"

@@ -22,8 +22,8 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-black transition-all rounded-full disabled:opacity-50 disabled:cursor-not-allowed";
-  
+  const baseStyles = "inline-flex items-center justify-center font-black transition-all rounded-lg disabled:opacity-50 disabled:cursor-not-allowed";
+
   const variants = {
     primary: "bg-[#2759CD] text-white shadow-lg shadow-blue-500/20 hover:opacity-90",
     secondary: "bg-slate-100 text-slate-600 hover:bg-slate-200",
@@ -34,10 +34,10 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    xs: "h-6 px-3 text-[10px]",
-    sm: "h-7 px-4 text-[11px]",
-    md: "h-8 px-6 text-[12px]",
-    lg: "h-10 px-8 text-[14px]",
+    xs: "h-6 px-2 text-[10px]",
+    sm: "h-7 px-3 text-[11px]",
+    md: "h-8 px-4 text-[12px]",
+    lg: "h-10 px-6 text-[14px]",
   };
 
   return (
@@ -48,7 +48,7 @@ export const Button: React.FC<ButtonProps> = ({
       {...(props as any)}
     >
       {loading ? (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-md animate-spin mr-2" />
       ) : (
         <>
           {Icon && iconPosition === 'left' && <Icon className={`w-3.5 h-3.5 ${children ? 'mr-1.5' : ''}`} />}

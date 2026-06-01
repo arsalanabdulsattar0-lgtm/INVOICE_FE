@@ -169,9 +169,9 @@ const AIAssistant: React.FC = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none transition-all"
                   style={{
-                    borderColor: inputFocus ? brand.primary : undefined,
+                    borderColor: inputFocus ? brand.primary : '#E2E8F0',
                     boxShadow: inputFocus ? `0 0 0 2px ${brand.primary}22` : undefined
                   }}
                   onFocus={() => setInputFocus(true)}

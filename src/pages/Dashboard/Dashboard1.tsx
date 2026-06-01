@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
+import { Input } from '../../components/ui/FormControls';
 import type { Invoice } from '../Invoices/invoiceTypes';
 
 interface Dashboard1Props {
@@ -45,7 +46,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                       + overdueInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
 
   const formatCurrency = (value: number) =>
-    '$' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    'Rs. ' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Filtered / Recent Invoices ─────────────────────────────────────────────
   const filteredInvoices = React.useMemo(() => {
@@ -77,7 +78,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
     const newProd = {
       id: productCode.toUpperCase(),
       name: productName,
-      subtitle: 'SKU: ' + (productSku || 'SKU-GEN-' + Math.floor(1000 + Math.random() * 9000)) + ' · $' + parseFloat(productPrice).toFixed(2),
+      subtitle: 'SKU: ' + (productSku || 'SKU-GEN-' + Math.floor(1000 + Math.random() * 9000)) + ' · Rs. ' + parseFloat(productPrice).toFixed(2),
     };
     const updated = [...customProducts, newProd];
     setCustomProducts(updated);
@@ -254,9 +255,6 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                       style={{ borderColor: brand.dark + '10' }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[11px] font-black shrink-0" style={{ background: inv.clientColor }}>
-                          {inv.clientInitials}
-                        </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900">{inv.client}</h4>
                           <span className="text-xs font-medium text-slate-400">#{inv.id}</span>
@@ -342,19 +340,18 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 {[
                   { label: 'Product Code', value: productCode, setter: setProductCode, placeholder: 'e.g. PROD-001' },
                   { label: 'Product Name', value: productName, setter: setProductName, placeholder: 'e.g. Web Design Package' },
-                  { label: 'Price (USD)',  value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
+                  { label: 'Price (PKR)',  value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
                   { label: 'SKU (optional)', value: productSku, setter: setProductSku, placeholder: 'e.g. SKU-WDP-01' },
                 ].map(f => (
-                  <div key={f.label}>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">{f.label}</label>
-                    <input
-                      type="text"
-                      value={f.value}
-                      onChange={e => f.setter(e.target.value)}
-                      placeholder={f.placeholder}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                    />
-                  </div>
+                  <Input
+                    key={f.label}
+                    label={f.label}
+                    type="text"
+                    value={f.value}
+                    onChange={e => f.setter(e.target.value)}
+                    placeholder={f.placeholder}
+                    size="sm"
+                  />
                 ))}
                 <div className="flex gap-2 pt-2">
                   <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>

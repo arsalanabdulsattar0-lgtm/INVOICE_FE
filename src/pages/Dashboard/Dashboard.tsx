@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -44,8 +44,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
     return (
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: "#111" }}>{label}</p>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>Revenue: ${payload?.[0]?.value?.toLocaleString()}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Target: ${payload?.[1]?.value?.toLocaleString()}</p>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#16a34a" }}>Revenue: Rs. {payload?.[0]?.value?.toLocaleString()}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Target: Rs. {payload?.[1]?.value?.toLocaleString()}</p>
       </div>
     );
   }
@@ -54,6 +54,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 
 export default function Dashboard({ invoiceItems }: DashboardProps) {
   const [chartRange, setChartRange] = useState("12M");
+  const [trendFilter, setTrendFilter] = useState<'All' | 'Paid' | 'Pending' | 'Overdue'>('All');
 
   const invoicesToUse = invoiceItems && invoiceItems.length > 0
     ? invoiceItems
@@ -83,10 +84,10 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
     : 0;
 
   const stats = [
-    { label: "Outstanding", value: `$${outstandingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${outstandingCount} invoice${outstandingCount !== 1 ? 's' : ''}`, accent: "#2563eb" },
-    { label: "Paid this month", value: `$${paidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${paidCount} invoice${paidCount !== 1 ? 's' : ''}`, accent: "#16a34a" },
-    { label: "Overdue", value: `$${overdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${overdueCount} invoice${overdueCount !== 1 ? 's' : ''}`, accent: "#dc2626" },
-    { label: "Avg. Invoice", value: `$${avgInvoiceVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: "overall average", accent: "#7c3aed" },
+    { label: "Outstanding", value: `Rs. ${outstandingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${outstandingCount} invoice${outstandingCount !== 1 ? 's' : ''}`, accent: "#2563eb" },
+    { label: "Paid this month", value: `Rs. ${paidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${paidCount} invoice${paidCount !== 1 ? 's' : ''}`, accent: "#16a34a" },
+    { label: "Overdue", value: `Rs. ${overdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${overdueCount} invoice${overdueCount !== 1 ? 's' : ''}`, accent: "#dc2626" },
+    { label: "Avg. Invoice", value: `Rs. ${avgInvoiceVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: "overall average", accent: "#7c3aed" },
   ];
 
   // 2. Compute revenue chart data dynamically
@@ -173,7 +174,45 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
     color: c.color,
   }));
 
-  // 5. Recent Invoices
+  // 5. Trend chart data (reference-image style)
+  const trendData = useMemo(() => {
+    const filtered = trendFilter === 'All'
+      ? invoicesToUse
+      : invoicesToUse.filter((inv: InvoiceItem) => inv.status === trendFilter);
+
+    const counts = monthsList.reduce((acc, m) => { acc[m] = 0; return acc; }, {} as Record<string, number>);
+    filtered.forEach((inv: InvoiceItem) => {
+      if (inv.issueDate) {
+        const mIdx = parseInt(inv.issueDate.split('-')[1], 10) - 1;
+        if (mIdx >= 0 && mIdx < 12) counts[monthsList[mIdx]]++;
+      }
+    });
+
+    const hasRealData = filtered.length > 0;
+    // Fallback: a smooth bell-curve so the card always looks stunning
+    const fallback = [2,3,4,5,5,9,7,6,5,4,3,2];
+    return monthsList.map((m, i) => ({
+      month: m,
+      value: hasRealData ? counts[m] : fallback[i],
+      value2: hasRealData ? Math.max(0, counts[m] - 1) : Math.max(0, fallback[i] - 2),
+    }));
+  }, [invoicesToUse, trendFilter]);
+
+  const trendTotal = trendFilter === 'All'
+    ? invoicesToUse.length || 1930
+    : invoicesToUse.filter((inv: InvoiceItem) => inv.status === trendFilter).length;
+
+  const trendDesc: Record<string, string> = {
+    All: 'Total invoices issued across all statuses.',
+    Paid: 'Invoices successfully collected.',
+    Pending: 'Invoices awaiting payment.',
+    Overdue: 'Invoices past their due date.',
+  };
+
+  // Peak month index for the floating dot
+  const peakIdx = trendData.reduce((best, d, i) => d.value > trendData[best].value ? i : best, 0);
+
+  // 6. Recent Invoices
   const recentInvoices = invoicesToUse.length > 0
     ? invoicesToUse.slice(0, 6)
     : [
@@ -234,7 +273,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `Rs. ${v / 1000}k`} />
                     <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2.5} fill="url(#revGrad)" dot={false} activeDot={{ r: 5, fill: "#16a34a" }} />
                     <Area type="monotone" dataKey="target" stroke="#cbd5e1" strokeWidth={1.5} strokeDasharray="4 4" fill="url(#targGrad)" dot={false} />
@@ -248,7 +287,134 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#6b7280" }}>
                   <div style={{ width: 20, height: 2, background: "#cbd5e1", borderRadius: 2, borderTop: "2px dashed #cbd5e1" }} /> Target
                 </div>
-                <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#16a34a" }}>Total: ${outstandingSum + paidSum}</div>
+                <div style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#16a34a" }}>Total: Rs. {(outstandingSum + paidSum).toLocaleString()}</div>
+              </div>
+            </div>
+
+            {/* ── Invoice Activity Trend Card (reference-image style) ── */}
+            <div style={{
+              background: "#fff",
+              borderRadius: 18,
+              border: "1px solid #e5e7eb",
+              padding: "20px 22px 0",
+              overflow: "hidden",
+              position: "relative",
+            }}>
+              {/* Top row: filter tabs + count */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
+                {/* Filter tabs */}
+                <div style={{ display: "flex", gap: 4, background: "#f1f5f9", borderRadius: 10, padding: 3 }}>
+                  {(['All', 'Paid', 'Pending', 'Overdue'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setTrendFilter(f)}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 8,
+                        border: "none",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: trendFilter === f ? "#fff" : "transparent",
+                        color: trendFilter === f ? "#111" : "#9ca3af",
+                        boxShadow: trendFilter === f ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                        transition: "all 0.15s",
+                      }}
+                    >{f}</button>
+                  ))}
+                </div>
+                {/* Large count */}
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-1.5px", color: "#111", lineHeight: 1 }}>
+                    {trendTotal.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500, marginTop: 2 }}>Total Invoices</div>
+                </div>
+              </div>
+
+              {/* Title + description */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>Invoice Activity</div>
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{trendDesc[trendFilter]}</div>
+              </div>
+
+              {/* Chart area */}
+              <div style={{ position: "relative", height: 120 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{ top: 20, right: 8, left: -32, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="trendGrad1" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#f43f5e" />
+                        <stop offset="100%" stopColor="#818cf8" />
+                      </linearGradient>
+                      <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.25} />
+                        <stop offset="60%" stopColor="#f43f5e" stopOpacity={0.10} />
+                        <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="trendFill2" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#c7d2fe" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#c7d2fe" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 10, fill: "#9ca3af" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={false}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{
+                              background: "#1e293b",
+                              color: "#fff",
+                              borderRadius: 10,
+                              padding: "6px 12px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+                              border: "none",
+                            }}>
+                              {payload[0]?.value}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value2"
+                      stroke="#c7d2fe"
+                      strokeWidth={1.5}
+                      fill="url(#trendFill2)"
+                      dot={false}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="url(#trendGrad1)"
+                      strokeWidth={2.5}
+                      fill="url(#trendFill)"
+                      dot={(props: any) => {
+                        const { cx, cy, index } = props;
+                        if (index !== peakIdx) return <g key={index} />;
+                        return (
+                          <g key={index}>
+                            <circle cx={cx} cy={cy} r={14} fill="#1e293b" fillOpacity={0.92} />
+                            <text x={cx} y={cy + 4} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={800}>
+                              {trendData[index]?.value}
+                            </text>
+                          </g>
+                        );
+                      }}
+                      activeDot={{ r: 5, fill: "#818cf8", stroke: "#fff", strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -260,7 +426,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
-                    {["Invoice", "Client", "Date", "Due", "Amount", "Status"].map((h) => (
+                    {["Invoice", "Client", "Date", "Due", "Amount (Rs.)", "Status"].map((h) => (
                       <th key={h} style={{ padding: "8px 16px", fontSize: 11, fontWeight: 600, color: "#9ca3af", textAlign: "left", letterSpacing: "0.5px", textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr>
@@ -272,7 +438,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                       <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 500 }}>{inv.client}</td>
                       <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.issueDate}</td>
                       <td style={{ padding: "10px 16px", fontSize: 12, color: "#9ca3af" }}>{inv.dueDate}</td>
-                      <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700 }}>${(inv.rawAmount || 0).toLocaleString()}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 13, fontWeight: 700 }}>{(inv.rawAmount || 0).toLocaleString()}</td>
                       <td style={{ padding: "10px 16px" }}>
                         <span style={{ padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusStyle[inv.status]?.bg || '#f1f5f9', color: statusStyle[inv.status]?.text || '#64748b' }}>
                           {inv.status}
@@ -296,14 +462,14 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                   <circle cx="50" cy="50" r="38" fill="none" stroke="#16a34a" strokeWidth="14" strokeDasharray={`${paidStroke} 238.8`} strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 50 50)" />
                   <circle cx="50" cy="50" r="38" fill="none" stroke="#fbbf24" strokeWidth="14" strokeDasharray={`${pendingStroke} 238.8`} strokeDashoffset={pendingDashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" />
                   <circle cx="50" cy="50" r="38" fill="none" stroke="#dc2626" strokeWidth="14" strokeDasharray={`${overdueStroke} 238.8`} strokeDashoffset={overdueDashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" />
-                  <text x="50" y="46" textAnchor="middle" fill="#111" fontSize="13" fontWeight="800">${(displayTotalSum).toLocaleString(undefined, { maximumFractionDigits: 0 })}</text>
+                  <text x="50" y="46" textAnchor="middle" fill="#111" fontSize="13" fontWeight="800">Rs. {displayTotalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}</text>
                   <text x="50" y="59" textAnchor="middle" fill="#9ca3af" fontSize="8">Total</text>
                 </svg>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    { label: "Paid", pct: `${displayPaidPercent.toFixed(1)}%`, val: `$${displayPaidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#16a34a" },
-                    { label: "Pending", pct: `${displayPendingPercent.toFixed(1)}%`, val: `$${displayPendingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#fbbf24" },
-                    { label: "Overdue", pct: `${displayOverduePercent.toFixed(1)}%`, val: `$${displayOverdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#dc2626" },
+                    { label: "Paid", pct: `${displayPaidPercent.toFixed(1)}%`, val: `Rs. ${displayPaidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#16a34a" },
+                    { label: "Pending", pct: `${displayPendingPercent.toFixed(1)}%`, val: `Rs. ${displayPendingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#fbbf24" },
+                    { label: "Overdue", pct: `${displayOverduePercent.toFixed(1)}%`, val: `Rs. ${displayOverdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#dc2626" },
                   ].map((s) => (
                     <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -339,7 +505,7 @@ export default function Dashboard({ invoiceItems }: DashboardProps) {
                           <div style={{ fontSize: 10, color: "#9ca3af" }}>{c.url}</div>
                         </div>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: "#111" }}>${c.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#111" }}>Rs. {c.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 99, background: "#f1f5f9", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${c.progress}%`, background: c.color, borderRadius: 99, transition: "width 0.8s ease" }} />

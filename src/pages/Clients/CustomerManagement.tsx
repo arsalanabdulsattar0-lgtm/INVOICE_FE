@@ -1,24 +1,35 @@
-// Customer Management Screen – mirrors the Create Invoice UI design system
-// ------------------------------------------------------------
-// This page replaces the previous client list with a full‑featured
-// customer CRUD UI. All components (Input, TextArea, ComboBox, Button)
-// come from the existing design system located in `src/components/ui/`.
-// The layout uses the same card styling, spacing and typography as the
-// invoice editor to satisfy the strict design consistency requirement.
-// ------------------------------------------------------------
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Check, X, Mail, Phone, LayoutGrid, List } from 'lucide-react';
+import {
+  Plus, Search, Trash2, Edit2, LayoutGrid, List,
+  SlidersHorizontal, ArrowUpDown, X, Eye,
+  CheckCircle, Clock, ChevronLeft, ChevronRight,
+  User, ShieldCheck, MapPin, Globe, CreditCard
+} from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { Input, TextArea } from '../../components/ui/FormControls';
+import { Input, TextArea, ScrollArea, ComboBox, Select, Toggle } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
+import Card from '../../components/ui/Card';
+import { FilterDrawer } from '../../components/ui/FilterDrawer';
+import { Chip, FilerChip, NonFilerChip, ActiveChip, InactiveChip } from '../../components/ui/Chip';
+
+// ---------------------------------------------------------------------------
+// Sales Persons Data
+// ---------------------------------------------------------------------------
+export const SALES_PERSONS = [
+  { id: 'sp-1', name: 'Ahmed Raza' },
+  { id: 'sp-2', name: 'Sara Khan' },
+  { id: 'sp-3', name: 'Usman Ali' },
+  { id: 'sp-4', name: 'Fatima Malik' },
+  { id: 'sp-5', name: 'Hassan Tariq' },
+];
 
 // ---------------------------------------------------------------------------
 // Types – reflect the backend model supplied by the user
 // ---------------------------------------------------------------------------
 interface Customer {
   id: string;
+  customer_id?: string;
   name: string;
   email: string;
   phone: string;
@@ -31,49 +42,17 @@ interface Customer {
   opening_date: string; // ISO date
   payment_term_days: number;
   discount_percent: number;
-  // address block
   address: string;
   city: string;
   province: string;
   country: string;
-  // tax block
   ntn: string;
   stn: string;
   cnic: string;
   wht_type: string;
+  is_active: boolean;
+  sales_person_id?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Tiny toggle component – styled to match the invoice UI (uses Input under the hood)
-// ---------------------------------------------------------------------------
-const Toggle: React.FC<{
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  label?: string;
-}> = ({ checked, onChange, label }) => {
-  const { brand } = useTheme();
-  const toggleClasses = `relative inline-flex flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none`;
-// duplicate removed
-  const thumb = checked
-    ? `translate-x-4`
-    : `translate-x-0`;
-  return (
-    <label className="inline-flex items-center space-x-2">
-      {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
-      <span
-        className={toggleClasses}
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        style={{ backgroundColor: checked ? brand.primary : undefined }}
-      >
-        <span
-          className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ${thumb}`}
-        />
-      </span>
-    </label>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -82,16 +61,102 @@ const CustomerManagement: React.FC = () => {
   const { brand } = useTheme();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<Customer | null>(null);
-  const [showModal, setShowModal] = useState(false);
+
+  // Interactive Filters & Sorting States
+  const [selectedFilerStatus, setSelectedFilerStatus] = useState<string>('all');
+  const [selectedWalkinStatus, setSelectedWalkinStatus] = useState<string>('all');
+  const [selectedActiveStatus, setSelectedActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
+  const [sortKey, setSortKey] = useState<'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // Panel Open States
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [showSortPanel, setShowSortPanel] = useState(false);
+  const [openAction, setOpenAction] = useState<string | null>(null);
+
+  // Layout View Mode
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
     try {
       const saved = localStorage.getItem('customers_view_mode');
-      return (saved === 'list' || saved === 'grid') ? saved : 'grid';
+      return saved === 'grid' ? 'grid' : 'list'; // default to list view (table)
     } catch {
-      return 'grid';
+      return 'list';
     }
   });
+
+  // Selected Customers for Bulk Actions
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+
+  // Editing / Viewing Detail modal states
+  const [editing, setEditing] = useState<Customer | null>(null);
+  const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'settings' | 'accounting'>('general');
+
+  const getStepStyles = (step: 'general' | 'settings' | 'accounting') => {
+    const order = { general: 0, settings: 1, accounting: 2 };
+    const activeOrder = order[activeTab];
+    const stepOrder = order[step];
+
+    if (activeOrder === stepOrder) {
+      return {
+        circle: {
+          borderColor: brand.primary,
+          backgroundColor: brand.primary,
+          color: '#ffffff',
+        },
+        label: {
+          color: brand.primary,
+          fontWeight: '600' as const,
+        }
+      };
+    } else if (activeOrder > stepOrder) {
+      return {
+        circle: {
+          borderColor: brand.primary,
+          backgroundColor: '#ffffff',
+          color: brand.primary,
+        },
+        label: {
+          color: '#475569',
+          fontWeight: '500' as const,
+        }
+      };
+    } else {
+      return {
+        circle: {
+          borderColor: '#E2E8F0',
+          backgroundColor: '#ffffff',
+          color: '#94A3B8',
+        },
+        label: {
+          color: '#94A3B8',
+          fontWeight: '400' as const,
+        }
+      };
+    }
+  };
+
+  const sortRef = useRef<HTMLDivElement>(null);
+  const perPage = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (sortRef.current && !sortRef.current.contains(target)) {
+        setShowSortPanel(false);
+      }
+      if (openAction && !target.closest('.action-menu-container')) {
+        setOpenAction(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openAction]);
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode);
@@ -102,57 +167,86 @@ const CustomerManagement: React.FC = () => {
     }
   };
 
-  // -----------------------------------------------------------------------
-  // Load / persist data – mirrors the client list implementation (localStorage)
-  // -----------------------------------------------------------------------
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('customer_list');
-      if (stored) {
-        setCustomers(JSON.parse(stored));
-      } else {
-        // Seed 30 sample customers
-        const sample: Customer[] = Array.from({ length: 30 }, (_, i) => ({
-          id: crypto.randomUUID(),
-          name: `Customer ${i + 1}`,
-          email: `customer${i + 1}@example.com`,
-          phone: `555-010${i.toString().padStart(2, '0')}`,
-          mobile: `555-020${i.toString().padStart(2, '0')}`,
-          website: `www.customer${i + 1}.com`,
-          is_walkin: false,
-          is_filer: false,
-          credit_limit: 5000,
-          opening_balance: 0,
-          opening_date: new Date().toISOString().split('T')[0],
-          payment_term_days: 30,
-          discount_percent: 0,
-          address: `Street ${i + 1}`,
-          city: 'City',
-          province: 'Province',
-          country: 'Country',
-          ntn: '',
-          stn: '',
-          cnic: '',
-          wht_type: '',
-        }));
-        setCustomers(sample);
-        persist(sample);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
   const persist = (list: Customer[]) => {
     try {
       localStorage.setItem('customer_list', JSON.stringify(list));
     } catch { /* ignore */ }
   };
 
-  // -----------------------------------------------------------------------
-  // Helpers – CRUD
-  // -----------------------------------------------------------------------
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('customer_list');
+      const seededFlag = localStorage.getItem('customers_seeded_v6');
+      const parsed = stored ? JSON.parse(stored) : null;
+      if (parsed && parsed.length > 0 && seededFlag === 'true') {
+        setCustomers(parsed);
+      } else {
+        // Seed 30 sample customers
+        const sample: Customer[] = Array.from({ length: 30 }, (_, i) => ({
+          id: crypto.randomUUID(),
+          customer_id: `CUST-${String(i + 1).padStart(3, '0')}`,
+          name: i === 0 ? 'BlueRitt Technologies'
+            : i === 1 ? 'Acme Corp'
+              : i === 2 ? 'Global Solutions'
+                : i === 3 ? 'Starlight Media'
+                  : i === 4 ? 'Ahmed Traders'
+                    : `Customer Account ${i + 1}`,
+          email: i === 0 ? 'billing@blueritt.com'
+            : i === 1 ? 'finance@acme.com'
+              : i === 2 ? 'hello@globalsol.com'
+                : i === 3 ? 'accounts@starlight.io'
+                  : i === 4 ? 'ahmed@traders.com'
+                    : `customer${i + 1}@example.com`,
+          phone: `+1 555 010${i.toString().padStart(2, '0')}`,
+          mobile: `+92 300 020${i.toString().padStart(2, '0')}`,
+          website: `www.customer${i + 1}.com`,
+          is_walkin: i % 4 === 3,
+          is_filer: i % 3 === 0,
+          credit_limit: 1000 + (i * 500),
+          opening_balance: i % 5 === 0 ? (i * 120) : 0,
+          opening_date: new Date().toISOString().split('T')[0],
+          payment_term_days: 30,
+          discount_percent: i % 4 === 1 ? 5 : 0,
+          address: `Office Suite ${100 + i}, Tech Park Boulevard`,
+          city: i % 3 === 0 ? 'Karachi' : i % 3 === 1 ? 'Lahore' : 'Islamabad',
+          province: i % 3 === 0 ? 'Sindh' : i % 3 === 1 ? 'Punjab' : 'Federal',
+          country: 'Pakistan',
+          ntn: i % 2 === 0 ? `NTN-${854721 + i}` : '',
+          stn: i % 3 === 0 ? `STN-${369852 + i}` : '',
+          cnic: `42101-${1234567 + i}-1`,
+          wht_type: i % 3 === 0 ? 'Active' : 'Exempt',
+          is_active: i % 3 !== 2,
+          sales_person_id: `sp-${(i % 5) + 1}`,
+        }));
+        setCustomers(sample);
+        persist(sample);
+        localStorage.setItem('customers_seeded_v6', 'true');
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      const newList = customers.filter(c => c.id !== id);
+      setCustomers(newList);
+      persist(newList);
+      setSelectedCustomerIds(prev => prev.filter(x => x !== id));
+    }
+  };
+
+  const handleToggleActive = (id: string) => {
+    const newList = customers.map(c =>
+      c.id === id ? { ...c, is_active: !c.is_active } : c
+    );
+    setCustomers(newList);
+    persist(newList);
+  };
+
   const openCreate = () => {
+    setActiveTab('general');
     setEditing({
       id: crypto.randomUUID(),
+      customer_id: `CUST-${String(customers.length + 1).padStart(3, '0')}`,
       name: '',
       email: '',
       phone: '',
@@ -163,21 +257,24 @@ const CustomerManagement: React.FC = () => {
       credit_limit: 0,
       opening_balance: 0,
       opening_date: new Date().toISOString().split('T')[0],
-      payment_term_days: 0,
+      payment_term_days: 30,
       discount_percent: 0,
       address: '',
       city: '',
       province: '',
-      country: '',
+      country: 'Pakistan',
       ntn: '',
       stn: '',
       cnic: '',
       wht_type: '',
+      is_active: true,
+      sales_person_id: '',
     });
     setShowModal(true);
   };
 
   const openEdit = (cust: Customer) => {
+    setActiveTab('general');
     setEditing({ ...cust });
     setShowModal(true);
   };
@@ -189,12 +286,11 @@ const CustomerManagement: React.FC = () => {
 
   const handleSave = () => {
     if (!editing) return;
-    // Basic validation – name and email required
     if (!editing.name.trim() || !editing.email.trim()) {
       alert('Name and Email are required');
       return;
     }
-    const existingIndex = customers.findIndex((c) => c.id === editing.id);
+    const existingIndex = customers.findIndex(c => c.id === editing.id);
     let newList: Customer[];
     if (existingIndex >= 0) {
       newList = [...customers];
@@ -207,196 +303,1129 @@ const CustomerManagement: React.FC = () => {
     closeModal();
   };
 
-  // -----------------------------------------------------------------------
-  // UI – Header & Search
-  // -----------------------------------------------------------------------
-  const filtered = customers.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
+  // Bulk Actions
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedCustomerIds(filteredCustomers.map(c => c.id));
+    } else {
+      setSelectedCustomerIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedCustomerIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (window.confirm(`Are you sure you want to delete the ${selectedCustomerIds.length} selected customers?`)) {
+      const newList = customers.filter(c => !selectedCustomerIds.includes(c.id));
+      setCustomers(newList);
+      persist(newList);
+      setSelectedCustomerIds([]);
+    }
+  };
+
+  const handleBulkToggleFiler = (filer: boolean) => {
+    const newList = customers.map(c =>
+      selectedCustomerIds.includes(c.id) ? { ...c, is_filer: filer } : c
+    );
+    setCustomers(newList);
+    persist(newList);
+    setSelectedCustomerIds([]);
+  };
+
+  const handleBulkToggleActive = (active: boolean) => {
+    const newList = customers.map(c =>
+      selectedCustomerIds.includes(c.id) ? { ...c, is_active: active } : c
+    );
+    setCustomers(newList);
+    persist(newList);
+    setSelectedCustomerIds([]);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedFilerStatus('all');
+    setSelectedWalkinStatus('all');
+    setSelectedActiveStatus('all');
+    setSelectedSalesPerson('all');
+    setSortKey('name');
+    setSortDir('asc');
+    setSearch('');
+    setCurrentPage(1);
+  };
+
+  const handleSort = (key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status') => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+    setShowSortPanel(false);
+  };
+
+  // Filter & Sort Logic
+  const filteredCustomers = useMemo(() => {
+    let result = customers.filter(c => {
+      const matchQuery =
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.email.toLowerCase().includes(search.toLowerCase()) ||
+        c.phone.toLowerCase().includes(search.toLowerCase()) ||
+        (c.city && c.city.toLowerCase().includes(search.toLowerCase())) ||
+        (c.ntn && c.ntn.toLowerCase().includes(search.toLowerCase()));
+
+      const matchFiler =
+        selectedFilerStatus === 'all' ||
+        (selectedFilerStatus === 'filer' && c.is_filer) ||
+        (selectedFilerStatus === 'non-filer' && !c.is_filer);
+
+      const matchWalkin =
+        selectedWalkinStatus === 'all' ||
+        (selectedWalkinStatus === 'walkin' && c.is_walkin) ||
+        (selectedWalkinStatus === 'standard' && !c.is_walkin);
+
+      const matchActive =
+        selectedActiveStatus === 'all' ||
+        (selectedActiveStatus === 'active' && c.is_active) ||
+        (selectedActiveStatus === 'inactive' && !c.is_active);
+
+      const matchSalesPerson =
+        selectedSalesPerson === 'all' ||
+        (c as any).sales_person_id === selectedSalesPerson;
+
+      return matchQuery && matchFiler && matchWalkin && matchActive && matchSalesPerson;
+    });
+
+    result = [...result].sort((a, b) => {
+      let av: string | number = '';
+      let bv: string | number = '';
+      if (sortKey === 'credit_limit') { av = a.credit_limit || 0; bv = b.credit_limit || 0; }
+      else if (sortKey === 'opening_balance') { av = a.opening_balance || 0; bv = b.opening_balance || 0; }
+      else if (sortKey === 'status') { av = a.is_active ? 1 : 0; bv = b.is_active ? 1 : 0; }
+      else {
+        av = a[sortKey as keyof Customer] as string | number || '';
+        bv = b[sortKey as keyof Customer] as string | number || '';
+      }
+
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return result;
+  }, [customers, search, selectedFilerStatus, selectedWalkinStatus, selectedActiveStatus, selectedSalesPerson, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(filteredCustomers.length / perPage);
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+  // KPI Calculations
+  const totalCount = customers.length;
+  const filersCount = customers.filter(c => c.is_filer).length;
+  const walkinCount = customers.filter(c => c.is_walkin).length;
+  const totalBalance = customers.reduce((acc, c) => acc + (c.opening_balance || 0), 0);
+
+  const stats = [
+    { label: 'Total Customers', value: totalCount.toString(), sub: `${totalCount} clients database`, icon: User, color: brand.primary, bg: brand.surface },
+    { label: 'Tax Filers', value: filersCount.toString(), sub: `${totalCount > 0 ? ((filersCount / totalCount) * 100).toFixed(0) : 0}% of client base`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
+    { label: 'Walk-in Accounts', value: walkinCount.toString(), sub: `${walkinCount} retail accounts`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
+    { label: 'Total Balance', value: `Rs. ${totalBalance.toLocaleString()}`, sub: 'Total outstanding balance', icon: CreditCard, color: '#BE123C', bg: '#FFF1F2' },
+  ];
+
+  const sortOptions: { key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status'; label: string }[] = [
+    { key: 'name', label: 'Customer Name' },
+    { key: 'email', label: 'Email Address' },
+    { key: 'status', label: 'Status' },
+    { key: 'credit_limit', label: 'Credit Limit' },
+    { key: 'opening_balance', label: 'Total Balance' },
+  ];
+
+  const SortArrow = ({ col }: { col: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' }) => (
+    <span className="ml-1 inline-block opacity-50" style={{ color: sortKey === col ? brand.primary : brand.dark }}>
+      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
   );
 
+
+
   return (
-    <div className="min-h-screen p-4 lg:px-8 lg:py-8 font-sans" style={{ backgroundColor: brand.surface }}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="min-h-full p-6 space-y-5" style={{ background: '#F4F7FD' }}>
+
+      {/* ── Page Header ── */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black" style={{ color: brand.dark }}>Customers</h1>
-          <p className="text-slate-400 text-sm mt-1">Manage your customer database and relationships.</p>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Customer List</h1>
+          <p className="text-[12px] font-medium text-slate-400 mt-0.5">
+            {filteredCustomers.length} customers found · Last updated just now
+          </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <div className="relative flex-grow sm:flex-grow-0">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search customers..."
-              className="w-full sm:w-64 bg-slate-50 border-none rounded-xl py-2 pl-9 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <Button variant="primary" size="md" icon={Plus} onClick={openCreate}>Add Customer</Button>
-
-          {/* View Toggle */}
-          <div className="flex items-center bg-white p-1 rounded-xl border shadow-sm flex-shrink-0" style={{ borderColor: brand.dark + '15' }}>
-            <button
-              onClick={() => handleViewModeChange('grid')}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
-              style={viewMode === 'grid' ? { backgroundColor: brand.primary } : undefined}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`}
-              style={viewMode === 'list' ? { backgroundColor: brand.primary } : undefined}
-              title="List View"
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Customer List / Cards rendering */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((c) => (
-            <motion.div
-              key={c.id}
-              whileHover={{ scale: 1.02, boxShadow: `0 4px 12px ${brand.primary}20` }}
-              className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer"
-              onClick={() => openEdit(c)}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">{c.name}</h3>
-                <Button variant="ghost" size="xs" icon={X} onClick={(e) => { e.stopPropagation(); const newList = customers.filter((x) => x.id !== c.id); setCustomers(newList); persist(newList); }} />
-              </div>
-              <div className="space-y-2 text-sm text-slate-500">
-                <div className="flex items-center gap-2"><Mail className="w-4 h-4" />{c.email}</div>
-                <div className="flex items-center gap-2"><Phone className="w-4 h-4" />{c.phone}</div>
-                {c.ntn && <div className="flex items-center gap-2"><Check className="w-4 h-4" />NTN: {c.ntn}</div>}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map((c) => (
-            <motion.div
-              key={c.id}
-              className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
-              onClick={() => openEdit(c)}
-            >
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                  <span className="font-bold text-slate-600 uppercase">{c.name.slice(0, 2)}</span>
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">{c.name}</h3>
-                  <div className="flex flex-wrap gap-4 text-xs text-slate-400 mt-0.5">
-                    <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {c.email}</span>
-                    <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {c.phone}</span>
-                    {c.ntn && <span>NTN: {c.ntn}</span>}
-                  </div>
-                </div>
-              </div>
-              <Button variant="ghost" size="xs" icon={X} onClick={(e) => { e.stopPropagation(); const newList = customers.filter((x) => x.id !== c.id); setCustomers(newList); persist(newList); }} />
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-
-      {/* ------------------------------------------------------------------- */}
-      {/* Modal – Inline create / edit – uses same card+spacing layout */}
-      {/* ------------------------------------------------------------------- */}
-      <AnimatePresence>
-        {showModal && editing && (
-          <motion.div
-            className="fixed inset-0 bg-black/30 flex items-center justify-center z-[200]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="white"
+            size="md"
+            icon={SlidersHorizontal}
+            onClick={() => setShowFilterDrawer(true)}
+            className="relative"
           >
-            <div className="bg-white w-full max-w-4xl rounded-3xl shadow-xl overflow-hidden" style={{ borderColor: brand.dark + '10' }}>
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 bg-white border-b" style={{ borderColor: brand.dark + '10' }}>
-                <h2 className="text-xl font-bold" style={{ color: brand.dark }}>{editing.id ? 'Edit Customer' : 'Add Customer'}</h2>
-                <Button variant="ghost" size="xs" icon={X} onClick={closeModal} />
+            Filter
+            {(selectedFilerStatus !== 'all' || selectedWalkinStatus !== 'all' || selectedActiveStatus !== 'all' || selectedSalesPerson !== 'all' || search !== '') && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
+                style={{ background: brand.accent || '#EF4444' }}>!</span>
+            )}
+          </Button>
+          <Button
+            onClick={openCreate}
+            variant="primary"
+            size="md"
+            icon={Plus}
+            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+          >
+            Add Customer
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* ── Stats Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, i) => (
+          <motion.div key={stat.label}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.07 }}
+            className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all group cursor-default"
+            style={{ borderColor: brand.dark + '10' }}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-black tracking-wide">{stat.label}</p>
+                <p className="text-2xl font-black mt-1 tracking-tight" style={{ color: brand.dark }}>{stat.value}</p>
+                <p className="text-[10px] font-medium text-slate-400 mt-1">{stat.sub}</p>
               </div>
-              {/* Modal Body – cards */}
-              <div className="p-6 space-y-6 overflow-y-auto" style={{ maxHeight: '80vh' }}>
-                {/* BASIC INFO */}
-                <SectionHeader title="BASIC INFO" />
-                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Name" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
-                    <Input label="Email" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
-                    <Input label="Phone" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
-                    <Input label="Mobile" value={editing.mobile} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} />
-                    <Input label="Website" value={editing.website} onChange={(e) => setEditing({ ...editing, website: e.target.value })} />
-                  </div>
-                </div>
-                {/* BUSINESS SETTINGS */}
-                <SectionHeader title="BUSINESS SETTINGS" />
-                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk‑in customer" />
-                    <Toggle checked={editing.is_filer} onChange={(v) => setEditing({ ...editing, is_filer: v })} label="Filer" />
-                    <Input label="Credit limit" type="number" value={editing.credit_limit?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, credit_limit: parseFloat(e.target.value) || 0 })} />
-                    <Input label="Payment terms (days)" type="number" value={editing.payment_term_days?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, payment_term_days: parseInt(e.target.value) || 0 })} />
-                    <Input label="Discount %" type="number" value={editing.discount_percent?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, discount_percent: parseFloat(e.target.value) || 0 })} />
-                  </div>
-                </div>
-                {/* FINANCIAL INFO */}
-                <SectionHeader title="FINANCIAL INFO" />
-                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Opening balance" type="number" value={editing.opening_balance?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, opening_balance: parseFloat(e.target.value) || 0 })} />
-                    <Input label="Opening date" type="date" value={editing.opening_date} onChange={(e) => setEditing({ ...editing, opening_date: e.target.value })} />
-                  </div>
-                </div>
-                {/* ADDRESS SECTION */}
-                <SectionHeader title="ADDRESS" />
-                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <TextArea label="Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} />
-                    <Input label="City" value={editing.city} onChange={(e) => setEditing({ ...editing, city: e.target.value })} />
-                    <Input label="Province" value={editing.province} onChange={(e) => setEditing({ ...editing, province: e.target.value })} />
-                    <Input label="Country" value={editing.country} onChange={(e) => setEditing({ ...editing, country: e.target.value })} />
-                  </div>
-                </div>
-                {/* TAX INFORMATION */}
-                <SectionHeader title="TAX INFORMATION" />
-                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="NTN" value={editing.ntn} onChange={(e) => setEditing({ ...editing, ntn: e.target.value })} />
-                    <Input label="STN" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} />
-                    <Input label="CNIC" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} />
-                    <Input label="WHT Type" value={editing.wht_type} onChange={(e) => setEditing({ ...editing, wht_type: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-              {/* Modal Footer */}
-              <div className="flex justify-end px-6 py-4 border-t" style={{ borderColor: brand.dark + '10' }}>
-                <Button variant="secondary" size="sm" onClick={closeModal} className="mr-2">Cancel</Button>
-                <Button variant="primary" size="sm" onClick={handleSave}>Save</Button>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                style={{ background: stat.bg }}>
+                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
               </div>
             </div>
           </motion.div>
+        ))}
+      </div>
+
+      {/* ── Table Card ── */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        className="bg-white rounded-2xl border shadow-sm overflow-hidden"
+        style={{ borderColor: brand.dark + '10' }}>
+
+        {/* ── Solid Header Bar ── */}
+        <div className="px-4 py-2.5 flex items-center justify-between text-white"
+          style={{ backgroundColor: brand.primary }}>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <h3 className="text-[11px] font-black tracking-wide">Customer Records</h3>
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{ backgroundColor: brand.soft, color: brand.dark }}>
+              {filteredCustomers.length} Customers
+            </span>
+          </div>
+
+          {/* Search inside header bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60" />
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Search customers..."
+                className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
+                style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+              />
+            </div>
+
+            {/* Sort Button */}
+            <div className="relative" ref={sortRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowSortPanel(p => !p); }}
+                className={`border ${showSortPanel ? 'bg-white/25 border-white/25' : 'bg-white/10 border-white/20'} text-white hover:bg-white/20`}
+                icon={ArrowUpDown}
+              >
+                Sort
+              </Button>
+              <AnimatePresence>
+                {showSortPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-9 z-30 bg-white rounded-xl shadow-xl border overflow-hidden w-44"
+                    style={{ borderColor: brand.dark + '15' }}>
+                    {sortOptions.map(opt => (
+                      <button key={opt.key} onClick={() => handleSort(opt.key)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold hover:bg-slate-50 transition-all"
+                        style={{ color: sortKey === opt.key ? brand.primary : brand.dark }}>
+                        {opt.label}
+                        {sortKey === opt.key && (
+                          <span>{sortDir === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-white/10 p-0.5 rounded-lg border border-white/20">
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`p-1 rounded transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
+                title="Table View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`p-1 rounded transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Actions Floating Bar */}
+        <AnimatePresence>
+          {selectedCustomerIds.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              className="bg-slate-900 text-white px-6 py-3 border-t border-slate-800 flex items-center justify-between"
+            >
+              <span className="text-xs font-bold text-slate-400">
+                <strong className="text-white text-sm mr-1">{selectedCustomerIds.length}</strong> customers selected
+              </span>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => handleBulkToggleActive(true)}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Mark Active
+                </button>
+                <button
+                  onClick={() => handleBulkToggleActive(false)}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Mark Inactive
+                </button>
+                <button
+                  onClick={() => handleBulkToggleFiler(true)}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Mark Tax Filer
+                </button>
+                <button
+                  onClick={() => handleBulkToggleFiler(false)}
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Mark Non-Filer
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected
+                </button>
+                <button
+                  onClick={() => setSelectedCustomerIds([])}
+                  className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Table Mode / Scroll Area ── */}
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={`${selectedFilerStatus}-${selectedWalkinStatus}-${sortKey}-${sortDir}-${currentPage}-${search}`}
+            className="overflow-x-auto"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          >
+            <AnimatePresence mode="wait">
+              {viewMode === 'list' ? (
+                <motion.div
+                  key="list-view"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ScrollArea className="w-full max-w-full" maxHeight="450px" style={{ overscrollBehavior: 'contain' }}>
+                    <table className="w-full">
+                      <thead className="sticky top-0 z-10 bg-white">
+                        <tr className="border-b" style={{ borderColor: brand.dark + '10' }}>
+                          <th className="px-4 py-3 text-center w-12 border-b">
+                            <input
+                              type="checkbox"
+                              checked={filteredCustomers.length > 0 && selectedCustomerIds.length === filteredCustomers.length}
+                              onChange={handleSelectAll}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer w-4 h-4"
+                            />
+                          </th>
+                          {([
+                            { label: 'Customer details', key: 'name', width: 'w-[22%]' },
+                            { label: 'Phone number', key: 'email', width: 'w-[13%]' },
+                            { label: 'City', key: null, width: 'w-[11%]' },
+                            { label: 'Credit limit (Rs.)', key: 'credit_limit', width: 'w-[11%]' },
+                            { label: 'Total balance (Rs.)', key: 'opening_balance', width: 'w-[11%]' },
+                            { label: 'Tax status', key: null, width: 'w-[17%]' },
+                            { label: 'Status', key: 'status', width: 'w-[15%]' },
+                            { label: 'Actions', key: null, width: 'w-20' },
+                          ] as { label: string; key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' | null; width: string }[]).map((h, idx) => (
+                            <th key={h.label}
+                              className={`${h.label === 'Actions' ? 'px-2' : 'px-4'} py-3 text-left border-b ${h.key ? 'cursor-pointer hover:bg-blue-50/40 select-none' : ''} transition-colors ${idx !== 0 ? 'border-l border-slate-100' : ''} ${h.width}`}
+                              style={{ borderColor: brand.dark + '10' }}
+                              onClick={() => h.key && handleSort(h.key)}>
+                              <span className="text-[10px] font-black tracking-widest inline-flex items-center gap-0.5 whitespace-nowrap"
+                                style={{ color: sortKey === h.key ? brand.primary : '#000000' }}>
+                                {h.label}
+                                {h.key && <SortArrow col={h.key} />}
+                              </span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedCustomers.map((cust, i) => {
+                          const isSelected = selectedCustomerIds.includes(cust.id);
+
+                          return (
+                            <motion.tr key={cust.id}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ type: 'spring', stiffness: 350, damping: 30, delay: i * 0.03 }}
+                              className={`group border-b transition-colors hover:bg-slate-50/60 cursor-pointer last:border-0 ${isSelected ? 'bg-blue-50/15' : ''}`}
+                              style={{ borderColor: brand.dark + '08' }}>
+
+                              {/* Checkbox */}
+                              <td className="px-4 py-3 text-center border-l border-slate-50 first:border-0 w-12">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleSelectRow(cust.id)}
+                                  className="rounded border-slate-300 text-blue-650 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
+                                />
+                              </td>
+
+                              {/* Customer Details (Name + ID) */}
+                              <td className="px-4 py-3 border-l border-slate-50">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-14 h-7 rounded-lg flex items-center justify-center bg-slate-100 border border-slate-200 text-black text-[10px] font-mono font-medium flex-shrink-0">
+                                    {cust.customer_id || `C-${cust.id.slice(0, 4).toUpperCase()}`}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="text-[12px] font-normal truncate max-w-[180px]" style={{ color: brand.dark }}>{cust.name}</h4>
+                                    <p className="text-[10px] font-normal text-slate-400 mt-0.5">{cust.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Contact Info (Phone) */}
+                              <td className="px-4 py-3 border-l border-slate-50 text-[12px] font-normal text-black">
+                                <span className="whitespace-nowrap">
+                                  {cust.phone || cust.mobile || 'N/A'}
+                                </span>
+                              </td>
+
+                              {/* City */}
+                              <td className="px-4 py-3 border-l border-slate-50 text-[12px] font-normal text-black">
+                                {cust.city || 'N/A'}
+                              </td>
+
+                              {/* Credit Limit */}
+                              <td className="px-4 py-3 border-l border-slate-50 text-[12px] font-normal text-black">
+                                {cust.credit_limit ? cust.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                              </td>
+
+                              {/* Total Balance */}
+                              <td className="px-4 py-3 border-l border-slate-50 text-[12px] font-normal text-black"
+                                style={{ color: cust.opening_balance > 0 ? '#BE123C' : '#000000' }}>
+                                {cust.opening_balance ? cust.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                              </td>
+
+                              {/* Tax Status */}
+                              <td className="px-4 py-3 border-l border-slate-50">
+                                {cust.is_filer
+                                  ? <FilerChip label="Filer" size="md" />
+                                  : <NonFilerChip label="Non-Filer" size="md" />
+                                }
+                              </td>
+
+                              {/* Status */}
+                              <td className="px-4 py-3 border-l border-slate-50">
+                                {cust.is_active
+                                  ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(cust.id)} />
+                                  : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(cust.id)} />
+                                }
+                              </td>
+
+                              {/* Actions */}
+                              <td className="px-1 py-3 border-l border-slate-50 w-16 whitespace-nowrap">
+                                <div className="flex items-center gap-0">
+                                  <Button onClick={() => setViewingCustomer(cust)}
+                                    variant="ghost" size="xs" icon={Eye} title="View Profile"
+                                    className="!px-1 text-blue-600 hover:bg-blue-50" />
+                                  <Button onClick={() => openEdit(cust)}
+                                    variant="ghost" size="xs" icon={Edit2} title="Edit"
+                                    className="!px-1 text-blue-600 hover:bg-blue-50" />
+                                  <Button onClick={() => handleDelete(cust.id, cust.name)}
+                                    variant="ghost" size="xs" icon={Trash2} title="Delete"
+                                    className="!px-1 !text-red-500" />
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+
+                        {paginatedCustomers.length === 0 && (
+                          <tr>
+                            <td colSpan={9} className="py-16 text-center">
+                              <User className="w-10 h-10 mx-auto mb-3 text-slate-200" />
+                              <p className="text-[13px] font-medium text-slate-400">No customers found</p>
+                              <p className="text-[11px] text-slate-300 mt-1">Try adjusting your filters or search query</p>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="grid-view"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ScrollArea className="w-full max-w-full p-4 bg-slate-50/50" maxHeight="450px" style={{ overscrollBehavior: 'contain' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
+                      {paginatedCustomers.map((cust) => (
+                        <motion.div
+                          key={cust.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Card className="h-full flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all cursor-pointer group border-slate-100 p-4" onClick={() => setViewingCustomer(cust)}>
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="h-8 px-2.5 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-mono font-bold text-[10px] shadow-sm group-hover:scale-105 transition-transform">
+                                {cust.customer_id || `C-${cust.id.slice(0, 4).toUpperCase()}`}
+                              </div>
+
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => openEdit(cust)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 transition-colors cursor-pointer"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(cust.id, cust.name)}
+                                  className="p-1.5 rounded-lg text-red-500 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                              {cust.is_filer
+                                ? <FilerChip label="Filer" size="xs" />
+                                : <NonFilerChip label="Non-Filer" size="xs" />
+                              }
+                              {cust.is_walkin && <Chip label="Walk-in" size="xs" color="#475569" bg="#F1F5F9" border="#E2E8F0" />}
+                              {!cust.is_active && <InactiveChip label="Inactive" size="xs" />}
+                            </div>
+
+                            <h3 className="text-[12px] font-normal text-slate-800 mb-0.5 line-clamp-1">{cust.name}</h3>
+                            <p className="text-[10px] font-medium text-slate-400 mb-2">{cust.email}</p>
+
+                            <p className="text-[11px] text-slate-500 font-normal line-clamp-2 h-8 mb-4">
+                              {cust.address ? `${cust.address}, ${cust.city || ''}` : 'No address specified.'}
+                            </p>
+
+                            <div className="mt-auto pt-3 border-t border-slate-50 flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-800">Limit: Rs. {(cust.credit_limit || 0).toLocaleString()}</span>
+                              <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">Bal: Rs. {(cust.opening_balance || 0).toLocaleString()}</span>
+                            </div>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 border-t flex items-center justify-between"
+            style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
+            <p className="text-[11px] font-medium text-black">
+              Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filteredCustomers.length)} of {filteredCustomers.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                variant="white" size="xs" icon={ChevronLeft}
+                className="w-8 h-8 px-0" />
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <Button key={p} onClick={() => setCurrentPage(p)}
+                  variant={currentPage === p ? 'primary' : 'white'} size="xs"
+                  className="w-8 h-8 px-0 border-none"
+                >
+                  {p}
+                </Button>
+              ))}
+              <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                variant="white" size="xs" icon={ChevronRight}
+                className="w-8 h-8 px-0" />
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* ── View Customer Profile Detail Modal ── */}
+      <AnimatePresence>
+        {viewingCustomer && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 md:p-8 shadow-2xl relative border border-slate-100 font-sans"
+            >
+              <button
+                onClick={() => setViewingCustomer(null)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-mono font-bold text-sm shadow-md">
+                  {viewingCustomer.customer_id || `C-${viewingCustomer.id.slice(0, 4).toUpperCase()}`}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${viewingCustomer.is_filer
+                      ? 'bg-emerald-50 text-emerald-600'
+                      : 'bg-amber-50 text-amber-600'
+                      }`}>
+                      {viewingCustomer.is_filer ? 'Tax Filer' : 'Non-Filer'}
+                    </span>
+                    {viewingCustomer.is_walkin && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-550 uppercase tracking-wider">Walk-in</span>}
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${viewingCustomer.is_active
+                      ? 'bg-emerald-50 text-emerald-600'
+                      : 'bg-red-50 text-red-600'
+                      }`}>
+                      {viewingCustomer.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 mt-1">{viewingCustomer.name}</h2>
+                  <p className="text-xs font-bold text-slate-400">{viewingCustomer.email} • {viewingCustomer.phone || 'No phone'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+                <div>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Client Contact & Location</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Mobile</span>
+                      <span className="text-slate-800 font-bold">{viewingCustomer.mobile || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Website</span>
+                      <span className="text-slate-850 font-bold hover:underline" style={{ color: brand.primary }}>{viewingCustomer.website || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">City / Province</span>
+                      <span className="text-slate-880 font-bold">{viewingCustomer.city ? `${viewingCustomer.city}, ${viewingCustomer.province}` : 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Country</span>
+                      <span className="text-slate-800 font-bold">{viewingCustomer.country || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Address</span>
+                      <span className="text-slate-800 font-bold text-right max-w-[200px] truncate">{viewingCustomer.address || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Business Settings & Credit</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Credit Limit</span>
+                      <span className="text-slate-800 font-black text-blue-600">Rs. {viewingCustomer.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Total Balance</span>
+                      <span className="text-slate-880 font-bold" style={{ color: viewingCustomer.opening_balance > 0 ? '#BE123C' : undefined }}>
+                        Rs. {viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Payment Terms</span>
+                      <span className="text-slate-800 font-bold">{viewingCustomer.payment_term_days} days</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Discount Percent</span>
+                      <span className="text-slate-800 font-bold">{viewingCustomer.discount_percent}%</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
+                      <span className="text-slate-500 font-medium">Sales Person</span>
+                      <span className="text-slate-800 font-bold">
+                        {SALES_PERSONS.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Tax Compliance Registry</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase">NTN Code</div>
+                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.ntn || 'N/A'}</div>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase">STN Registry</div>
+                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.stn || 'N/A'}</div>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase">CNIC Number</div>
+                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.cnic || 'N/A'}</div>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-bold uppercase">WHT Category</div>
+                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.wht_type || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setViewingCustomer(null);
+                    openEdit(viewingCustomer);
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
+                >
+                  Edit Customer Profile
+                </button>
+                <button
+                  onClick={() => setViewingCustomer(null)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
-    </div>
-  );
-};
 
-// Section header component mirroring Invoice view
-const SectionHeader: React.FC<{ title: string }> = ({ title }) => {
-  const { brand } = useTheme();
-  return (
-    <div className="px-6 py-3" style={{ backgroundColor: brand.soft }}>
-      <h3 className="text-sm font-bold text-slate-700">{title}</h3>
+      {/* ── Add / Edit Customer Form Modal ── */}
+      <AnimatePresence>
+        {showModal && editing && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative border border-slate-100 font-sans"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 bg-white border-b flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black" style={{ color: brand.dark }}>
+                    {editing.name ? `Edit Customer: ${editing.name}` : 'Create New Customer'}
+                  </h2>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Stepper Wizard Progression */}
+              <div className="px-6 pb-6 flex justify-center flex-shrink-0 bg-white pt-4">
+                <div className="relative w-full max-w-xl flex items-center justify-between">
+
+                  {/* Connecting lines */}
+                  <div className="absolute left-6 right-6 top-6 h-[2px] bg-slate-200" style={{ zIndex: 0 }} />
+
+                  {/* Active connecting progress line */}
+                  <div
+                    className="absolute left-6 top-6 h-[2px] transition-all duration-300"
+                    style={{
+                      zIndex: 0,
+                      backgroundColor: brand.primary,
+                      width: activeTab === 'general' ? '0%' : activeTab === 'settings' ? '50%' : '100%'
+                    }}
+                  />
+
+                  {/* Step 1: Basic Info */}
+                  <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('general')}
+                      className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs bg-white"
+                      style={getStepStyles('general').circle}
+                    >
+                      <User className="w-5 h-5" />
+                    </button>
+                    <span
+                      className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                      style={getStepStyles('general').label}
+                    >
+                      Basic Info
+                    </span>
+                  </div>
+
+                  {/* Step 2: Settings */}
+                  <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!editing.name?.trim() || !editing.email?.trim()) {
+                          alert("Please fill in required fields (Name & Email).");
+                          return;
+                        }
+                        setActiveTab('settings');
+                      }}
+                      className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs bg-white"
+                      style={getStepStyles('settings').circle}
+                    >
+                      <ShieldCheck className="w-5 h-5" />
+                    </button>
+                    <span
+                      className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                      style={getStepStyles('settings').label}
+                    >
+                      Settings
+                    </span>
+                  </div>
+
+                  {/* Step 3: Accounting */}
+                  <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!editing.name?.trim() || !editing.email?.trim()) {
+                          alert("Please fill in required fields (Name & Email).");
+                          return;
+                        }
+                        setActiveTab('accounting');
+                      }}
+                      className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs bg-white"
+                      style={getStepStyles('accounting').circle}
+                    >
+                      <CreditCard className="w-5 h-5" />
+                    </button>
+                    <span
+                      className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                      style={getStepStyles('accounting').label}
+                    >
+                      Accounting
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="flex-1 px-8 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+                {activeTab === 'general' && (
+                  <div className="space-y-6 animate-fadeIn">
+                    {/* SECTION 1: BASIC INFO */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                        <User className="w-3.5 h-3.5" /> Basic Contact Information
+                      </h4>
+                      <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Input variant="compact" label="Customer ID" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUST-001" />
+                          <Input variant="compact" label="Customer Name *" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Acme Corporation" />
+                          <Input variant="compact" label="Email Address *" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="e.g. accounting@acme.com" />
+                          <Input variant="compact" label="Phone Number" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} placeholder="e.g. +92 21 3456789" />
+                          <Input variant="compact" label="Mobile Number" value={editing.mobile} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="e.g. +92 300 1234567" />
+                          <Input variant="compact" label="Website Link" value={editing.website} onChange={(e) => setEditing({ ...editing, website: e.target.value })} placeholder="e.g. www.acme.com" />
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* SECTION 4: ADDRESS BLOCK */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5" /> Physical Address
+                      </h4>
+                      <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="col-span-2">
+                            <TextArea className="!rounded-lg text-[11px] py-1.5 px-3 h-14" label="Billing Street Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="e.g. Suite #12, 3rd Floor, Commercial Plaza" />
+                          </div>
+                          <Input variant="compact" label="City" value={editing.city} onChange={(e) => setEditing({ ...editing, city: e.target.value })} placeholder="Karachi" />
+                          <Input variant="compact" label="Province/State" value={editing.province} onChange={(e) => setEditing({ ...editing, province: e.target.value })} placeholder="Sindh" />
+                          <Input variant="compact" label="Country" value={editing.country} onChange={(e) => setEditing({ ...editing, country: e.target.value })} placeholder="Pakistan" />
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <div className="space-y-6 animate-fadeIn">
+                    {/* SECTION 2: BUSINESS SETTINGS */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Business & Tax Settings
+                      </h4>
+                      <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-6 flex-wrap pt-1">
+                            <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk-in Retail Client" />
+                            <Toggle checked={editing.is_filer} onChange={(v) => setEditing({ ...editing, is_filer: v })} label="Registered Tax Filer" />
+                            <Toggle checked={editing.is_active} onChange={(v) => setEditing({ ...editing, is_active: v })} label="Active Account Status" />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-200/40">
+                            <Input variant="compact" label="Credit Limit (Rs.)" type="number" value={editing.credit_limit?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, credit_limit: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                            <Input variant="compact" label="Payment Terms (Days)" type="number" value={editing.payment_term_days?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, payment_term_days: parseInt(e.target.value) || 0 })} placeholder="30" />
+                            <Input variant="compact" label="Default Discount (%)" type="number" value={editing.discount_percent?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, discount_percent: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+
+                    {/* SECTION 5: TAX LAWS */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                        <Globe className="w-3.5 h-3.5" /> Government Registries & WHT
+                      </h4>
+                      <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Input variant="compact" label="National Tax Number (NTN)" value={editing.ntn} onChange={(e) => setEditing({ ...editing, ntn: e.target.value })} placeholder="1234567-8" />
+                          <Input variant="compact" label="Sales Tax Number (STN)" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} placeholder="STN-12345" />
+                          <Input variant="compact" label="CNIC Number (individuals)" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} placeholder="42101-1234567-1" />
+                          <Input variant="compact" label="Withholding Tax (WHT) Type" value={editing.wht_type} onChange={(e) => setEditing({ ...editing, wht_type: e.target.value })} placeholder="Active / Exempt / Suspended" />
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'accounting' && (
+                  <div className="space-y-6 animate-fadeIn">
+                    {/* SECTION 3: FINANCIAL ACCOUNTING */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                        <CreditCard className="w-3.5 h-3.5" /> Accounting Details
+                      </h4>
+                      <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Input variant="compact" label="Total Balance (Rs.)" type="number" value={editing.opening_balance?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, opening_balance: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                          <Select
+                            variant="compact"
+                            label="Sales Person"
+                            value={editing.sales_person_id || ''}
+                            onChange={(e) => setEditing({ ...editing, sales_person_id: e.target.value })}
+                            options={[
+                              { value: '', label: 'Select sales person...' },
+                              ...SALES_PERSONS.map(sp => ({ value: sp.id, label: sp.name }))
+                            ]}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-between items-center px-6 py-4 border-t bg-slate-50 rounded-b-3xl flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
+                {/* Left action (Back button) */}
+                <div>
+                  {activeTab !== 'general' && (
+                    <Button
+                      type="button"
+                      variant="white"
+                      size="md"
+                      icon={ChevronLeft}
+                      onClick={() => {
+                        if (activeTab === 'settings') setActiveTab('general');
+                        else if (activeTab === 'accounting') setActiveTab('settings');
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
+                </div>
+
+                {/* Right actions (Cancel + Next/Save Customer buttons) */}
+                <div className="flex items-center gap-3">
+                  <Button variant="white" size="md" onClick={closeModal}>
+                    Cancel
+                  </Button>
+
+                  {activeTab !== 'accounting' ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="md"
+                      icon={ChevronRight}
+                      iconPosition="right"
+                      onClick={() => {
+                        if (!editing.name?.trim() || !editing.email?.trim()) {
+                          alert("Please fill in required fields (Name & Email).");
+                          return;
+                        }
+                        if (activeTab === 'general') setActiveTab('settings');
+                        else if (activeTab === 'settings') setActiveTab('accounting');
+                      }}
+                      style={{ backgroundColor: brand.primary }}
+                    >
+                      Next
+                    </Button>
+                  ) : (
+                    <Button variant="primary" size="md" onClick={handleSave} className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/10">
+                      Save Customer
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Filter Drawer (Side Panel) ── */}
+      <FilterDrawer
+        isOpen={showFilterDrawer}
+        onClose={() => setShowFilterDrawer(false)}
+        onReset={handleResetFilters}
+        onApply={() => setShowFilterDrawer(false)}
+      >
+
+        {/* Tax Status */}
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-bold text-slate-500">Tax status</label>
+          <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-0.5 rounded-lg border border-slate-200/30">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'filer', label: 'Filer' },
+              { key: 'non-filer', label: 'Non-Filer' }
+            ].map(opt => {
+              const isActive = selectedFilerStatus === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => { setSelectedFilerStatus(opt.key); setCurrentPage(1); }}
+                  className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none ${isActive
+                    ? 'bg-white shadow-xs border border-slate-200/40'
+                    : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'
+                    }`}
+                  style={{ color: isActive ? brand.primary : undefined }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Account Type */}
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-bold text-slate-500">Account type</label>
+          <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-0.5 rounded-lg border border-slate-200/30">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'walkin', label: 'Walk-in' },
+              { key: 'standard', label: 'Standard' }
+            ].map(opt => {
+              const isActive = selectedWalkinStatus === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => { setSelectedWalkinStatus(opt.key); setCurrentPage(1); }}
+                  className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none ${isActive
+                    ? 'bg-white shadow-xs border border-slate-200/40'
+                    : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'
+                    }`}
+                  style={{ color: isActive ? brand.primary : undefined }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Account Status */}
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-bold text-slate-500">Account status</label>
+          <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-0.5 rounded-lg border border-slate-200/30">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'active', label: 'Active' },
+              { key: 'inactive', label: 'Inactive' }
+            ].map(opt => {
+              const isActive = selectedActiveStatus === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => { setSelectedActiveStatus(opt.key as any); setCurrentPage(1); }}
+                  className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none ${isActive
+                    ? 'bg-white shadow-xs border border-slate-200/40'
+                    : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'
+                    }`}
+                  style={{ color: isActive ? brand.primary : undefined }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sales Person */}
+        <div className="space-y-1.5">
+          <label className="block text-[11px] font-bold text-slate-500">Sales person</label>
+          <ComboBox
+            value={selectedSalesPerson === 'all' ? '' : selectedSalesPerson}
+            onChange={(val) => { setSelectedSalesPerson(val || 'all'); setCurrentPage(1); }}
+            options={SALES_PERSONS}
+            placeholder="Select sales person..."
+            variant="compact"
+          />
+        </div>
+      </FilterDrawer>
     </div>
   );
 };

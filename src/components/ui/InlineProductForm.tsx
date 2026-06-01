@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Box, Save } from 'lucide-react';
+import { X, FileText, Save, Percent, ChevronLeft, ChevronRight, Package, Tag, Layers, Box } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { Input, TextArea, ComboBox } from './FormControls';
+import { Input, TextArea, ComboBox, Toggle } from './FormControls';
+import Card from './Card';
+import { Button } from './Button';
 import type { Product } from '../../pages/Products/ProductList';
 import {
   ProductCategory,
@@ -10,7 +12,8 @@ import {
   ProductMake,
   ProductModel,
   ProductSize,
-  ProductUOM
+  ProductUOM,
+  ProductSupplier
 } from '../../pages/Products/ProductList';
 
 interface Props {
@@ -57,39 +60,9 @@ const FbrSaleTypeOptions = [
   { id: 'Zero-Rated', name: 'Zero-Rated' },
 ];
 
-const Toggle: React.FC<{
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  label?: string;
-}> = ({ checked, onChange, label }) => {
-  const { brand } = useTheme();
-  const toggleClasses = `relative inline-flex flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none`;
-  const thumb = checked ? `translate-x-4` : `translate-x-0`;
-  return (
-    <label className="inline-flex items-center space-x-2">
-      {label && <span className="text-sm font-medium text-slate-700">{label}</span>}
-      <span
-        className={toggleClasses}
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        style={{
-          backgroundColor: checked ? brand.primary : '#D1D5DB',
-          width: '40px',
-          height: '24px',
-          padding: '2px',
-        }}
-      >
-        <span
-          className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ${thumb}`}
-        />
-      </span>
-    </label>
-  );
-};
-
 const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) => {
   const { brand } = useTheme();
+  const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax'>('general');
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     code: '',
@@ -124,12 +97,16 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
     fbr_tax_id: '',
     description: '',
     notes: '',
-    is_active: true
+    is_active: true,
+    length: 0,
+    width: 0,
+    preferred_supplier_id: ''
   });
 
   // Reset or populate form when it opens
   useEffect(() => {
     if (isOpen) {
+      setActiveTab('general');
       setFormData({
         name: initialData?.name || '',
         code: initialData?.code || '',
@@ -164,7 +141,10 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
         fbr_tax_id: initialData?.fbr_tax_id || '',
         description: initialData?.description || '',
         notes: initialData?.notes || '',
-        is_active: initialData?.is_active ?? true
+        is_active: initialData?.is_active ?? true,
+        length: initialData?.length || 0,
+        width: initialData?.width || 0,
+        preferred_supplier_id: initialData?.preferred_supplier_id || ''
       });
     }
   }, [isOpen, initialData]);
@@ -182,7 +162,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
     try {
       const stored = localStorage.getItem('products_list');
       const products: Product[] = stored ? JSON.parse(stored) : [];
-      
+
       const newProduct: Product = {
         id: initialData?.id || crypto.randomUUID(),
         name: formData.name,
@@ -218,7 +198,11 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
         fbr_tax_id: formData.fbr_tax_id || '',
         description: formData.description || '',
         notes: formData.notes || '',
-        is_active: formData.is_active ?? true
+        is_active: formData.is_active ?? true,
+        length: formData.length || 0,
+        width: formData.width || 0,
+        created_at: initialData?.created_at || new Date().toISOString().split('T')[0],
+        preferred_supplier_id: formData.preferred_supplier_id || ''
       };
 
       if (initialData?.id) {
@@ -238,11 +222,70 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
     }
   };
 
-  const SectionHeader = ({ title }: { title: string }) => (
-    <div className="px-6 py-3 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
-      <h3 className="text-[11px] font-black uppercase tracking-wider">{title}</h3>
-    </div>
-  );
+
+
+  const getStepStyles = (step: 'general' | 'tax' | 'pricing') => {
+    const order = { general: 0, tax: 1, pricing: 2 };
+    const activeOrder = order[activeTab];
+    const stepOrder = order[step];
+
+    if (activeOrder === stepOrder) {
+      // Active
+      return {
+        circle: {
+          borderColor: brand.primary,
+          backgroundColor: brand.primary,
+          color: '#ffffff',
+        },
+        label: {
+          color: brand.primary,
+          fontWeight: '600' as const,
+        }
+      };
+    } else if (activeOrder > stepOrder) {
+      // Completed
+      return {
+        circle: {
+          borderColor: brand.primary,
+          backgroundColor: '#ffffff',
+          color: brand.primary,
+        },
+        label: {
+          color: '#475569', // slate-600
+          fontWeight: '500' as const,
+        }
+      };
+    } else {
+      // Pending
+      return {
+        circle: {
+          borderColor: '#E2E8F0', // slate-200
+          backgroundColor: '#ffffff',
+          color: '#94A3B8', // slate-400
+        },
+        label: {
+          color: '#94A3B8', // slate-400
+          fontWeight: '400' as const,
+        }
+      };
+    }
+  };
+
+  const handleNext = () => {
+    if (activeTab === 'general') {
+      if (!formData.name?.trim()) {
+        alert("Product name is required");
+        return;
+      }
+      if (!formData.code?.trim()) {
+        alert("Product code is required");
+        return;
+      }
+      setActiveTab('tax');
+    } else if (activeTab === 'tax') {
+      setActiveTab('pricing');
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -257,154 +300,295 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
             className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-[2px]"
             onClick={onClose}
           />
-          
+
           {/* Floating Panel */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[201] w-full max-w-4xl bg-white border shadow-2xl rounded-3xl overflow-hidden"
-            style={{ borderColor: brand.dark + '20' }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[201] w-full max-w-4xl bg-white border shadow-2xl rounded-3xl max-h-[85vh] flex flex-col overflow-hidden"
+            style={{ borderColor: brand.dark + '10' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-200/50">
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-50 border border-slate-100">
-                  <Box className="w-5 h-5" style={{ color: brand.primary }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-800">
-                    {initialData?.id ? 'Edit Product' : 'Add Product'}
-                  </h3>
-                  <p className="text-xs text-slate-400 font-medium">Specify complete classification, pricing, tax and compliance rules</p>
-                </div>
+                <h2 className="text-lg font-black" style={{ color: brand.dark }}>
+                  {initialData?.id ? `Edit Product: ${formData.name || ''}` : 'Create New Product'}
+                </h2>
               </div>
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Scrollable Body containing 9 Sections */}
-            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar" style={{ maxHeight: '70vh' }}>
-              
-              {/* 1. BASIC INFO */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="1. Basic Info" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic Board Pro v4" />
-                  <Input label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PROD-1001" />
-                </div>
-              </div>
+            {/* Stepper Wizard Progression */}
+            <div className="px-6 pb-6 flex justify-center flex-shrink-0 bg-white">
+              <div className="relative w-full max-w-xl flex items-center justify-between">
 
-              {/* 2. CLASSIFICATION */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="2. Classification" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ComboBox label="Category" value={formData.category_id || ''} onChange={(val) => setFormData({ ...formData, category_id: val })} options={ProductCategory} placeholder="Select Category" />
-                  <ComboBox label="Brand" value={formData.brand_id || ''} onChange={(val) => setFormData({ ...formData, brand_id: val })} options={ProductBrand} placeholder="Select Brand" />
-                  <ComboBox label="Make" value={formData.make_id || ''} onChange={(val) => setFormData({ ...formData, make_id: val })} options={ProductMake} placeholder="Select Make" />
-                  <ComboBox label="Model" value={formData.model_id || ''} onChange={(val) => setFormData({ ...formData, model_id: val })} options={ProductModel} placeholder="Select Model" />
-                  <ComboBox label="Size" value={formData.size_id || ''} onChange={(val) => setFormData({ ...formData, size_id: val })} options={ProductSize} placeholder="Select Size" />
-                  <ComboBox label="UOM (Unit of Measure)" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
-                </div>
-              </div>
+                {/* Connecting lines */}
+                <div className="absolute left-6 right-6 top-6 h-[2px] bg-slate-200" style={{ zIndex: 0 }} />
 
-              {/* 3. PRICING */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="3. Pricing" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Input label="Sale Price" type="number" value={formData.sale_price || ''} onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                  <Input label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                  <Input label="MRP Ex Tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                  <Input label="MRP Inc Tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                </div>
-              </div>
+                {/* Active connecting progress line */}
+                <div
+                  className="absolute left-6 top-6 h-[2px] transition-all duration-300"
+                  style={{
+                    zIndex: 0,
+                    backgroundColor: brand.primary,
+                    width: activeTab === 'general' ? '0%' : activeTab === 'tax' ? '50%' : '100%'
+                  }}
+                />
 
-              {/* 4. STOCK INFO */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="4. Stock Info" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Input label="Opening Qty" type="number" value={formData.opening_qty || ''} onChange={(e) => setFormData({ ...formData, opening_qty: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                  <Input label="Opening Rate" type="number" value={formData.opening_rate || ''} onChange={(e) => setFormData({ ...formData, opening_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                  <Input label="Low Stock Level" type="number" value={formData.low_stock_level || ''} onChange={(e) => setFormData({ ...formData, low_stock_level: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                  <Input label="Weight (kg)" type="number" value={formData.weight || ''} onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                {/* Step 1: Basic Info */}
+                <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('general')}
+                    className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs"
+                    style={getStepStyles('general').circle}
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                  <span
+                    className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                    style={getStepStyles('general').label}
+                  >
+                    Basic Info
+                  </span>
                 </div>
-              </div>
 
-              {/* 5. TAX CONFIGURATION */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="5. Tax Configuration" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input label="GST %" type="number" value={formData.gst_rate || ''} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                  <Input label="Non-Filer GST %" type="number" value={formData.non_filer_gst_rate || ''} onChange={(e) => setFormData({ ...formData, non_filer_gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                  <Input label="ADT %" type="number" value={formData.adt_rate || ''} onChange={(e) => setFormData({ ...formData, adt_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                {/* Step 2: Tax & Compliance */}
+                <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!formData.name?.trim() || !formData.code?.trim()) {
+                        alert("Please fill in the required fields (Name & Code) first.");
+                        return;
+                      }
+                      setActiveTab('tax');
+                    }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs"
+                    style={getStepStyles('tax').circle}
+                  >
+                    <Percent className="w-5 h-5" />
+                  </button>
+                  <span
+                    className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                    style={getStepStyles('tax').label}
+                  >
+                    Tax & Compliance
+                  </span>
                 </div>
-              </div>
 
-              {/* 6. DISCOUNT SETTINGS */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="6. Discount Settings" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Sale Discount %" type="number" value={formData.sale_discount || ''} onChange={(e) => setFormData({ ...formData, sale_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                  <Input label="Purchase Discount %" type="number" value={formData.purchase_discount || ''} onChange={(e) => setFormData({ ...formData, purchase_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                {/* Step 3: Details */}
+                <div className="flex flex-col items-center" style={{ zIndex: 1 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!formData.name?.trim() || !formData.code?.trim()) {
+                        alert("Please fill in the required fields (Name & Code) first.");
+                        return;
+                      }
+                      setActiveTab('pricing');
+                    }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 cursor-pointer shadow-xs"
+                    style={getStepStyles('pricing').circle}
+                  >
+                    <Package className="w-5 h-5" />
+                  </button>
+                  <span
+                    className="text-xs mt-2 tracking-wide transition-colors duration-300"
+                    style={getStepStyles('pricing').label}
+                  >
+                    Financial & Details
+                  </span>
                 </div>
-              </div>
 
-              {/* 7. FBR / COMPLIANCE (ADVANCED) */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="7. FBR / Compliance (Advanced)" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ComboBox label="FBR UOM" value={formData.fbr_uom || ''} onChange={(val) => setFormData({ ...formData, fbr_uom: val })} options={FbrUomOptions} placeholder="Select FBR UOM" />
-                  <Input label="SRO Item Serial No" value={formData.sro_item_serial_no} onChange={(e) => setFormData({ ...formData, sro_item_serial_no: e.target.value })} placeholder="SRO Serial No" />
-                  <Input label="SRO Schedule No" value={formData.sro_schedule_no} onChange={(e) => setFormData({ ...formData, sro_schedule_no: e.target.value })} placeholder="SRO Schedule No" />
-                  <Input label="FBR Sale Rate" type="number" value={formData.fbr_sale_rate || ''} onChange={(e) => setFormData({ ...formData, fbr_sale_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                  <ComboBox label="FBR Sale Type" value={formData.fbr_sale_type || ''} onChange={(val) => setFormData({ ...formData, fbr_sale_type: val })} options={FbrSaleTypeOptions} placeholder="Select Sale Type" />
-                  <Input label="HS Code" value={formData.hs_code} onChange={(e) => setFormData({ ...formData, hs_code: e.target.value })} placeholder="HS Code" />
-                </div>
               </div>
+            </div>
 
-              {/* 8. TAX LINKING */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="8. Tax Linking" />
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ComboBox label="GST Tax Linking" value={formData.gst_tax_id || ''} onChange={(val) => setFormData({ ...formData, gst_tax_id: val })} options={TaxOptions} placeholder="Select GST Link" />
-                  <ComboBox label="Non-Filer Tax Linking" value={formData.non_filer_tax_id || ''} onChange={(val) => setFormData({ ...formData, non_filer_tax_id: val })} options={NonFilerTaxOptions} placeholder="Select Non-Filer Link" />
-                  <ComboBox label="ADT Tax Linking" value={formData.adt_tax_id || ''} onChange={(val) => setFormData({ ...formData, adt_tax_id: val })} options={AdtTaxOptions} placeholder="Select ADT Link" />
-                  <ComboBox label="FBR Tax Linking" value={formData.fbr_tax_id || ''} onChange={(val) => setFormData({ ...formData, fbr_tax_id: val })} options={FbrTaxOptions} placeholder="Select FBR Link" />
-                </div>
-              </div>
+            {/* Scrollable Body containing Tabbed Sections */}
+            <div className="flex-1 px-8 py-6 space-y-4 overflow-y-auto custom-scrollbar">
 
-              {/* 9. ADDITIONAL INFO */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <SectionHeader title="9. Additional Info" />
-                <div className="p-5 space-y-4">
-                  <TextArea label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Additional description..." />
-                  <TextArea label="Notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Internal notes..." />
-                  <div className="pt-2">
-                    <Toggle checked={!!formData.is_active} onChange={(val) => setFormData({ ...formData, is_active: val })} label="Product is Active" />
+              {activeTab === 'general' && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="space-y-1.5">
+                    <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                      <Tag className="w-3.5 h-3.5" /> Basic Information
+                    </h4>
+                    <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Input variant="compact" label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic Board Pro v4" />
+                      <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PROD-1001" />
+                      <ComboBox variant="compact" label="UOM" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
+                      <Input variant="compact" label="Sale Price" type="number" value={formData.sale_price || ''} onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input variant="compact" label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input variant="compact" label="MRP Ex Tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input variant="compact" label="MRP Inc Tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                    </div>
+                  </Card>
+                  </div>
+
+                  {/* Card 2: Classification & Description */}
+                  <div className="space-y-1.5">
+                    <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5" /> Classification & Details
+                    </h4>
+                    <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <ComboBox variant="compact" label="Category" value={formData.category_id || ''} onChange={(val) => setFormData({ ...formData, category_id: val })} options={ProductCategory} placeholder="Select Category" />
+                          <ComboBox variant="compact" label="Brand" value={formData.brand_id || ''} onChange={(val) => setFormData({ ...formData, brand_id: val })} options={ProductBrand} placeholder="Select Brand" />
+                          <ComboBox variant="compact" label="Make" value={formData.make_id || ''} onChange={(val) => setFormData({ ...formData, make_id: val })} options={ProductMake} placeholder="Select Make" />
+                          <ComboBox variant="compact" label="Model" value={formData.model_id || ''} onChange={(val) => setFormData({ ...formData, model_id: val })} options={ProductModel} placeholder="Select Model" />
+                          <ComboBox variant="compact" label="Size" value={formData.size_id || ''} onChange={(val) => setFormData({ ...formData, size_id: val })} options={ProductSize} placeholder="Select Size" />
+                          <ComboBox variant="compact" label="Preferred Supplier" value={formData.preferred_supplier_id || ''} onChange={(val) => setFormData({ ...formData, preferred_supplier_id: val })} options={ProductSupplier} placeholder="Select Supplier" />
+                        </div>
+
+                        {/* Additional Details */}
+                        <div className="space-y-3 pt-2 border-t border-slate-200/40">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <TextArea className="!rounded-lg text-[11px] py-1.5 px-3 h-14" label="Description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Additional description..." />
+                            <TextArea className="!rounded-lg text-[11px] py-1.5 px-3 h-14" label="Notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Internal notes..." />
+                          </div>
+                          <div className="pt-1">
+                            <Toggle checked={!!formData.is_active} onChange={(val) => setFormData({ ...formData, is_active: val })} label="Product is Active" />
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {activeTab === 'pricing' && (
+                <div className="space-y-1.5 animate-fadeIn">
+                  <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                    <Box className="w-3.5 h-3.5" /> Inventory & Dimensions
+                  </h4>
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                  <div className="space-y-4">
+                    {/* Row 1: Stock Info (3 inputs) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Input variant="compact" label="Opening Qty" type="number" value={formData.opening_qty || ''} onChange={(e) => setFormData({ ...formData, opening_qty: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <Input variant="compact" label="Opening Rate" type="number" value={formData.opening_rate || ''} onChange={(e) => setFormData({ ...formData, opening_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input variant="compact" label="Low Stock Level" type="number" value={formData.low_stock_level || ''} onChange={(e) => setFormData({ ...formData, low_stock_level: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                    </div>
+
+                    {/* Row 2: Weight & Dimensions (3 inputs) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Input variant="compact" label="Weight (kg)" type="number" value={formData.weight || ''} onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input variant="compact" label="Length" type="number" value={formData.length || ''} onChange={(e) => setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <Input variant="compact" label="Width" type="number" value={formData.width || ''} onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Input variant="compact" label="Sale Discount %" type="number" value={formData.sale_discount || ''} onChange={(e) => setFormData({ ...formData, sale_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <Input variant="compact" label="Purchase Discount %" type="number" value={formData.purchase_discount || ''} onChange={(e) => setFormData({ ...formData, purchase_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                    </div>
+                  </div>
+                </Card>
+                </div>
+              )}
+
+              {activeTab === 'tax' && (
+                <div className="space-y-1.5 animate-fadeIn">
+                  <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
+                    <Percent className="w-3.5 h-3.5" /> Tax Compliance & FBR Linking
+                  </h4>
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                  <div className="space-y-4">
+                    {/* Tax Configuration Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Input variant="compact" label="GST %" type="number" value={formData.gst_rate || ''} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <Input variant="compact" label="Non-Filer GST %" type="number" value={formData.non_filer_gst_rate || ''} onChange={(e) => setFormData({ ...formData, non_filer_gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <Input variant="compact" label="ADT %" type="number" value={formData.adt_rate || ''} onChange={(e) => setFormData({ ...formData, adt_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                    </div>
+
+                    {/* FBR / Compliance Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <ComboBox variant="compact" label="FBR UOM" value={formData.fbr_uom || ''} onChange={(val) => setFormData({ ...formData, fbr_uom: val })} options={FbrUomOptions} placeholder="Select FBR UOM" />
+                      <Input variant="compact" label="SRO Item Serial No" value={formData.sro_item_serial_no} onChange={(e) => setFormData({ ...formData, sro_item_serial_no: e.target.value })} placeholder="SRO Serial No" />
+                      <Input variant="compact" label="SRO Schedule No" value={formData.sro_schedule_no} onChange={(e) => setFormData({ ...formData, sro_schedule_no: e.target.value })} placeholder="SRO Schedule No" />
+                      <Input variant="compact" label="FBR Sale Rate" type="number" value={formData.fbr_sale_rate || ''} onChange={(e) => setFormData({ ...formData, fbr_sale_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <ComboBox variant="compact" label="FBR Sale Type" value={formData.fbr_sale_type || ''} onChange={(val) => setFormData({ ...formData, fbr_sale_type: val })} options={FbrSaleTypeOptions} placeholder="Select Sale Type" />
+                      <Input variant="compact" label="HS Code" value={formData.hs_code} onChange={(e) => setFormData({ ...formData, hs_code: e.target.value })} placeholder="HS Code" />
+                    </div>
+
+                    {/* Tax Linking Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <ComboBox variant="compact" label="GST Tax Linking" value={formData.gst_tax_id || ''} onChange={(val) => setFormData({ ...formData, gst_tax_id: val })} options={TaxOptions} placeholder="Select GST Link" />
+                      <ComboBox variant="compact" label="Non-Filer Tax Linking" value={formData.non_filer_tax_id || ''} onChange={(val) => setFormData({ ...formData, non_filer_tax_id: val })} options={NonFilerTaxOptions} placeholder="Select Non-Filer Link" />
+                      <ComboBox variant="compact" label="ADT Tax Linking" value={formData.adt_tax_id || ''} onChange={(val) => setFormData({ ...formData, adt_tax_id: val })} options={AdtTaxOptions} placeholder="Select ADT Link" />
+                      <ComboBox variant="compact" label="FBR Tax Linking" value={formData.fbr_tax_id || ''} onChange={(val) => setFormData({ ...formData, fbr_tax_id: val })} options={FbrTaxOptions} placeholder="Select FBR Link" />
+                    </div>
+                  </div>
+                </Card>
+                </div>
+              )}
 
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-200/50 flex justify-end gap-2 bg-slate-50/50">
-              <button
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200/50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all shadow-sm hover:opacity-90 hover:scale-102 active:scale-98"
-                style={{ backgroundColor: brand.primary }}
-              >
-                <Save className="w-3.5 h-3.5" />
-                {initialData?.id ? 'Save Changes' : 'Add Product'}
-              </button>
+            <div className="p-6 border-t border-slate-200/50 flex justify-between items-center bg-slate-50/50 flex-shrink-0">
+              {/* Left action (Back button) */}
+              <div>
+                {activeTab !== 'general' && (
+                  <Button
+                    type="button"
+                    variant="white"
+                    size="md"
+                    icon={ChevronLeft}
+                    onClick={() => {
+                      if (activeTab === 'tax') setActiveTab('general');
+                      else if (activeTab === 'pricing') setActiveTab('tax');
+                    }}
+                  >
+                    Back
+                  </Button>
+                )}
+              </div>
+
+              {/* Right actions (Cancel + Next/Save buttons) */}
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="white"
+                  size="md"
+                  onClick={onClose}
+                >
+                  Cancel
+                </Button>
+
+                {activeTab !== 'pricing' ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    icon={ChevronRight}
+                    iconPosition="right"
+                    onClick={handleNext}
+                    style={{ backgroundColor: brand.primary }}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    icon={Save}
+                    onClick={handleSave}
+                    className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/10 border-none text-white"
+                  >
+                    {initialData?.id ? 'Save Changes' : 'Add Product'}
+                  </Button>
+                )}
+              </div>
             </div>
           </motion.div>
         </>
