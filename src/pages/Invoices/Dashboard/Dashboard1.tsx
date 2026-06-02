@@ -5,10 +5,10 @@ import {
   Search, Plus, Users, Box, BarChart3, Sparkles,
   ArrowRight, Edit
 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import Card from '../../components/ui/Card';
-import { Input } from '../../components/ui/FormControls';
-import type { Invoice } from '../Invoices/invoiceTypes';
+import { useTheme } from '../../../context/ThemeContext';
+import Card from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/FormControls';
+import type { Invoice } from '../invoiceTypes';
 
 interface Dashboard1Props {
   invoiceItems?: Invoice[];
@@ -36,14 +36,14 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
   });
 
   // ── Data Calculations ──────────────────────────────────────────────────────
-  const draftInvoices   = invoiceItems.filter(inv => inv.status === 'Draft');
-  const paidInvoices    = invoiceItems.filter(inv => inv.status === 'Paid');
+  const draftInvoices = invoiceItems.filter(inv => inv.status === 'Draft');
+  const paidInvoices = invoiceItems.filter(inv => inv.status === 'Paid');
   const overdueInvoices = invoiceItems.filter(inv => inv.status === 'Overdue');
   const pendingInvoices = invoiceItems.filter(inv => inv.status === 'Pending');
 
-  const totalRevenue  = paidInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
   const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0)
-                      + overdueInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+    + overdueInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
 
   const formatCurrency = (value: number) =>
     'Rs. ' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -53,10 +53,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
     let list = [...invoiceItems];
     const q = aiQuery.toLowerCase().trim();
     if (q) {
-      if (q.includes('overdue'))             list = list.filter(i => i.status === 'Overdue');
-      else if (q.includes('paid'))           list = list.filter(i => i.status === 'Paid');
+      if (q.includes('overdue')) list = list.filter(i => i.status === 'Overdue');
+      else if (q.includes('paid')) list = list.filter(i => i.status === 'Paid');
       else if (q.includes('pending') || q.includes('unpaid')) list = list.filter(i => i.status === 'Pending');
-      else if (q.includes('draft'))          list = list.filter(i => i.status === 'Draft');
+      else if (q.includes('draft')) list = list.filter(i => i.status === 'Draft');
       else list = list.filter(i =>
         i.client.toLowerCase().includes(q) ||
         i.id.toLowerCase().includes(q) ||
@@ -91,10 +91,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
 
   // ── Status color map ───────────────────────────────────────────────────────
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-    Paid:    { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+    Paid: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
     Pending: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
     Overdue: { bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
-    Draft:   { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
+    Draft: { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -181,10 +181,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
           <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Create Invoice', icon: Plus,     onClick: () => onViewChange?.('add-invoice-v4'), color: brand.primary, bg: 'bg-indigo-50' },
-              { label: 'Add Customer',  icon: Users,     onClick: () => onViewChange?.('clients'),        color: '#0EA5E9',    bg: 'bg-sky-50'    },
-              { label: 'Add Product',   icon: Box,       onClick: () => setShowAddProductModal(true),     color: '#F59E0B',    bg: 'bg-amber-50'  },
-              { label: 'View Reports',  icon: BarChart3, onClick: () => { setToastMessage('Reports & Analytics feature coming soon!'); setTimeout(() => setToastMessage(null), 3000); }, color: '#10B981',    bg: 'bg-emerald-50'},
+              { label: 'Create Invoice', icon: Plus, onClick: () => onViewChange?.('add-invoice-v4'), color: brand.primary, bg: 'bg-indigo-50' },
+              { label: 'Add Customer', icon: Users, onClick: () => onViewChange?.('clients'), color: '#0EA5E9', bg: 'bg-sky-50' },
+              { label: 'Add Product', icon: Box, onClick: () => setShowAddProductModal(true), color: '#F59E0B', bg: 'bg-amber-50' },
+              { label: 'View Reports', icon: BarChart3, onClick: () => { setToastMessage('Reports & Analytics feature coming soon!'); setTimeout(() => setToastMessage(null), 3000); }, color: '#10B981', bg: 'bg-emerald-50' },
             ].map(action => (
               <motion.button
                 key={action.label}
@@ -288,7 +288,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <h3 className="text-xs font-bold text-slate-500 mb-3">Invoice Summary</h3>
                 {[
                   { label: 'Total Invoices', value: String(invoiceItems.length) },
-                  { label: 'Total Revenue',  value: formatCurrency(totalRevenue)  },
+                  { label: 'Total Revenue', value: formatCurrency(totalRevenue) },
                   { label: 'Pending Amount', value: formatCurrency(pendingAmount) },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between p-2 rounded-md bg-slate-50 mb-2">
@@ -301,10 +301,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
               <div>
                 <h3 className="text-xs font-bold text-slate-500 mb-3">Status Breakdown</h3>
                 {[
-                  { label: 'Paid',    value: paidInvoices.length,    color: '#15803D' },
-                  { label: 'Pending', value: pendingInvoices.length,  color: '#C2410C' },
-                  { label: 'Overdue', value: overdueInvoices.length,  color: '#BE123C' },
-                  { label: 'Draft',   value: draftInvoices.length,    color: '#64748B' },
+                  { label: 'Paid', value: paidInvoices.length, color: '#15803D' },
+                  { label: 'Pending', value: pendingInvoices.length, color: '#C2410C' },
+                  { label: 'Overdue', value: overdueInvoices.length, color: '#BE123C' },
+                  { label: 'Draft', value: draftInvoices.length, color: '#64748B' },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between p-2 rounded-md bg-slate-50 mb-2">
                     <span className="text-xs font-bold text-slate-600">{item.label}</span>
@@ -340,7 +340,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 {[
                   { label: 'Product Code', value: productCode, setter: setProductCode, placeholder: 'e.g. PROD-001' },
                   { label: 'Product Name', value: productName, setter: setProductName, placeholder: 'e.g. Web Design Package' },
-                  { label: 'Price (PKR)',  value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
+                  { label: 'Price (PKR)', value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
                   { label: 'SKU (optional)', value: productSku, setter: setProductSku, placeholder: 'e.g. SKU-WDP-01' },
                 ].map(f => (
                   <Input

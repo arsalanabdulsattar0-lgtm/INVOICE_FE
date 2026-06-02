@@ -11,6 +11,13 @@ import { ScrollArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
 import { ProductFilterDrawer } from '../../components/ui/ProductFilterDrawer';
 import { ActiveChip, InactiveChip } from '../../components/ui/Chip';
+import {
+  ProductCategory,
+  ProductBrand,
+  ProductModel,
+  ProductSize,
+  ProductUOM
+} from '../../utils/productData';
 
 export interface Product {
   id: string;
@@ -57,62 +64,6 @@ export interface Product {
 interface Props {
   onAddProductClick: () => void;
 }
-
-export const ProductCategory = [
-  { id: 'cat-1', name: 'Electronics' },
-  { id: 'cat-2', name: 'Hardware' },
-  { id: 'cat-3', name: 'Cabling' },
-  { id: 'cat-4', name: 'Networking' },
-  { id: 'cat-5', name: 'Software' },
-  { id: 'cat-6', name: 'Services' },
-];
-
-export const ProductBrand = [
-  { id: 'br-1', name: 'Intel' },
-  { id: 'br-2', name: 'Logitech' },
-  { id: 'br-3', name: 'ASUS' },
-  { id: 'br-4', name: 'Cisco' },
-  { id: 'br-5', name: 'TP-Link' },
-  { id: 'br-6', name: 'Generic' },
-];
-
-export const ProductMake = [
-  { id: 'mk-1', name: 'USA' },
-  { id: 'mk-2', name: 'China' },
-  { id: 'mk-3', name: 'Taiwan' },
-  { id: 'mk-4', name: 'Japan' },
-  { id: 'mk-5', name: 'Germany' },
-];
-
-export const ProductModel = [
-  { id: 'md-1', name: 'Pro v4' },
-  { id: 'md-2', name: 'Airflow AF' },
-  { id: 'md-3', name: 'Gen4 PCIe' },
-  { id: 'md-4', name: 'Enterprise Managed' },
-  { id: 'md-5', name: 'Standard Edition' },
-];
-
-export const ProductSize = [
-  { id: 'sz-1', name: 'Standard' },
-  { id: 'sz-2', name: '1 Meter' },
-  { id: 'sz-3', name: '2TB Storage' },
-  { id: 'sz-4', name: '32GB Capacity' },
-  { id: 'sz-5', name: '1500VA Power' },
-];
-
-export const ProductUOM = [
-  { id: 'uom-1', name: 'Pcs' },
-  { id: 'uom-2', name: 'Box' },
-  { id: 'uom-3', name: 'Kg' },
-];
-
-export const ProductSupplier = [
-  { id: 'sup-1', name: 'Logitech Wholesale' },
-  { id: 'sup-2', name: 'ASUS Distribution' },
-  { id: 'sup-3', name: 'Cisco Partner PK' },
-  { id: 'sup-4', name: 'Intel Distributors' },
-  { id: 'sup-5', name: 'Local Supplier' },
-];
 
 type SortKey = 'name' | 'code' | 'price' | 'qty' | 'status' | 'category_id';
 type SortDir = 'asc' | 'desc';
@@ -769,7 +720,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                                     className="!px-1 text-blue-600 hover:bg-blue-50" />
                                   <Button onClick={() => handleDelete(product.id, product.name)}
                                     variant="ghost" size="xs" icon={Trash2} title="Delete"
-                                    className="!px-1 text-red-500" />
+                                    className="!px-1 !text-red-500" />
                                 </div>
                               </td>
                             </motion.tr>

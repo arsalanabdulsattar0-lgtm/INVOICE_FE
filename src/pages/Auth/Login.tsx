@@ -11,7 +11,7 @@ interface Props {
 
 const Login: React.FC<Props> = ({ onLogin }) => {
   const { brand } = useTheme();
-  
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('admin@invoiceflow.com');
   const [password, setPassword] = useState('password123');
@@ -31,48 +31,48 @@ const Login: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500"
       style={{ backgroundColor: brand.surface }}
     >
       {/* Background Decor with dynamic theme colors */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div 
-          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[120px] animate-pulse" 
+        <div
+          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[120px] animate-pulse"
           style={{ background: `${brand.primary}12` }}
         />
-        <div 
-          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-[120px] animate-pulse delay-1000" 
+        <div
+          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-[120px] animate-pulse delay-1000"
           style={{ background: `${brand.accent || brand.primary}12` }}
         />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div 
+        <div
           className="bg-white/80 backdrop-blur-2xl border p-10 rounded-[2.5rem] shadow-2xl transition-all duration-300"
-          style={{ 
+          style={{
             borderColor: brand.primary + '15',
             boxShadow: `0 20px 40px -15px ${brand.primary}15`
           }}
         >
-          
+
           {/* Logo / Brand Header */}
           <div className="text-center mb-8">
-            <div 
+            <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transition-all duration-300"
-              style={{ 
+              style={{
                 background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent || brand.primary})`,
                 boxShadow: `0 10px 20px ${brand.primary}30`
               }}
             >
               <span className="text-white font-bold text-3xl">I</span>
             </div>
-            <h1 
+            <h1
               className="text-3xl font-extrabold tracking-tight mb-2 transition-colors duration-300"
               style={{ color: brand.dark }}
             >
@@ -84,11 +84,11 @@ const Login: React.FC<Props> = ({ onLogin }) => {
           </div>
 
           {/* Switch Tab (Login vs SignUp) */}
-          <div 
+          <div
             className="flex p-1.5 rounded-2xl mb-8 relative border transition-all"
-            style={{ 
-              backgroundColor: brand.surface, 
-              borderColor: brand.dark + '0c' 
+            style={{
+              backgroundColor: brand.surface,
+              borderColor: brand.dark + '0c'
             }}
           >
             <button
@@ -189,8 +189,8 @@ const Login: React.FC<Props> = ({ onLogin }) => {
                 <div className="flex justify-between items-center w-full">
                   <span>Password *</span>
                   {!isSignUp && (
-                    <a 
-                      href="#" 
+                    <a
+                      href="#"
                       onClick={(e) => { e.preventDefault(); alert('Password reset link sent (Simulation).'); }}
                       className="text-[10px] font-bold hover:underline transition-colors ml-auto"
                       style={{ color: brand.primary }}
@@ -210,7 +210,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
             />
 
             {/* Action button */}
-            <Button 
+            <Button
               type="submit"
               variant="primary"
               size="lg"
@@ -230,7 +230,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
               {isSignUp ? (
                 <>
                   Already have an account?{' '}
-                  <button 
+                  <button
                     onClick={() => setIsSignUp(false)}
                     className="font-bold hover:underline transition-all"
                     style={{ color: brand.primary }}
@@ -241,7 +241,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
               ) : (
                 <>
                   Don't have an account?{' '}
-                  <button 
+                  <button
                     onClick={() => setIsSignUp(true)}
                     className="font-bold hover:underline transition-all"
                     style={{ color: brand.primary }}

@@ -2,7 +2,7 @@ import React from 'react';
 import { FilterDrawer } from './FilterDrawer';
 import { Input, Select, ComboBox } from './FormControls';
 import { useTheme } from '../../context/ThemeContext';
-import { ProductCategory, ProductSupplier } from '../../pages/Products/ProductList';
+import { ProductCategory, ProductSupplier } from '../../utils/productData';
 
 interface ProductFilterDrawerProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
           >
             All
           </button>
-          {ProductCategory.map((cat) => (
+          {ProductCategory.map((cat: { id: string; name: string }) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}

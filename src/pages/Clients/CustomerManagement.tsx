@@ -12,22 +12,12 @@ import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
 import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import { Chip, FilerChip, NonFilerChip, ActiveChip, InactiveChip } from '../../components/ui/Chip';
-
-// ---------------------------------------------------------------------------
-// Sales Persons Data
-// ---------------------------------------------------------------------------
-export const SALES_PERSONS = [
-  { id: 'sp-1', name: 'Ahmed Raza' },
-  { id: 'sp-2', name: 'Sara Khan' },
-  { id: 'sp-3', name: 'Usman Ali' },
-  { id: 'sp-4', name: 'Fatima Malik' },
-  { id: 'sp-5', name: 'Hassan Tariq' },
-];
+import { SALES_PERSONS } from '../../utils/customerData';
 
 // ---------------------------------------------------------------------------
 // Types – reflect the backend model supplied by the user
 // ---------------------------------------------------------------------------
-interface Customer {
+export interface Customer {
   id: string;
   customer_id?: string;
   name: string;

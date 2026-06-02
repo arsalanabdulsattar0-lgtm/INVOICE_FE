@@ -17,25 +17,8 @@ import {
 } from 'lucide-react';
 import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
-
-// Sample data for the ComboBoxes
-const sampleCustomers = [
-  { id: '1', name: 'Arsalan Abdul Sattar', subtitle: 'Premium Client · Karachi, PK', fullAddress: 'House 42, Street 5, Karachi, PK', strn: 'STRN-042-2024', ntn: '1234567-8', province: 'Sindh', registrationType: 'Registered', creditLimit: 500000, balance: 125000, status: 'active' },
-  { id: '2', name: 'Google DeepMind', subtitle: 'Enterprise · London, UK', fullAddress: '6 Pancras Square, London, UK', strn: 'STRN-UK-9821', ntn: '9876543-1', province: 'London', registrationType: 'Registered', creditLimit: 2000000, balance: 0, status: 'active' },
-  { id: '3', name: 'Al-Madina Traders', subtitle: 'Wholesale · Lahore, PK', fullAddress: 'Shop 12, Main Bazar, Lahore, PK', strn: 'STRN-LHR-3310', ntn: '4561237-5', province: 'Punjab', registrationType: 'Unregistered', creditLimit: 150000, balance: 89000, status: 'overdue' },
-  { id: '4', name: 'TechFlow Solutions', subtitle: 'SaaS · Dubai, UAE', fullAddress: 'Office 404, Tech Tower, Dubai, UAE', strn: 'STRN-UAE-7821', ntn: '7894561-2', province: 'Dubai', registrationType: 'Registered', creditLimit: 750000, balance: 210000, status: 'active' },
-];
-
-const sampleProducts = [
-  { id: 'P001', name: 'Logic Board Pro v4', subtitle: 'SKU: LB-V4-001 · Rs. 450.00' },
-  { id: 'P002', name: 'Wireless Mesh Node', subtitle: 'SKU: WMN-2024 · Rs. 120.00' },
-  { id: 'P003', name: 'Thermal Paste XG', subtitle: 'SKU: TP-XG-01 · Rs. 15.00' },
-  { id: 'P004', name: 'Fiber Patch Cord', subtitle: 'SKU: FPC-OS2-1M · Rs. 8.00' },
-  { id: 'P005', name: 'Core Processor i9', subtitle: 'SKU: CP-I9-14G · Rs. 599.00' },
-  { id: 'P006', name: 'High-Speed RAM 32GB', subtitle: 'SKU: RAM-DDR5-32 · Rs. 110.00' },
-  { id: 'P007', name: 'NVMe SSD 2TB', subtitle: 'SKU: SSD-NVME-2TB · Rs. 180.00' },
-  { id: 'P010', name: 'Chassis Airflow ATX', subtitle: 'SKU: CASE-ATX-AF · Rs. 95.00' },
-];
+import { sampleCustomers } from '../../utils/customerData';
+import { sampleProducts } from '../../utils/productData';
 
 interface Props {
   data: InvoiceData;

@@ -14,7 +14,7 @@ import {
   ProductSize,
   ProductUOM,
   ProductSupplier
-} from '../../pages/Products/ProductList';
+} from '../../utils/productData';
 
 interface Props {
   isOpen: boolean;

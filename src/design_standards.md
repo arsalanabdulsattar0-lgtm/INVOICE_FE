@@ -1,4 +1,27 @@
 # INVOICE_FE — Design Standards Reference
+PROJECT DEVELOPMENT RULES
+
+Before implementing any UI:
+
+1. Read design_standards.md first.
+2. Reuse existing components.
+3. Never create new Button, Card, Input, Select, Table components if a standard version already exists.
+4. Follow existing typography exactly.
+5. Follow existing spacing exactly.
+6. Follow existing theme tokens exactly.
+7. Maintain visual consistency with Create Invoice screen.
+8. Never introduce a new design system.
+9. Never hardcode colors if theme tokens exist.
+10. Prefer modifying existing components over creating duplicates.
+
+MANDATORY:
+
+- design_standards.md is the single source of truth.
+- Existing UI components must always be reused.
+- Existing theme must always be respected.
+- Existing font sizes must always be respected.
+- Existing spacing system must always be respected.
+- Existing Create Invoice screen is the visual reference for all new screens.
 
 > **Rule:** Koi bhi naya feature ya screen banana ho, **pehle yeh document padho**, phir existing standard components use karo. Apni marzi se nayi styling mat banao.
 

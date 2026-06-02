@@ -4,8 +4,8 @@ import type { InvoiceData } from './types';
 import Layout from './components/layout/Layout';
 
 // Lazy-loaded pages — each becomes its own async chunk
-const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
-const Dashboard1 = lazy(() => import('./pages/Dashboard/Dashboard1'));
+const Dashboard = lazy(() => import('./pages/Invoices/Dashboard/Dashboard'));
+const Dashboard1 = lazy(() => import('./pages/Invoices/Dashboard/Dashboard1'));
 const InvoiceEditorV4 = lazy(() => import('./pages/Invoices/InvoiceEditorV4'));
 const InvoiceListModule = lazy(() => import('./pages/Invoices/InvoiceList'));
 const CustomerManagement = lazy(() => import('./pages/Clients/CustomerManagement'));
@@ -238,18 +238,18 @@ function App() {
         return <Dashboard invoiceItems={invoiceList} />;
       case 'dashboard1':
         return <Dashboard1 invoiceItems={invoiceList} onViewChange={(v) => setActiveView(v as View)} />;
-        case 'add-invoice':
-          return <div>Invoice creation is handled via AI Inline Panel.</div>;
-        case 'add-invoice-v2':
-          return <div>Invoice creation v2 handled via AI Inline Panel.</div>;
-        case 'add-invoice-v3':
-          return <div>Invoice creation v3 handled via AI Inline Panel.</div>;
-        case 'add-invoice-v4':
-          return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
+      case 'add-invoice':
+        return <div>Invoice creation is handled via AI Inline Panel.</div>;
+      case 'add-invoice-v2':
+        return <div>Invoice creation v2 handled via AI Inline Panel.</div>;
+      case 'add-invoice-v3':
+        return <div>Invoice creation v3 handled via AI Inline Panel.</div>;
+      case 'add-invoice-v4':
+        return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
       case 'invoices':
         return <InvoiceListModule invoiceItems={invoiceList} setInvoiceItems={setInvoiceList} onViewChange={(v) => setActiveView(v as View)} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
       case 'clients':
-          return <CustomerManagement />;
+        return <CustomerManagement />;
       case 'products':
         return <ProductList onAddProductClick={() => {
           setProductFormInitialData(undefined);
@@ -287,10 +287,10 @@ function App() {
         </Suspense>
       </Layout>
 
-      <InlineProductForm 
-        isOpen={isProductFormOpen} 
-        onClose={() => setIsProductFormOpen(false)} 
-        initialData={productFormInitialData} 
+      <InlineProductForm
+        isOpen={isProductFormOpen}
+        onClose={() => setIsProductFormOpen(false)}
+        initialData={productFormInitialData}
       />
 
       {/* Hidden Printable Invoice Area */}
