@@ -79,7 +79,7 @@ export const AppearanceModule: React.FC<AppearanceModuleProps> = ({
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Sun className="w-3.5 h-3.5" style={{ color: brand.primary }} />
-          <h4 className="text-xs font-bold uppercase tracking-widest" style={{ color: brand.textSecondary }}>
+          <h4 className="text-xs font-bold tracking-widest" style={{ color: brand.textSecondary }}>
             Color Themes
           </h4>
         </div>

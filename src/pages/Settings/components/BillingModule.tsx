@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
+import { Input, ScrollArea } from '../../../components/ui/FormControls';
 import { useTheme } from '../../../context/ThemeContext';
-import { ScrollArea } from '../../../components/ui/ScrollArea';
+import { TableHeader } from '../../../components/ui/Typography';
 import { Modal } from '../../../components/ui/Modal';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 
 interface BillingModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
@@ -30,6 +31,7 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
   // Modal open states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
+  const [cancelConfirmModal, setCancelConfirmModal] = useState(false);
 
   // Form states for upgrade modal
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Pro Suite');
@@ -79,11 +81,13 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
 
   // Cancel plan handler
   const handleCancelPlan = () => {
-    if (window.confirm('Are you sure you want to cancel your plan subscription?')) {
-      setPlanName('Free Tier');
-      setPlanPrice(0);
-      setNextBillDate('Cancelled');
-    }
+    setCancelConfirmModal(true);
+  };
+
+  const doCancelPlan = () => {
+    setPlanName('Free Tier');
+    setPlanPrice(0);
+    setNextBillDate('Cancelled');
   };
 
   const plansList = [
@@ -100,14 +104,14 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
         <div className="px-4 py-2.5 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Subscription overview</h3>
+            <h3 className="text-[11px] font-black tracking-wide">Subscription Overview</h3>
           </div>
         </div>
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 rounded-2xl border bg-slate-50/50" style={{ borderColor: brand.dark + '10' }}>
-              <span className="text-[10px] font-bold text-slate-400">Active plan</span>
+              <span className="text-[10px] font-bold text-slate-400">Active Plan</span>
               <h3 className="text-base font-black text-slate-800 mt-1">{planName}</h3>
               <p className="text-xs text-slate-500 mt-1">
                 {planPrice > 0 ? (
@@ -115,19 +119,19 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
                     Next bill on: <strong>{nextBillDate}</strong> ({planPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })} / month)
                   </>
                 ) : (
-                  'Subscription status: inactive'
+                  'Subscription Status: Inactive'
                 )}
               </p>
               <div className="mt-4 flex gap-2">
-                <Button variant="primary" size="xs" onClick={() => { setSelectedPlan(planName); setShowUpgradeModal(true); }} style={{ backgroundColor: brand.primary }}>Upgrade plan</Button>
+                <Button variant="primary" size="xs" onClick={() => { setSelectedPlan(planName); setShowUpgradeModal(true); }} style={{ backgroundColor: brand.primary }}>Upgrade Plan</Button>
                 {planPrice > 0 && (
-                  <Button variant="white" size="xs" onClick={handleCancelPlan}>Cancel plan</Button>
+                  <Button variant="white" size="xs" onClick={handleCancelPlan}>Cancel Plan</Button>
                 )}
               </div>
             </div>
 
             <div className="p-5 rounded-2xl border bg-slate-50/50" style={{ borderColor: brand.dark + '10' }}>
-              <span className="text-[10px] font-bold text-slate-400">Payment method</span>
+              <span className="text-[10px] font-bold text-slate-400">Payment Method</span>
               <h3 className="text-base font-black text-slate-800 mt-1 flex items-center gap-2">
                 <span className="px-2 py-0.5 bg-blue-900 rounded text-white text-[9px] font-bold flex items-center justify-center">
                   {cardBrand}
@@ -136,7 +140,7 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
               </h3>
               <p className="text-xs text-slate-500 mt-1">Expires: <strong>{cardExpiry}</strong></p>
               <div className="mt-4">
-                <Button variant="white" size="xs" onClick={() => setShowCardModal(true)}>Update card</Button>
+                <Button variant="white" size="xs" onClick={() => setShowCardModal(true)}>Update Card</Button>
               </div>
             </div>
           </div>
@@ -149,7 +153,7 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
         <div className="px-4 py-2.5 flex items-center justify-between text-white" style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Payment history</h3>
+            <h3 className="text-[11px] font-black tracking-wide">Payment History</h3>
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: brand.soft, color: brand.dark }}>
               {receipts.length} transactions
             </span>
@@ -161,15 +165,12 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b" style={{ borderColor: brand.dark + '10' }}>
                 {['Transaction ID', 'Date', 'Amount (Rs.)', 'Status'].map((h, idx) => (
-                  <th
+                  <TableHeader
                     key={h}
-                    className={`px-4 py-3 text-left border-b ${idx !== 0 ? 'border-l border-slate-50' : ''}`}
-                    style={{ borderColor: brand.dark + '10' }}
-                  >
-                    <span className="text-[10px] font-black tracking-widest whitespace-nowrap" style={{ color: brand.dark }}>
-                      {h}
-                    </span>
-                  </th>
+                    label={h}
+                    padding="px-4"
+                    borderLeft={idx !== 0}
+                  />
                 ))}
               </tr>
             </thead>
@@ -194,13 +195,13 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
       <Modal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        title="Upgrade plan"
+        title="Upgrade Plan"
         size="lg"
         footer={
           <>
             <Button variant="white" size="md" onClick={() => setShowUpgradeModal(false)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleUpgradePlan} style={{ backgroundColor: brand.primary }}>
-              Confirm plan
+              Confirm Plan
             </Button>
           </>
         }
@@ -235,27 +236,27 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
       <Modal
         isOpen={showCardModal}
         onClose={() => setShowCardModal(false)}
-        title="Update card details"
+        title="Update Card Details"
         size="lg"
         footer={
           <>
             <Button variant="white" size="md" onClick={() => setShowCardModal(false)}>Cancel</Button>
             <Button variant="primary" size="md" onClick={handleUpdateCard} style={{ backgroundColor: brand.primary }}>
-              Save details
+              Save Details
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Cardholder name *"
+            label="Cardholder Name *"
             variant="compact"
             placeholder="e.g. Arsalan Abdul Sattar"
             value={cardholderName}
             onChange={e => setCardholderName(e.target.value)}
           />
           <Input
-            label="Card number *"
+            label="Card Number *"
             variant="compact"
             placeholder="e.g. 4242 4242 4242 4242"
             value={cardNumberForm}
@@ -263,7 +264,7 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Expiry date *"
+              label="Expiry Date *"
               variant="compact"
               placeholder="MM/YY"
               value={cardExpiryForm}
@@ -281,6 +282,16 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={cancelConfirmModal}
+        onClose={() => setCancelConfirmModal(false)}
+        onConfirm={doCancelPlan}
+        title="Cancel Subscription?"
+        message="Are you sure you want to cancel your plan subscription? Your account will be downgraded to the Free Tier and you will lose access to premium features."
+        confirmLabel="Yes, Cancel Plan"
+        variant="danger"
+      />
     </div>
   );
 };

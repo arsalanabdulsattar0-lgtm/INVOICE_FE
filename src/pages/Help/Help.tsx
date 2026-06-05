@@ -8,7 +8,7 @@ const Help: React.FC = () => {
       <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
         <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-xl">
-          <h2 className="text-3xl font-extrabold mb-4 tracking-tight">How can we help?</h2>
+          <h2 className="text-3xl font-extrabold mb-4 tracking-tight">How Can We Help?</h2>
           <p className="text-indigo-100 text-sm leading-relaxed mb-6">
             Search our knowledge base or get in touch with our support team. 
             We're here to help you manage your business efficiently.
@@ -50,10 +50,10 @@ const Help: React.FC = () => {
         </h3>
         <div className="space-y-4">
           {[
-            'How to create your first invoice',
-            'Setting up recurring payments',
-            'Customizing your invoice templates',
-            'Managing multiple client profiles',
+            'How to Create Your First Invoice',
+            'Setting Up Recurring Payments',
+            'Customizing Your Invoice Templates',
+            'Managing Multiple Customer Profiles',
           ].map((text, i) => (
             <div key={i} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
               <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">{text}</span>

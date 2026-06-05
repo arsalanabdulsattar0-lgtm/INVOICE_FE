@@ -3,14 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
-  FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronRight
+  FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronRight,
+  CreditCard, ShieldCheck
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
 import Card from '../../components/ui/Card';
-import { ScrollArea } from '../../components/ui/FormControls';
+import { ScrollArea, Input } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
 import { ProductFilterDrawer } from '../../components/ui/ProductFilterDrawer';
 import { ActiveChip, InactiveChip } from '../../components/ui/Chip';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import {
   ProductCategory,
   ProductBrand,
@@ -104,6 +108,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
 
   // Viewing detail product modal
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+  const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
 
   const sortRef = useRef<HTMLDivElement>(null);
   const perPage = 15;
@@ -223,13 +229,15 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
   }, []);
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      const newProducts = products.filter(p => p.id !== id);
-      localStorage.setItem('products_list', JSON.stringify(newProducts));
-      setProducts(newProducts);
-      setSelectedProductIds(prev => prev.filter(x => x !== id));
-      window.dispatchEvent(new CustomEvent('ai-sync-data'));
-    }
+    setDeleteModal({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    const newProducts = products.filter(p => p.id !== deleteModal.id);
+    localStorage.setItem('products_list', JSON.stringify(newProducts));
+    setProducts(newProducts);
+    setSelectedProductIds(prev => prev.filter(x => x !== deleteModal.id));
+    window.dispatchEvent(new CustomEvent('ai-sync-data'));
   };
 
   const handleEditClick = (p: Product) => {
@@ -261,13 +269,15 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`Are you sure you want to delete the ${selectedProductIds.length} selected products?`)) {
-      const newProducts = products.filter(p => !selectedProductIds.includes(p.id));
-      localStorage.setItem('products_list', JSON.stringify(newProducts));
-      setProducts(newProducts);
-      setSelectedProductIds([]);
-      window.dispatchEvent(new CustomEvent('ai-sync-data'));
-    }
+    setBulkConfirmModal(true);
+  };
+
+  const doBulkDelete = () => {
+    const newProducts = products.filter(p => !selectedProductIds.includes(p.id));
+    localStorage.setItem('products_list', JSON.stringify(newProducts));
+    setProducts(newProducts);
+    setSelectedProductIds([]);
+    window.dispatchEvent(new CustomEvent('ai-sync-data'));
   };
 
   const handleBulkToggleActive = (active: boolean) => {
@@ -390,11 +400,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
     { key: 'status', label: 'Status' },
   ];
 
-  const SortArrow = ({ col }: { col: SortKey }) => (
-    <span className="ml-1 inline-block opacity-50" style={{ color: sortKey === col ? brand.primary : brand.dark }}>
-      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-    </span>
-  );
+
 
 
 
@@ -404,39 +410,36 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
     <div className="min-h-full p-6 space-y-5" style={{ background: '#F4F7FD' }}>
 
       {/* ── Page Header (InvoiceList Style) ── */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Product List</h1>
-          <p className="text-[12px] font-medium text-slate-400 mt-0.5">
-            {filteredProducts.length} products found · Last updated just now
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="white"
-            size="md"
-            icon={SlidersHorizontal}
-            onClick={() => setShowFilterDrawer(true)}
-            className="relative"
-          >
-            Filter
-            {(selectedCategory !== 'all' || priceOperator !== 'all' || stockOperator !== 'all' || selectedStatus !== 'All' || selectedSupplier !== 'all' || search !== '') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
-                style={{ background: brand.accent || '#EF4444' }}>!</span>
-            )}
-          </Button>
-          <Button
-            onClick={onAddProductClick}
-            variant="primary"
-            size="md"
-            icon={Plus}
-            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-          >
-            Add Product
-          </Button>
-        </div>
-      </motion.div>
+      <PageHeader
+        title="Product List"
+        subtitle={`${filteredProducts.length} products found · Last updated just now`}
+        actions={
+          <>
+            <Button
+              variant="white"
+              size="md"
+              icon={SlidersHorizontal}
+              onClick={() => setShowFilterDrawer(true)}
+              className="relative"
+            >
+              Filter
+              {(selectedCategory !== 'all' || priceOperator !== 'all' || stockOperator !== 'all' || selectedStatus !== 'All' || selectedSupplier !== 'all' || search !== '') && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
+                  style={{ background: brand.accent || '#EF4444' }}>!</span>
+              )}
+            </Button>
+            <Button
+              onClick={onAddProductClick}
+              variant="primary"
+              size="md"
+              icon={Plus}
+              className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+            >
+              Add Product
+            </Button>
+          </>
+        }
+      />
 
       {/* ── Stats Cards (InvoiceList Style) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -470,14 +473,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
         {/* ── Solid Header Bar (InvoiceList Style) ── */}
         <div className="px-4 py-2.5 flex items-center justify-between text-white"
           style={{ backgroundColor: brand.primary }}>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Product Records</h3>
-            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filteredProducts.length} Products
-            </span>
-          </div>
+          <CardTitle title="Product Records" count={filteredProducts.length} countLabel="products" />
 
           {/* Search inside header bar */}
           <div className="flex items-center gap-2">
@@ -486,7 +482,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Search products..."
+                placeholder="Search Products..."
                 className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
                 style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
@@ -625,22 +621,22 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                           {([
                             { label: 'Product details', key: 'name', width: 'w-[43%]' },
                             { label: 'Category', key: 'category_id', width: 'w-[13%]' },
-                            { label: 'In stocks', key: 'qty', width: 'w-[10%]' },
+                            { label: 'In stock', key: 'qty', width: 'w-[10%]' },
                             { label: 'Price (Rs.)', key: 'price', width: 'w-[12%]' },
                             { label: 'Status', key: 'status', width: 'w-[10%]' },
                             { label: 'Last updated', key: null, width: 'w-[12%]' },
                             { label: 'Actions', key: null, width: 'w-20' },
                           ] as { label: string; key: SortKey | null; width: string }[]).map((h, idx) => (
-                            <th key={h.label}
-                              className={`${h.label === 'Actions' ? 'px-2' : 'px-4'} py-3 text-left border-b ${h.key ? 'cursor-pointer hover:bg-blue-50/40 select-none' : ''} transition-colors ${idx !== 0 ? 'border-l border-slate-100' : ''} ${h.width}`}
-                              style={{ borderColor: brand.dark + '10' }}
-                              onClick={() => h.key && handleSort(h.key)}>
-                              <span className="text-[10px] font-black tracking-widest inline-flex items-center gap-0.5 whitespace-nowrap"
-                                style={{ color: sortKey === h.key ? brand.primary : '#000000' }}>
-                                {h.label}
-                                {h.key && <SortArrow col={h.key} />}
-                              </span>
-                            </th>
+                            <TableHeader
+                              key={h.label}
+                              label={h.label}
+                              sortKey={h.key || undefined}
+                              activeSortKey={sortKey}
+                              sortDir={sortDir}
+                              onSort={(key) => handleSort(key)}
+                              width={h.width}
+                              borderLeft={idx !== 0}
+                            />
                           ))}
                         </tr>
                       </thead>
@@ -762,8 +758,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                           <Card className="h-full flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all cursor-pointer group border-slate-100 p-4" onClick={() => setViewingProduct(product)}>
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <span className="text-[9px] uppercase font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider">{product.code}</span>
-                                {!product.is_active && <span className="text-[9px] uppercase font-medium px-2 py-0.5 rounded bg-red-50 text-red-500 tracking-wider">Inactive</span>}
+                                <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider">{product.code}</span>
+                                {!product.is_active && <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-red-50 text-red-500 tracking-wider">Inactive</span>}
                               </div>
 
                               <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -839,111 +835,81 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 md:p-8 shadow-2xl relative border border-slate-100 font-sans"
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-xl"
             >
-              <button
-                onClick={() => setViewingProduct(null)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Modal Header */}
+              <ModalHeader
+                title={`Product: ${viewingProduct.name}`}
+                subtitle={viewingProduct.code}
+                onClose={() => setViewingProduct(null)}
+              />
 
-              <div className="mb-6">
-                <span className="text-xs font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 uppercase tracking-wider">{viewingProduct.code}</span>
-                <h2 className="text-xl font-black text-slate-900 mt-1">{viewingProduct.name}</h2>
-                <p className="text-xs font-bold text-slate-400 mt-1">{getCategoryName(viewingProduct.category_id)} • {getBrandName(viewingProduct.brand_id)}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
-                <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Product Information</h3>
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Description</span>
-                      <span className="text-slate-800 font-bold text-right max-w-[200px] truncate">{viewingProduct.description || 'N/A'}</span>
+              {/* Modal Body */}
+              <div className="flex-grow overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+                {/* SECTION 1: Product Information */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Product Information" icon={Box} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input variant="compact" label="Category" readOnly value={getCategoryName(viewingProduct.category_id)} />
+                      <Input variant="compact" label="Brand" readOnly value={getBrandName(viewingProduct.brand_id)} />
+                      <Input variant="compact" label="Model" readOnly value={ProductModel.find(m => m.id === viewingProduct.model_id)?.name || 'Generic'} />
+                      <Input variant="compact" label="Size" readOnly value={ProductSize.find(s => s.id === viewingProduct.size_id)?.name || 'Standard'} />
+                      <Input variant="compact" label="Unit Of Measure" readOnly value={getUOMName(viewingProduct.uom_id)} />
+                      <Input variant="compact" label="Weight (kg)" readOnly value={viewingProduct.weight ? String(viewingProduct.weight) : 'N/A'} />
+                      <div className="col-span-2">
+                        <Input variant="compact" label="Description" readOnly value={viewingProduct.description || 'N/A'} />
+                      </div>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Model</span>
-                      <span className="text-slate-800 font-bold">{ProductModel.find(m => m.id === viewingProduct.model_id)?.name || 'Generic'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Size</span>
-                      <span className="text-slate-800 font-bold">{ProductSize.find(s => s.id === viewingProduct.size_id)?.name || 'Standard'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Unit of Measure</span>
-                      <span className="text-slate-800 font-bold">{ProductUOM.find(u => u.id === viewingProduct.uom_id)?.name || 'Pcs'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Weight</span>
-                      <span className="text-slate-800 font-bold">{viewingProduct.weight ? `${viewingProduct.weight} kg` : 'N/A'}</span>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
 
-                <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Pricing & Inventory</h3>
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Sale Price</span>
-                      <span className="text-slate-800 font-black text-blue-600">Rs. {viewingProduct.sale_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                {/* SECTION 2: Pricing & Inventory */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Pricing & Inventory" icon={CreditCard} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input variant="compact" label="Sale Price (Rs.)" readOnly value={viewingProduct.sale_price.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      <Input variant="compact" label="Cost Price (Rs.)" readOnly value={viewingProduct.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      <Input variant="compact" label="Stocks (qty)" readOnly value={`${viewingProduct.opening_qty} units`} />
+                      <Input variant="compact" label="Low Stock Level" readOnly value={`${viewingProduct.low_stock_level} units`} />
+                      <Input variant="compact" label="Status" readOnly value={viewingProduct.is_active ? 'Active' : 'Inactive'} />
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Cost Price</span>
-                      <span className="text-slate-800 font-bold">Rs. {viewingProduct.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Stocks (Qty)</span>
-                      <span className="text-slate-800 font-bold">{viewingProduct.opening_qty} units</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Low Stock Level</span>
-                      <span className="text-red-500 font-bold">{viewingProduct.low_stock_level} units</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Status</span>
-                      <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${viewingProduct.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                        {viewingProduct.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
 
-                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Tax Compliance & Codes</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">GST Rate</div>
-                      <div className="text-sm font-black text-slate-700 mt-1">{viewingProduct.gst_rate}%</div>
+                {/* SECTION 3: Tax Compliance & Codes */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Tax Compliance & Codes" icon={ShieldCheck} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-3 gap-4">
+                      <Input variant="compact" label="GST Rate (%)" readOnly value={`${viewingProduct.gst_rate}%`} />
+                      <Input variant="compact" label="Non-Filer Rate (%)" readOnly value={`${viewingProduct.non_filer_gst_rate}%`} />
+                      <Input variant="compact" label="HS Code" readOnly value={viewingProduct.hs_code || 'N/A'} />
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">Non-Filer Rate</div>
-                      <div className="text-sm font-black text-slate-700 mt-1">{viewingProduct.non_filer_gst_rate}%</div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">HS Code</div>
-                      <div className="text-sm font-black text-slate-700 mt-1">{viewingProduct.hs_code || 'N/A'}</div>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-                <button
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-2 px-6 py-4 border-t bg-slate-50 flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
+                <Button
+                  variant="white"
+                  size="md"
                   onClick={() => {
                     setViewingProduct(null);
                     handleEditClick(viewingProduct);
                   }}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
                 >
                   Edit Product
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={() => setViewingProduct(null)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
                 >
                   Close
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -969,6 +935,24 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
         setSelectedStatus={(status) => { setSelectedStatus(status); setCurrentPage(1); }}
         selectedSupplier={selectedSupplier}
         setSelectedSupplier={(sup) => { setSelectedSupplier(sup); setCurrentPage(1); }}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDelete}
+        title="Delete Product?"
+        itemName={deleteModal.name}
+        warningText="This action cannot be undone and all product records will be permanently removed from catalog."
+      />
+      <ConfirmModal
+        isOpen={bulkConfirmModal}
+        onClose={() => setBulkConfirmModal(false)}
+        onConfirm={doBulkDelete}
+        title={`Delete ${selectedProductIds.length} Products?`}
+        message={`Are you sure you want to permanently delete the ${selectedProductIds.length} selected product${selectedProductIds.length !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel="Yes, Delete All"
+        variant="danger"
       />
     </div>
   );

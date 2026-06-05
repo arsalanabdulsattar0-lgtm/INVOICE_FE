@@ -1,5 +1,6 @@
 import type { TaxSetup } from '../pages/Settings/Settings';
 import type { SalesPerson } from '../pages/Settings/components/SalesPersonModule';
+import type { Company } from '../pages/Settings/components/CompanyModule';
 
 export const seedTaxes: TaxSetup[] = [
   { id: 't1', taxCode: 'GST-17', taxType: 'GST', taxRate: 17, province: 'Punjab',  active: true  },
@@ -115,3 +116,101 @@ export const seedSalespeople: SalesPerson[] = [
 
 export const PROVINCES = ['Punjab', 'Sindh', 'KPK', 'Balochistan', 'Federal', 'AJK', 'GB'];
 export const TAX_TYPES  = ['GST', 'SST', 'WHT', 'FED', 'Excise', 'Other'];
+
+export const BUSINESS_TYPES = [
+  'Sole Proprietorship',
+  'Partnership',
+  'Private Limited',
+  'Public Limited',
+  'NGO / Non-Profit',
+  'Government Entity',
+  'Branch Office',
+  'Other',
+];
+
+export const seedCompanies: Company[] = [
+  {
+    id: 'co1',
+    name: 'Acme Corporation',
+    ntn: '1234567-8',
+    stn: '03-00-1234-567-89',
+    cnic: '35202-1234567-1',
+    email: 'info@acme.com',
+    phone: '042-35711111',
+    mobile: '0300-1234567',
+    website: 'https://www.acme.com',
+    pral_token: 'pral_live_abc123xyz',
+    city: 'Lahore',
+    zip_code: '54000',
+    business_type: 'Private Limited',
+    address3: 'Main Boulevard, Gulberg III, Lahore',
+    is_active: true,
+  },
+  {
+    id: 'co2',
+    name: 'Horizon Traders',
+    ntn: '9876543-2',
+    stn: '05-00-9876-543-21',
+    cnic: '42201-9876543-2',
+    email: 'contact@horizontraders.pk',
+    phone: '021-34567890',
+    mobile: '0321-7654321',
+    website: 'https://www.horizontraders.pk',
+    pral_token: '',
+    city: 'Karachi',
+    zip_code: '75500',
+    business_type: 'Partnership',
+    address3: 'I.I. Chundrigar Road, Clifton, Karachi',
+    is_active: true,
+  },
+  {
+    id: 'co3',
+    name: 'Alpha Enterprises',
+    ntn: '5551234-9',
+    stn: '',
+    cnic: '61101-5551234-3',
+    email: 'alpha@enterprises.com.pk',
+    phone: '051-2223334',
+    mobile: '0333-1112223',
+    website: '',
+    pral_token: '',
+    city: 'Islamabad',
+    zip_code: '44000',
+    business_type: 'Sole Proprietorship',
+    address3: 'Jinnah Avenue, Sector F-7, Islamabad',
+    is_active: false,
+  },
+  {
+    id: 'co4',
+    name: 'Beta Solutions Pvt Ltd',
+    ntn: '3334445-7',
+    stn: '08-00-3334-445-67',
+    cnic: '37405-3334445-5',
+    email: 'info@betasolutions.pk',
+    phone: '041-8732200',
+    mobile: '0311-9988776',
+    website: 'https://betasolutions.pk',
+    pral_token: 'pral_test_def456uvw',
+    city: 'Faisalabad',
+    zip_code: '38000',
+    business_type: 'Private Limited',
+    address3: 'D-Ground, Peoples Colony, Faisalabad',
+    is_active: true,
+  },
+];
+
+export interface Branch {
+  id: string;
+  companyId: string;
+  name: string;
+  address: string;
+  is_head_office: boolean;
+}
+
+export const seedBranches: Branch[] = [
+  { id: 'br-1', companyId: 'co1', name: 'Lahore Head Office', address: 'Main Boulevard, Gulberg III, Lahore', is_head_office: true },
+  { id: 'br-2', companyId: 'co1', name: 'Karachi Branch', address: 'DHA Phase 6, Karachi', is_head_office: false },
+  { id: 'br-3', companyId: 'co2', name: 'Karachi Head Office', address: 'I.I. Chundrigar Road, Clifton, Karachi', is_head_office: true },
+  { id: 'br-4', companyId: 'co4', name: 'Faisalabad Head Office', address: 'D-Ground, Peoples Colony, Faisalabad', is_head_office: true },
+];
+

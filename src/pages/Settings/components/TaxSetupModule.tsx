@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
-import { Select } from '../../../components/ui/Select';
-import { Toggle } from '../../../components/ui/Toggle';
-import { ScrollArea } from '../../../components/ui/ScrollArea';
+import { Input, Select, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
 import { FilterDrawer } from '../../../components/ui/FilterDrawer';
 import { Modal } from '../../../components/ui/Modal';
+import { TableHeader } from '../../../components/ui/Typography';
 import { useTheme } from '../../../context/ThemeContext';
 import { seedTaxes, PROVINCES, TAX_TYPES } from '../../../utils/settingsData';
+import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 
 export interface TaxSetup {
   id: string;
@@ -39,6 +38,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TaxSetup | null>(null);
   const [form, setForm] = useState<Omit<TaxSetup, 'id'>>(emptyTax());
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
 
   const filtered = taxes.filter(t => {
     const matchSearch = t.taxCode.toLowerCase().includes(search.toLowerCase()) || t.taxType.toLowerCase().includes(search.toLowerCase());
@@ -61,7 +61,13 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
     setShowForm(false);
   };
 
-  const handleDelete = (id: string) => setTaxes(prev => prev.filter(t => t.id !== id));
+  const handleDelete = (id: string, name: string) => {
+    setDeleteModal({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    setTaxes(prev => prev.filter(t => t.id !== deleteModal.id));
+  };
 
   const handleReset = () => { setFilterType('all'); setFilterProvince('all'); setFilterStatus('all'); };
 
@@ -75,7 +81,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
             icon={Search}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by code or type..."
+            placeholder="Search By Code Or Type..."
           />
         </div>
         <div className="flex items-center gap-2">
@@ -102,15 +108,13 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b" style={{ borderColor: brand.dark + '10' }}>
                 {['Tax Code', 'Tax Type', 'Tax Rate (%)', 'Province', 'Status', 'Actions'].map((h, idx) => (
-                  <th
+                  <TableHeader
                     key={h}
-                    className={`px-4 py-3 text-left border-b ${idx !== 0 ? 'border-l border-slate-50' : ''} ${h === 'Actions' ? 'w-20 !px-2' : ''}`}
-                    style={{ borderColor: brand.dark + '10' }}
-                  >
-                    <span className="text-[10px] font-black tracking-widest whitespace-nowrap" style={{ color: brand.dark }}>
-                      {h}
-                    </span>
-                  </th>
+                    label={h}
+                    width={h === 'Actions' ? 'w-20' : ''}
+                    padding={h === 'Actions' ? 'px-2' : 'px-4'}
+                    borderLeft={idx !== 0}
+                  />
                 ))}
               </tr>
             </thead>
@@ -140,7 +144,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
                   <td className="px-2 py-3 border-l border-slate-50 w-20">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="xs" icon={Pencil} title="Edit" className="!px-1" onClick={() => openEdit(t)} />
-                      <Button variant="ghost" size="xs" icon={Trash2} title="Delete" className="!px-1 !text-red-500" onClick={() => handleDelete(t.id)} />
+                      <Button variant="ghost" size="xs" icon={Trash2} title="Delete" className="!px-1 !text-red-500" onClick={() => handleDelete(t.id, t.taxCode)} />
                     </div>
                   </td>
                 </motion.tr>
@@ -213,7 +217,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
         title="Filter Taxes"
       >
         <div className="space-y-1.5">
-          <label className="block text-[11px] font-bold text-slate-500">Tax type</label>
+          <label className="block text-[11px] font-bold text-slate-500">Tax Type</label>
           <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-0.5 rounded-lg border border-slate-200/30">
             {['all', ...TAX_TYPES].map(opt => (
               <button
@@ -233,7 +237,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
             variant="compact"
             value={filterProvince}
             onChange={e => setFilterProvince(e.target.value)}
-            options={[{ value: 'all', label: 'All provinces' }, ...PROVINCES.map(p => ({ value: p, label: p }))]}
+            options={[{ value: 'all', label: 'All Provinces' }, ...PROVINCES.map(p => ({ value: p, label: p }))]}
           />
         </div>
         <div className="space-y-1.5">
@@ -252,6 +256,15 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
           </div>
         </div>
       </FilterDrawer>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDelete}
+        title="Delete Tax Configuration?"
+        itemName={deleteModal.name}
+        warningText="This action cannot be undone and this tax configuration will be permanently removed from the settings."
+      />
     </div>
   );
 };

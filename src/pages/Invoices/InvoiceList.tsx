@@ -4,13 +4,16 @@ import {
   Search, Download, Eye, Plus,
   FileText, CheckCircle, Clock, AlertCircle, TrendingUp,
   ArrowUpDown, Printer, Trash2, Edit3,
-  ChevronLeft, ChevronRight, SlidersHorizontal, X
+  ChevronLeft, ChevronRight, SlidersHorizontal, X,
+  CreditCard, Package
 } from 'lucide-react';
-import { ScrollArea, Select } from '../../components/ui/FormControls';
+import { ScrollArea, Select, Input, TextArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
 import { useTheme } from '../../context/ThemeContext';
 import { FilterDrawer } from '../../components/ui/FilterDrawer';
+import Card from '../../components/ui/Card';
 import type { InvoiceData, InvoiceItem } from '../../types';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 export type { InvoiceStatus, Invoice } from './invoiceTypes';
@@ -26,12 +29,12 @@ const statusConfig: Record<InvoiceStatus, { bg: string; text: string; border: st
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type SortKey = 'id' | 'client' | 'issueDate' | 'dueDate' | 'amount' | 'status' | 'type';
+type SortKey = 'id' | 'customer' | 'issueDate' | 'dueDate' | 'amount' | 'status' | 'type';
 type SortDir = 'asc' | 'desc';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface InvoiceListProps {
-  onViewChange?: (view: 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'settings' | 'help') => void;
+  onViewChange?: (view: 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'customers' | 'settings' | 'help') => void;
   invoiceItems: Invoice[];
   setInvoiceItems: React.Dispatch<React.SetStateAction<Invoice[]>>;
   onPrintInvoice?: (inv: Invoice) => void;
@@ -59,6 +62,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
   const [showSortPanel, setShowSortPanel] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<InvoiceData | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const perPage = 15;
 
   const sortRef = useRef<HTMLDivElement>(null);
@@ -88,13 +92,13 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const handleExport = () => {
     try {
-      const headers = ['Invoice ID', 'Client', 'Issue Date', 'Due Date', 'Amount (Rs.)', 'Type', 'Status'];
+      const headers = ['Invoice ID', 'Customer', 'Issue date', 'Due date', 'Amount (Rs.)', 'Type', 'Status'];
       const rows = filtered.map(inv => [
         inv.id,
-        inv.client,
+        inv.customer,
         inv.issueDate,
         inv.dueDate,
-        inv.rawAmount || inv.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''),
+        inv.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''),
         inv.type || 'Standard',
         inv.status
       ]);
@@ -128,8 +132,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           dueDate: inv.dueDate,
           senderName: 'Antigravity Creative Studio',
           senderAddress: '452 Innovation Blvd, San Francisco, CA 94107',
-          clientName: inv.client,
-          clientAddress: 'Enterprise Client Account',
+          customerName: inv.customer,
+          customerAddress: 'Enterprise Customer Account',
           subject: 'Services Rendered',
           reference: '',
           productCode: '',
@@ -167,6 +171,14 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const typeOptions = ['All', ...Array.from(new Set(invoiceItems.map(i => i.type)))];
 
+  const handleDelete = (id: string, name: string) => {
+    setDeleteModal({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    setInvoiceItems(prev => prev.filter(x => x.id !== deleteModal.id));
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
@@ -176,7 +188,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
   const filtered = invoiceItems
     .filter(inv => {
       const matchSearch = inv.id.toLowerCase().includes(search.toLowerCase()) ||
-        inv.client.toLowerCase().includes(search.toLowerCase());
+        inv.customer.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'All' || inv.status === statusFilter;
       const matchType = typeFilter === 'All' || inv.type === typeFilter;
       return matchSearch && matchStatus && matchType;
@@ -195,7 +207,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: 'id', label: 'Invoice ID' },
-    { key: 'client', label: 'Client Name' },
+    { key: 'customer', label: 'Customer Name' },
     { key: 'issueDate', label: 'Issue Date' },
     { key: 'dueDate', label: 'Due Date' },
     { key: 'amount', label: 'Amount' },
@@ -292,7 +304,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
             <h3 className="text-[11px] font-black tracking-wide">Invoice Records</h3>
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
               style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filtered.length} Invoices
+              {filtered.length} invoices
             </span>
           </div>
 
@@ -303,7 +315,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Search invoices or clients..."
+                placeholder="Search invoices or customers..."
                 className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
                 style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
@@ -390,9 +402,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                   <tr className="border-b" style={{ borderColor: brand.dark + '10' }}>
                     {([
                       { label: 'Invoice ID', key: 'id', width: 'w-[15%]' },
-                      { label: 'Client', key: 'client', width: 'w-[25%]' },
-                      { label: 'Issue date', key: 'issueDate', width: 'w-[12%]' },
-                      { label: 'Due date', key: 'dueDate', width: 'w-[12%]' },
+                      { label: 'Customer', key: 'customer', width: 'w-[25%]' },
+                      { label: 'Issue Date', key: 'issueDate', width: 'w-[12%]' },
+                      { label: 'Due Date', key: 'dueDate', width: 'w-[12%]' },
                       { label: 'Amount (Rs.)', key: 'amount', width: 'w-[13%]' },
                       { label: 'Type', key: 'type', width: 'w-[11%]' },
                       { label: 'Status', key: 'status', width: 'w-[12%]' },
@@ -428,10 +440,10 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                           <span className="text-[12px] font-normal font-mono" style={{ color: brand.dark }}>{inv.id}</span>
                         </td>
 
-                        {/* Client */}
+                        {/* Customer */}
                         <td className="px-4 py-3 border-l border-slate-50">
                           <span className="text-[12px] font-normal truncate max-w-[200px]" style={{ color: brand.dark }}>
-                            {inv.client}
+                            {inv.customer}
                           </span>
                         </td>
 
@@ -484,9 +496,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                             <Button onClick={() => onPrintInvoice?.(inv)}
                               variant="ghost" size="xs" icon={Download} title="Download PDF"
                               className="!px-1 text-blue-600 hover:bg-blue-50" />
-                            <Button onClick={() => setInvoiceItems(prev => prev.filter(x => x.id !== inv.id))}
+                            <Button onClick={() => handleDelete(inv.id, inv.customer)}
                               variant="ghost" size="xs" icon={Trash2} title="Delete"
-                               className="!px-1 text-red-500" />
+                              className="!px-1 !text-red-500" />
                           </div>
                         </td>
                       </motion.tr>
@@ -548,17 +560,28 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
               transition={{ type: 'spring', duration: 0.5 }}
-              className="bg-white max-w-4xl w-full rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white max-w-4xl w-full rounded-3xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh] relative border-slate-100 font-sans"
               style={{ borderColor: brand.dark + '10' }}
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between px-6 py-4 bg-white border-b flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black flex items-center gap-2" style={{ color: brand.dark }}>
-                    <span>Invoice Detail: {previewInvoice.invoiceNumber}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: brand.primary }}>
-                      {previewInvoice.type}
-                    </span>
+                  <h2 className="text-lg font-black text-slate-900 flex items-center gap-2.5" style={{ color: brand.dark }}>
+                    Invoice: {previewInvoice.invoiceNumber}
+                    <span className="text-xs font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 capitalize">{previewInvoice.type}</span>
+                    {(() => {
+                      const invoiceObj = invoiceItems.find(inv => inv.id === previewInvoice.invoiceNumber);
+                      const status = invoiceObj ? invoiceObj.status : 'Draft';
+                      const cfg = statusConfig[status] || statusConfig['Draft'];
+                      const StatusIcon = cfg.icon;
+                      return (
+                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold whitespace-nowrap"
+                          style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.text }}>
+                          <StatusIcon className="w-3.5 h-3.5" style={{ color: cfg.text }} />
+                          <span>{status}</span>
+                        </div>
+                      );
+                    })()}
                   </h2>
                 </div>
                 <button
@@ -570,157 +593,177 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
               </div>
 
               {/* Scrollable Modal Content */}
-              <ScrollArea className="flex-1 p-6 overflow-y-auto" maxHeight="calc(90vh - 140px)">
-                <div className="space-y-8">
-                  {/* Biller & Client info in two columns */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-6 border-b" style={{ borderColor: brand.dark + '08' }}>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-2">From</h4>
-                      <p className="text-[12px] font-bold text-slate-900">{previewInvoice.senderName || 'Antigravity Creative Studio'}</p>
-                      <p className="text-[12px] font-normal text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
-                        {previewInvoice.senderAddress || '452 Innovation Blvd, San Francisco, CA 94107'}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-2">Bill To</h4>
-                      <p className="text-[12px] font-bold text-slate-900">{previewInvoice.clientName}</p>
-                      <p className="text-[12px] font-normal text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
-                        {previewInvoice.clientAddress || 'Enterprise Client'}
-                      </p>
-                    </div>
+              <ScrollArea className="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar" maxHeight="calc(90vh - 140px)">
+                <div className="space-y-6">
+                  {/* SECTION 1: General Information */}
+                  <div className="space-y-1.5">
+                    <h4 className="text-[13px] font-black ml-1 flex items-center gap-2" style={{ color: brand.dark }}>
+                      <FileText className="w-3.5 h-3.5" style={{ color: brand.primary }} />
+                      General Information
+                    </h4>
+                    <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Customer details */}
+                        <div className="space-y-3">
+                          <Input variant="compact" label="Customer Name" placeholder="Customer Name" readOnly value={previewInvoice.customerName} />
+                          <TextArea label="Customer Address" placeholder="Customer Address" readOnly value={previewInvoice.customerAddress || ''} className="!rounded-lg text-[11px] py-1.5 px-3 h-14" />
+                        </div>
+                        {/* Sender details */}
+                        <div className="space-y-3">
+                          <Input variant="compact" label="Company Name" placeholder="Company Name" readOnly value={previewInvoice.senderName || 'Antigravity Creative Studio'} />
+                          <TextArea label="Company Address" placeholder="Company Address" readOnly value={previewInvoice.senderAddress || ''} className="!rounded-lg text-[11px] py-1.5 px-3 h-14" />
+                        </div>
+                      </div>
+                      <div className="h-px bg-slate-100 my-4" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                        <Input variant="compact" label="Issue Date" placeholder="Issue Date" readOnly value={previewInvoice.date} />
+                        <Input variant="compact" label="Due Date" placeholder="Due Date" readOnly value={previewInvoice.dueDate} />
+                        <Input variant="compact" label="Invoice ID" placeholder="Invoice ID" readOnly value={previewInvoice.invoiceNumber} />
+                        <Input variant="compact" label="Invoice Type" placeholder="Invoice Type" readOnly value={previewInvoice.type} />
+                        <Input variant="compact" label="Reference" placeholder="Reference" readOnly value={previewInvoice.reference || 'N/A'} />
+                        <Input variant="compact" label="Subject" placeholder="Subject" readOnly value={previewInvoice.subject || 'Services Rendered'} />
+                      </div>
+                    </Card>
                   </div>
 
-                  {/* Date, Subject, Reference Info */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-6 border-b" style={{ borderColor: brand.dark + '08' }}>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Issue Date</h4>
-                      <p className="text-[12px] font-normal text-slate-700 mt-1">{previewInvoice.date}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Due Date</h4>
-                      <p className="text-[12px] font-normal text-slate-700 mt-1">{previewInvoice.dueDate}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Subject</h4>
-                      <p className="text-[12px] font-normal text-slate-700 mt-1 truncate">{previewInvoice.subject || 'Services Rendered'}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Reference</h4>
-                      <p className="text-[12px] font-normal text-slate-700 mt-1">{previewInvoice.reference || 'N/A'}</p>
-                    </div>
-                  </div>
-
-                  {/* Items List Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 text-[10px] font-black tracking-widest text-black uppercase border-b" style={{ borderColor: brand.dark + '10' }}>
-                          <th className="py-3 px-4">Code</th>
-                          <th className="py-3 px-4 w-[40%]">Description</th>
-                          <th className="py-3 px-4 text-right">Unit</th>
-                          <th className="py-3 px-4 text-right">Qty</th>
-                          <th className="py-3 px-4 text-right">Rate (Rs.)</th>
-                          <th className="py-3 px-4 text-right">Tax (Rs.)</th>
-                          <th className="py-3 px-4 text-right">Discount (Rs.)</th>
-                          <th className="py-3 px-4 text-right">Total (Rs.)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewInvoice.items.map((item: InvoiceItem, idx: number) => {
-                          const itemTotal = (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0);
-                          return (
-                            <tr key={idx} className="border-b text-[12px] text-slate-600" style={{ borderColor: brand.dark + '06' }}>
-                              <td className="py-3.5 px-4 font-medium font-mono" style={{ color: brand.primary }}>{item.productCode || 'BC-001'}</td>
-                              <td className="py-3.5 px-4 font-normal leading-relaxed" style={{ color: brand.dark }}>{item.description}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-slate-500">{item.unit || 'Job'}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-slate-600">{item.quantity}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-slate-500">{item.price.toFixed(2)}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-green-600">+{item.tax + (item.furtherTax || 0) === 0 ? '0.00' : (item.tax + (item.furtherTax || 0)).toFixed(2)}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-red-500">-{item.discount === 0 ? '0.00' : item.discount.toFixed(2)}</td>
-                              <td className="py-3.5 px-4 text-right font-normal text-slate-700">{itemTotal.toFixed(2)}</td>
+                  {/* SECTION 2: Transaction Entries */}
+                  <div className="space-y-1.5">
+                    <h4 className="text-[13px] font-black ml-1 flex items-center gap-2" style={{ color: brand.dark }}>
+                      <Package className="w-3.5 h-3.5" style={{ color: brand.primary }} />
+                      Transaction Entries
+                    </h4>
+                    <Card className="p-0 shadow-sm overflow-hidden" style={{ borderColor: brand.dark + '10' }}>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 text-[10px] font-black tracking-widest text-slate-500 border-b" style={{ borderColor: brand.dark + '10' }}>
+                              <th className="py-3 px-4 text-[10px] font-black tracking-widest text-slate-500">Product Code</th>
+                              <th className="py-3 px-4 w-[25%] text-[10px] font-black tracking-widest text-slate-500">Description</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Unit</th>
+                              <th className="py-3 px-4 text-left text-[10px] font-black tracking-widest text-slate-500">Details</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Qty</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Price (Rs.)</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Discount (Rs.)</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Tax (Rs.)</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Further Tax (Rs.)</th>
+                              <th className="py-3 px-4 text-right text-[10px] font-black tracking-widest text-slate-500">Total (Rs.)</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody>
+                            {previewInvoice.items.map((item: InvoiceItem, idx: number) => {
+                              const itemTotal = (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0);
+                              return (
+                                <tr key={idx} className="border-b text-[12px] text-slate-600 last:border-0" style={{ borderColor: brand.dark + '06' }}>
+                                  <td className="py-3.5 px-4 font-medium font-mono" style={{ color: brand.primary }}>{item.productCode || 'BC-001'}</td>
+                                  <td className="py-3.5 px-4 font-normal leading-relaxed" style={{ color: brand.dark }}>{item.description}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-slate-500">{item.unit || 'Job'}</td>
+                                  <td className="py-3.5 px-4 text-left font-normal text-slate-500">{item.unitDetails || ''}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-slate-600">{item.quantity}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-slate-500">{item.price.toFixed(2)}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-red-500">-{item.discount === 0 ? '0.00' : item.discount.toFixed(2)}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-green-600">+{item.tax === 0 ? '0.00' : item.tax.toFixed(2)}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-green-600">+{(item.furtherTax || 0) === 0 ? '0.00' : (item.furtherTax || 0).toFixed(2)}</td>
+                                  <td className="py-3.5 px-4 text-right font-normal text-slate-700">{itemTotal.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
                   </div>
 
-                  {/* Financial Totals Breakdown & Notes */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pt-4">
-                    {/* Left: Notes & Bank Info */}
-                    <div className="md:col-span-7 space-y-4">
-                      {previewInvoice.notes && (
-                        <div className="p-3.5 bg-slate-50/50 rounded-xl border" style={{ borderColor: brand.dark + '08' }}>
-                          <h5 className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-1.5">Terms & Remarks</h5>
-                          <p className="text-[12px] font-normal text-slate-500 leading-relaxed whitespace-pre-line">{previewInvoice.notes}</p>
-                        </div>
-                      )}
-                      {previewInvoice.bankAccount && (
-                        <div className="p-3.5 bg-slate-50/50 rounded-xl border" style={{ borderColor: brand.dark + '08' }}>
-                          <h5 className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-1">Bank Payment Account</h5>
-                          <p className="text-[12px] font-normal text-slate-500">{previewInvoice.bankAccount}</p>
-                        </div>
-                      )}
-                    </div>
+                  {/* SECTION 3: Notes & Financial Breakdown */}
+                  <div className="space-y-1.5">
+                    <h4 className="text-[13px] font-black ml-1 flex items-center gap-2" style={{ color: brand.dark }}>
+                      <CreditCard className="w-3.5 h-3.5" style={{ color: brand.primary }} />
+                      Notes & Financial Breakdown
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-1">
+                      {/* Left: Notes & Bank Info */}
+                      <div className="md:col-span-7 space-y-4">
+                        {previewInvoice.notes && (
+                          <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                            <TextArea label="Notes & Special Terms" readOnly value={previewInvoice.notes} className="!rounded-lg text-[11px] py-1.5 px-3 h-20" />
+                          </Card>
+                        )}
+                        {previewInvoice.bankAccount && (
+                          <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                            <Input variant="compact" label="Bank Payment Account" readOnly value={previewInvoice.bankAccount} />
+                          </Card>
+                        )}
+                      </div>
 
-                    {/* Right: Calculated Totals */}
-                    <div className="md:col-span-5 space-y-2 text-[12px]">
-                      {(() => {
-                        const subtotal = previewInvoice.items.reduce((sum: number, item: InvoiceItem) => sum + (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0), 0);
-                        const taxAmount = (subtotal * (previewInvoice.taxRate || 0)) / 100;
-                        const discountVal = previewInvoice.discountAmount || (subtotal * (previewInvoice.discountPercentage || 0)) / 100;
-                        const netPayable = subtotal + taxAmount - discountVal + (previewInvoice.shippingCharges || 0) + (previewInvoice.roundOff || 0);
-                        const balanceDue = netPayable - (previewInvoice.receivedAmount || 0);
+                      {/* Right: Calculated Totals */}
+                      <div className="md:col-span-5">
+                        <Card className="p-4 shadow-sm space-y-2 text-[12px]" style={{ borderColor: brand.dark + '10' }}>
+                          {(() => {
+                            const subtotal = previewInvoice.items.reduce((sum: number, item: InvoiceItem) => sum + (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0), 0);
+                            const taxAmount = (subtotal * (previewInvoice.taxRate || 0)) / 100;
+                            const discountVal = previewInvoice.discountAmount || (subtotal * (previewInvoice.discountPercentage || 0)) / 100;
+                            const netPayable = subtotal + taxAmount - discountVal + (previewInvoice.shippingCharges || 0) + (previewInvoice.roundOff || 0);
+                            const balanceDue = netPayable - (previewInvoice.receivedAmount || 0);
 
-                        return (
-                          <>
-                            <div className="flex justify-between text-slate-500 font-normal">
-                              <span>Subtotal (Rs.)</span>
-                              <span className="text-slate-800 font-normal">{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            {taxAmount > 0 && (
-                              <div className="flex justify-between text-slate-500 font-normal">
-                                <span>Global Tax ({previewInvoice.taxRate}%) (Rs.)</span>
-                                <span className="text-green-600 font-normal">+{taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              </div>
-                            )}
-                            {discountVal > 0 && (
-                              <div className="flex justify-between text-slate-500 font-normal">
-                                <span>Global Discount (Rs.)</span>
-                                <span className="text-red-500 font-normal">-{discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              </div>
-                            )}
-                            {(previewInvoice.shippingCharges || 0) > 0 && (
-                              <div className="flex justify-between text-slate-500 font-normal">
-                                <span>Shipping Charges (Rs.)</span>
-                                <span className="text-slate-850 font-normal">+{previewInvoice.shippingCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              </div>
-                            )}
-                            <div className="h-px bg-slate-100 my-1" />
-                            <div className="flex justify-between font-bold text-[13px] py-1.5 border-t border-b border-slate-100" style={{ color: brand.dark }}>
-                              <span>Net Payable (Rs.)</span>
-                              <span style={{ color: brand.primary }}>{netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            {previewInvoice.receivedAmount > 0 && (
-                              <div className="flex justify-between text-green-600 font-normal">
-                                <span>Amount Received (Rs.)</span>
-                                <span>-{(previewInvoice.receivedAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              </div>
-                            )}
-                            <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex justify-between font-bold text-[13px] text-rose-600 mt-2">
-                              <span>Balance Due (Rs.)</span>
-                              <span>{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                          </>
-                        );
-                      })()}
+                            return (
+                              <>
+                                <div className="flex justify-between text-slate-500 font-normal">
+                                  <span>Gross Subtotal</span>
+                                  <span className="text-slate-800 font-normal">{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                {taxAmount > 0 && (
+                                  <div className="flex justify-between items-center text-slate-500 font-normal">
+                                    <div className="flex flex-col">
+                                      <span>Tax</span>
+                                      <span className="text-[10px] text-slate-400">Calculated ({previewInvoice.taxRate}%)</span>
+                                    </div>
+                                    <span className="text-green-600 font-normal">+{taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                {discountVal > 0 && (
+                                  <div className="flex justify-between text-slate-500 font-normal">
+                                    <span>Discount</span>
+                                    <span className="text-red-500 font-normal">-{discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                {(previewInvoice.shippingCharges || 0) > 0 && (
+                                  <div className="flex justify-between text-slate-500 font-normal">
+                                    <span>Shipping Charges</span>
+                                    <span className="text-slate-800 font-normal">+{previewInvoice.shippingCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                {(previewInvoice.roundOff || 0) !== 0 && (
+                                  <div className="flex justify-between text-slate-500 font-normal">
+                                    <span>Round Off</span>
+                                    <span className="text-slate-800 font-normal">{(previewInvoice.roundOff || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                <div className="h-px bg-slate-100 my-1" />
+                                <div className="flex justify-between font-bold text-[13px] py-1.5 border-t border-b border-slate-100" style={{ color: brand.dark }}>
+                                  <span>Net Total (Rs.)</span>
+                                  <span style={{ color: brand.primary }}>{netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                {previewInvoice.receivedAmount > 0 && (
+                                  <div className="flex justify-between text-green-600 font-normal">
+                                    <span>Amount Received (Rs.)</span>
+                                    <span>-{(previewInvoice.receivedAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex justify-between font-bold text-[13px] text-rose-600 mt-2">
+                                  <span>Balance Due (Rs.)</span>
+                                  <span>{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </Card>
+                      </div>
                     </div>
                   </div>
                 </div>
               </ScrollArea>
 
               {/* Modal Footer */}
-              <div className="px-6 py-4 bg-white border-t flex justify-end gap-3" style={{ borderColor: brand.dark + '10' }}>
+              <div className="flex justify-end gap-2 px-6 py-4 border-t bg-slate-50 flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
                 <Button
                   onClick={() => setPreviewInvoice(null)}
                   variant="white"
@@ -737,9 +780,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
                     const mapped: Invoice = {
                       id: previewInvoice.invoiceNumber,
-                      client: previewInvoice.clientName,
-                      clientInitials: previewInvoice.clientName.slice(0, 2).toUpperCase(),
-                      clientColor: brand.primary,
+                      customer: previewInvoice.customerName,
+                      customerInitials: previewInvoice.customerName.slice(0, 2).toUpperCase(),
+                      customerColor: brand.primary,
                       issueDate: previewInvoice.date,
                       dueDate: previewInvoice.dueDate,
                       amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -791,6 +834,15 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           />
         </div>
       </FilterDrawer>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDelete}
+        title="Delete Invoice?"
+        itemName={deleteModal.name}
+        warningText="This action cannot be undone and all associated invoice items and records will be permanently deleted."
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, CreditCard, Palette, Receipt, Users,
+  User, CreditCard, Palette, Receipt, Users, Building2,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -11,10 +11,12 @@ import { BillingModule } from './components/BillingModule';
 import { AppearanceModule } from './components/AppearanceModule';
 import { TaxSetupModule } from './components/TaxSetupModule';
 import { SalesPersonModule } from './components/SalesPersonModule';
+import { CompanyModule } from './components/CompanyModule';
 
 // Re-export types imported from separate modules (for settingsData.ts and other consumers)
 export type { TaxSetup } from './components/TaxSetupModule';
 export type { SalesPerson } from './components/SalesPersonModule';
+export type { Company } from './components/CompanyModule';
 
 // ─── Main Settings component ──────────────────────────────────────────────────
 
@@ -27,7 +29,8 @@ const Settings: React.FC = () => {
     { id: 'billing', title: 'Billing & Plans', desc: 'Manage your subscription and payment methods.', icon: CreditCard },
     { id: 'appearance', title: 'Appearance', desc: 'Customize the look and feel of the app.', icon: Palette },
     { id: 'tax', title: 'Tax Setup', desc: 'Manage tax codes, types, rates, and provinces.', icon: Receipt },
-    { id: 'sales', title: 'Sales Person', desc: 'Manage salespersons, targets, and commissions.', icon: Users },
+    { id: 'sales', title: 'Salesperson', desc: 'Manage salespersons, targets, and commissions.', icon: Users },
+    { id: 'company', title: 'Company', desc: 'Manage company profiles, NTN, STN, PRAL tokens and contacts.', icon: Building2 },
   ];
 
   const toggle = (id: string) =>
@@ -140,6 +143,7 @@ const Settings: React.FC = () => {
               )}
               {activeSection === 'tax' && <TaxSetupModule brand={brand} />}
               {activeSection === 'sales' && <SalesPersonModule brand={brand} />}
+              {activeSection === 'company' && <CompanyModule brand={brand} />}
             </div>
           </motion.div>
         )}

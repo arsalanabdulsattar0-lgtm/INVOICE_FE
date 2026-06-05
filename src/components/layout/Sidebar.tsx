@@ -35,7 +35,7 @@ const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onTog
     { id: 'dashboard1', label: 'Dashboard 1', icon: Sparkles },
     { id: 'invoices', label: 'Invoices', icon: FileText },
     { id: 'add-invoice-v4', label: 'Create V4', icon: Zap },
-    { id: 'clients', label: 'Customer', icon: Users },
+    { id: 'customers', label: 'Customers', icon: Users },
     { id: 'products', label: 'Products', icon: Box },
   ];
 
@@ -176,7 +176,7 @@ const Sidebar: React.FC<Props> = ({ activeView, onViewChange, isCollapsed, onTog
               {!isCollapsed && (
                 <div className="text-left">
                   <p className="text-sm font-bold leading-tight" style={{ color: brand.textPrimary }}>John Doe</p>
-                  <p className="text-[11px] font-medium uppercase tracking-wider" style={{ color: brand.sidebarText }}>Admin Account</p>
+                  <p className="text-[11px] font-medium tracking-wider" style={{ color: brand.sidebarText }}>Admin Account</p>
                 </div>
               )}
             </div>

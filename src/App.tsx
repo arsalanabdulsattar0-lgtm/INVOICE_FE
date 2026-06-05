@@ -8,7 +8,7 @@ const Dashboard = lazy(() => import('./pages/Invoices/Dashboard/Dashboard'));
 const Dashboard1 = lazy(() => import('./pages/Invoices/Dashboard/Dashboard1'));
 const InvoiceEditorV4 = lazy(() => import('./pages/Invoices/InvoiceEditorV4'));
 const InvoiceListModule = lazy(() => import('./pages/Invoices/InvoiceList'));
-const CustomerManagement = lazy(() => import('./pages/Clients/CustomerManagement'));
+const CustomerManagement = lazy(() => import('./pages/Customers/CustomerManagement'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
 const Help = lazy(() => import('./pages/Help/Help'));
 const Login = lazy(() => import('./pages/Auth/Login'));
@@ -19,7 +19,7 @@ const InlineProductForm = lazy(() => import('./components/ui/InlineProductForm')
 import { initialInvoices } from './pages/Invoices/invoiceTypes';
 import type { Invoice } from './pages/Invoices/invoiceTypes';
 
-type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'clients' | 'products' | 'settings' | 'help';
+type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'customers' | 'products' | 'settings' | 'help';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -30,12 +30,17 @@ function App() {
     try {
       const stored = localStorage.getItem('invoice_list');
       if (stored) {
-        const parsed = JSON.parse(stored) as Invoice[];
+        const parsed = JSON.parse(stored) as any[];
         // If it's the old default list (length <= 8), reset to the new 30 initialInvoices
         if (parsed.length <= 8) {
           return initialInvoices;
         }
-        return parsed;
+        return parsed.map((inv: any) => ({
+          ...inv,
+          customer: inv.customer || inv.client || 'Unknown Customer',
+          customerInitials: inv.customerInitials || inv.clientInitials || (inv.customer || inv.client || 'UC').slice(0, 2).toUpperCase(),
+          customerColor: inv.customerColor || inv.clientColor || '#16a34a',
+        }));
       }
       return initialInvoices;
     } catch {
@@ -76,8 +81,8 @@ function App() {
     dueDate: '2026-05-26',
     senderName: 'Antigravity Creative Studio',
     senderAddress: '452 Innovation Blvd, San Francisco, CA 94107\ncontact@antigravity.studio | +1 (555) 012-3456',
-    clientName: 'BlueRitt Technologies Inc.',
-    clientAddress: '88 Tech Park Way, Austin, TX 78701\nbilling@blueritt.com',
+    customerName: 'BlueRitt Technologies Inc.',
+    customerAddress: '88 Tech Park Way, Austin, TX 78701\nbilling@blueritt.com',
     subject: 'Brand Identity & Web Development - Phase 1',
     reference: 'PO-2026-004',
     items: generatedItems,
@@ -141,15 +146,15 @@ function App() {
     const discountVal = data.discountAmount || (subtotal * data.discountPercentage) / 100;
     const netPayable = subtotal + taxAmount - discountVal + data.shippingCharges + data.roundOff;
 
-    const initials = data.clientName ? data.clientName.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : 'IV';
+    const initials = data.customerName ? data.customerName.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : 'IV';
     const colors = ['#2759CD', '#10B981', '#F59E0B', '#8B5CF6', '#EE4932', '#0EA5E9', '#EC4899', '#14B8A6'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     const updatedInvoice: Invoice = {
       id: data.invoiceNumber || 'INV-' + Math.floor(1000 + Math.random() * 9000),
-      client: data.clientName || 'Unnamed Client',
-      clientInitials: initials,
-      clientColor: randomColor,
+      customer: data.customerName || 'Unnamed Customer',
+      customerInitials: initials,
+      customerColor: randomColor,
       issueDate: data.date || new Date().toISOString().split('T')[0],
       dueDate: data.dueDate || new Date().toISOString().split('T')[0],
       amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -191,8 +196,8 @@ function App() {
             dueDate: inv.dueDate,
             senderName: 'Antigravity Creative Studio',
             senderAddress: '452 Innovation Blvd, San Francisco, CA 94107',
-            clientName: inv.client,
-            clientAddress: 'Enterprise Client Account',
+            customerName: inv.customer,
+            customerAddress: 'Enterprise Customer Account',
             subject: 'Services Rendered',
             reference: '',
             productCode: '',
@@ -248,7 +253,7 @@ function App() {
         return <InvoiceEditorV4 data={invoice} onChange={setInvoice} onSave={handleSaveInvoice} onViewChange={(v) => setActiveView(v as View)} onPrint={handlePrintInvoice} />;
       case 'invoices':
         return <InvoiceListModule invoiceItems={invoiceList} setInvoiceItems={setInvoiceList} onViewChange={(v) => setActiveView(v as View)} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
-      case 'clients':
+      case 'customers':
         return <CustomerManagement />;
       case 'products':
         return <ProductList onAddProductClick={() => {
@@ -336,12 +341,12 @@ function App() {
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#2759CD', margin: 0, letterSpacing: '2px' }}>INVOICE</h2>
+                <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#2759CD', margin: 0, letterSpacing: '2px' }}>Invoice</h2>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginTop: '4px' }}>#{printInvoiceData.id}</p>
                 <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px', lineHeight: '1.8' }}>
-                  <div><strong>Issue Date:</strong> {printInvoiceData.issueDate}</div>
-                  <div><strong>Due Date:</strong> {printInvoiceData.dueDate}</div>
-                  <div><strong>Payment Term:</strong> {printInvoiceData.payment}</div>
+                  <div><strong>Issue date:</strong> {printInvoiceData.issueDate}</div>
+                  <div><strong>Due date:</strong> {printInvoiceData.dueDate}</div>
+                  <div><strong>Payment term:</strong> {printInvoiceData.payment}</div>
                   <div><strong>Status:</strong> {printInvoiceData.status}</div>
                 </div>
               </div>
@@ -350,7 +355,7 @@ function App() {
             {/* Billing Details Block */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
               <div>
-                <h3 style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>FROM</h3>
+                <h3 style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>From</h3>
                 <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Antigravity Creative Studio</h4>
                 <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: '1.7' }}>
                   452 Innovation Blvd, San Francisco, CA 94107<br />
@@ -359,11 +364,11 @@ function App() {
                 </p>
               </div>
               <div>
-                <h3 style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>BILL TO</h3>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{printInvoiceData.client}</h4>
+                <h3 style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '2px', color: '#94a3b8', marginBottom: '8px' }}>Bill to</h3>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{printInvoiceData.customer}</h4>
                 <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: '1.7' }}>
-                  Enterprise Client Account<br />
-                  Invoice Type: {printInvoiceData.type}
+                  Enterprise Customer Account<br />
+                  Invoice type: {printInvoiceData.type}
                 </p>
               </div>
             </div>
@@ -373,7 +378,7 @@ function App() {
               <thead>
                 <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
                   {['Code', 'Description', 'Unit', 'Qty', 'Rate (Rs.)', 'Tax (Rs.)', 'Discount (Rs.)', 'Total (Rs.)'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', color: '#64748b', textAlign: (h === 'Description' || h === 'Code') ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 12px', fontSize: '9px', fontWeight: 900, letterSpacing: '1px', color: '#64748b', textAlign: (h === 'Description' || h === 'Code') ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -441,7 +446,7 @@ function App() {
                   }
 
                   const rows = [
-                    { label: 'Gross Subtotal (Rs.)', value: subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                    { label: 'Gross subtotal (Rs.)', value: subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
                     { label: `Tax (${taxRate}%) (Rs.)`, value: `+${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
                     { label: 'Discount (Rs.)', value: `-${discountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
                     { label: 'Shipping (Rs.)', value: `+${shippingCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
@@ -456,18 +461,18 @@ function App() {
                         </div>
                       ))}
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 4px', marginTop: '4px', background: '#2759CD', borderRadius: '6px' }}>
-                        <span style={{ color: 'white', fontWeight: 900, fontSize: '13px' }}>Net Total (Rs.)</span>
+                        <span style={{ color: 'white', fontWeight: 900, fontSize: '13px' }}>Net total (Rs.)</span>
                         <span style={{ color: 'white', fontWeight: 900, fontSize: '15px' }}>{netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       {receivedAmount > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 4px', borderBottom: '1px solid #f1f5f9', fontSize: '11px', marginTop: '4px' }}>
-                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Amount Received (Rs.)</span>
+                          <span style={{ color: '#16a34a', fontWeight: 600 }}>Amount received (Rs.)</span>
                           <span style={{ color: '#16a34a', fontWeight: 700 }}>-{receivedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
                       {balanceDue !== netPayable && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 4px', marginTop: '4px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '6px' }}>
-                          <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '11px' }}>Balance Due (Rs.)</span>
+                          <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '11px' }}>Balance due (Rs.)</span>
                           <span style={{ color: '#dc2626', fontWeight: 900, fontSize: '12px' }}>{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
@@ -479,7 +484,7 @@ function App() {
 
             {/* Notes */}
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', fontSize: '10px', color: '#94a3b8' }}>
-              <h5 style={{ fontWeight: 800, color: '#64748b', marginBottom: '4px', fontSize: '11px' }}>Notes & Payment Terms:</h5>
+              <h5 style={{ fontWeight: 800, color: '#64748b', marginBottom: '4px', fontSize: '11px' }}>Notes & payment terms:</h5>
               <p style={{ margin: 0, lineHeight: '1.7' }}>
                 Please include the invoice number <strong>{printInvoiceData.id}</strong> in your wire transfer reference.<br />
                 Payment via ACH or Wire Transfer. All invoices are due within {printInvoiceData.payment === 'Net 30' ? '30 days' : printInvoiceData.payment === 'Net 15' ? '15 days' : 'the agreed term'}.<br />

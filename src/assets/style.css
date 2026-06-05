@@ -189,7 +189,7 @@
   color: var(--brand-dark) !important;
 }
 .invoice-recent-table-head {
-  color: var(--brand-dark-70) !important;
+  color: var(--brand-dark) !important;
   border-color: var(--brand-dark-10) !important;
 }
 .invoice-recent-table-body {
@@ -282,7 +282,6 @@
 .printable-billing-section-title {
   font-size: 9px !important;
   font-weight: 900 !important;
-  text-transform: uppercase !important;
   letter-spacing: 2px !important;
   color: #94a3b8 !important;
   margin-bottom: 8px !important;

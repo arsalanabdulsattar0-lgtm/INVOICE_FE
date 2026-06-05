@@ -19,6 +19,8 @@ import { Input, TextArea, Select, ComboBox, ScrollArea } from '../../components/
 import { Button } from '../../components/ui/Button';
 import { sampleCustomers } from '../../utils/customerData';
 import { sampleProducts } from '../../utils/productData';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { AlertModal } from '../../components/ui/AlertModal';
 
 interface Props {
   data: InvoiceData;
@@ -36,6 +38,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
+
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; type: 'new' | 'close' }>({ isOpen: false, type: 'new' });
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>((window as any).isSidebarCollapsed || false);
 
@@ -120,7 +126,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
     // Prevent adding new item if there's an existing empty item
     const hasEmptyItem = data.items.some(item => !item.productCode);
     if (hasEmptyItem) {
-      alert('Please fill the current product details before adding a new one.');
+      setAlertModal({ isOpen: true, message: 'Please fill in the current product details (Product Code) before adding a new row.' });
       return;
     }
 
@@ -176,32 +182,34 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
   // ── Action Handlers ──
   const handleNewInvoice = () => {
-    if (window.confirm('Are you sure you want to create a new invoice? All unsaved changes will be lost.')) {
-      onChange({
-        invoiceNumber: 'INV-' + Math.floor(Math.random() * 100000).toString().padStart(5, '0'),
-        date: new Date().toISOString().split('T')[0],
-        dueDate: new Date().toISOString().split('T')[0],
-        senderName: '',
-        senderAddress: '',
-        clientName: '',
-        clientAddress: '',
-        subject: '',
-        reference: '',
-        productCode: '',
-        remarks: '',
-        type: 'Standard',
-        items: [],
-        taxRate: 0,
-        discountPercentage: 0,
-        discountAmount: 0,
-        shippingCharges: 0,
-        roundOff: 0,
-        receivedAmount: 0,
-        bankAccount: '',
-        notes: ''
-      });
-      setSelectedCustomerId('');
-    }
+    setConfirmModal({ isOpen: true, type: 'new' });
+  };
+
+  const doNewInvoice = () => {
+    onChange({
+      invoiceNumber: 'INV-' + Math.floor(Math.random() * 100000).toString().padStart(5, '0'),
+      date: new Date().toISOString().split('T')[0],
+      dueDate: new Date().toISOString().split('T')[0],
+      senderName: '',
+      senderAddress: '',
+      customerName: '',
+      customerAddress: '',
+      subject: '',
+      reference: '',
+      productCode: '',
+      remarks: '',
+      type: 'Standard',
+      items: [],
+      taxRate: 0,
+      discountPercentage: 0,
+      discountAmount: 0,
+      shippingCharges: 0,
+      roundOff: 0,
+      receivedAmount: 0,
+      bankAccount: '',
+      notes: ''
+    });
+    setSelectedCustomerId('');
   };
 
   const handleSave = () => {
@@ -218,15 +226,15 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
     const discountVal = data.discountAmount || (subtotal * data.discountPercentage) / 100;
     const netPayable = subtotal + taxAmount - discountVal + data.shippingCharges + data.roundOff;
 
-    const initials = data.clientName ? data.clientName.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : 'IV';
+    const initials = data.customerName ? data.customerName.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2) : 'IV';
     const colors = ['#2759CD', '#10B981', '#F59E0B', '#8B5CF6', '#EE4932', '#0EA5E9', '#EC4899', '#14B8A6'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     return {
       id: data.invoiceNumber || 'INV-' + Math.floor(1000 + Math.random() * 9000),
-      client: data.clientName || 'Unnamed Client',
-      clientInitials: initials,
-      clientColor: randomColor,
+      customer: data.customerName || 'Unnamed Customer',
+      customerInitials: initials,
+      customerColor: randomColor,
       issueDate: data.date || new Date().toISOString().split('T')[0],
       dueDate: data.dueDate || new Date().toISOString().split('T')[0],
       amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -238,9 +246,11 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
   };
 
   const handleClose = () => {
-    if (window.confirm('Discard all changes and return to dashboard?')) {
-      onViewChange?.('dashboard');
-    }
+    setConfirmModal({ isOpen: true, type: 'close' });
+  };
+
+  const doClose = () => {
+    onViewChange?.('dashboard');
   };
 
   const handlePrint = () => {
@@ -444,7 +454,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
             {/* Left Column: General Information */}
             <div className="flex-1 bg-white rounded-xl border shadow-sm relative z-40 border-brand-dark-10">
-              <SectionHeader title="General information" badge="Identity Layer" className="rounded-t-xl" icon={FileText} />
+              <SectionHeader title="General Information" badge="Identity Layer" className="rounded-t-xl" icon={FileText} />
               <div className="p-4 space-y-3">
                 {/* Row 1 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -452,14 +462,14 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     <ComboBox
                       variant="compact"
                       label="Customer"
-                      placeholder="Search customer..."
+                      placeholder="Search Customer..."
                       value={selectedCustomerId}
                       options={sampleCustomers}
                       onChange={(id) => {
                         setSelectedCustomerId(id);
-                        const client = sampleCustomers.find(c => c.id === id);
-                        if (client) {
-                          onChange({ ...data, clientName: client.name, clientAddress: client.fullAddress });
+                        const customer = sampleCustomers.find(c => c.id === id);
+                        if (customer) {
+                          onChange({ ...data, customerName: customer.name, customerAddress: customer.fullAddress });
                         }
                       }}
                     />
@@ -481,7 +491,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                 {/* Row 2 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                   <div className="lg:col-span-5">
-                    <Input variant="compact" label="Customer Address" placeholder="Street, City, Country..." value={data.clientAddress || ''} readOnly />
+                    <Input variant="compact" label="Customer Address" placeholder="Street, city, country..." value={data.customerAddress || ''} readOnly />
                   </div>
                   <div className="lg:col-span-2">
                     <Input variant="compact" label="Due Date" type="date" value={data.dueDate}
@@ -519,13 +529,12 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   {/* Header */}
                   <div className="px-3 py-2.5 flex items-center justify-between bg-brand-primary">
                     <span className="text-[11px] font-black text-white tracking-wide flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-white" /> Client profile
+                      <User className="w-3.5 h-3.5 text-white" /> Customer Profile
                     </span>
-                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider ${
-                      selectedCustomer.status === 'active' ? 'invoice-badge-active' :
-                      selectedCustomer.status === 'overdue' ? 'invoice-badge-overdue' :
-                      'invoice-badge-inactive'
-                    }`}>{selectedCustomer.status}</div>
+                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black tracking-wider ${selectedCustomer.status === 'active' ? 'invoice-badge-active' :
+                        selectedCustomer.status === 'overdue' ? 'invoice-badge-overdue' :
+                          'invoice-badge-inactive'
+                      }`}>{selectedCustomer.status}</div>
                   </div>
 
                   {/* Body */}
@@ -545,11 +554,11 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     <div className="h-[1px] bg-slate-200/60 my-1" />
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-slate-400 tracking-wider">Credit limit (Rs.)</span>
+                      <span className="text-[9px] font-bold text-slate-400 tracking-wider">Credit Limit (Rs.)</span>
                       <span className="text-[11px] font-semibold text-brand-primary">{selectedCustomer.creditLimit.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-slate-400 tracking-wider">Current balance (Rs.)</span>
+                      <span className="text-[9px] font-bold text-slate-400 tracking-wider">Current Balance (Rs.)</span>
                       <span className={`text-[11px] font-semibold ${selectedCustomer.balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                         {selectedCustomer.balance > 0 ? `${selectedCustomer.balance.toLocaleString()}` : 'Clear'}
                       </span>
@@ -567,8 +576,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center">
                     <Package className="w-5 h-5 text-slate-200" />
                   </div>
-                  <p className="text-[9px] font-bold text-slate-300 text-center uppercase tracking-widest leading-relaxed">
-                    Select customer<br />to view profile
+                  <p className="text-[9px] font-bold text-slate-300 text-center tracking-widest leading-relaxed">
+                    Select Customer<br />To View Profile
                   </p>
                 </motion.div>
               )}
@@ -581,7 +590,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
               <div className="w-[31%]">
                 <ComboBox
                   variant="compact"
-                  placeholder="Search product code/barcode..."
+                  placeholder="Search Product Code/Barcode..."
                   value=""
                   icon={Search}
                   options={sampleProducts}
@@ -614,9 +623,9 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
               <div className="px-4 py-2.5 flex items-center justify-between text-white bg-brand-primary">
                 <div className="flex items-center gap-2">
                   <Package className="w-3.5 h-3.5 text-white" />
-                  <h3 className="text-[11px] font-black tracking-wide">Transaction entries</h3>
+                  <h3 className="text-[11px] font-black tracking-wide">Transaction Entries</h3>
                   <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold invoice-card-badge">
-                    {filteredItems.length} Items
+                    {filteredItems.length} items
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -625,7 +634,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     <input
                       value={tableSearchQuery}
                       onChange={e => setTableSearchQuery(e.target.value)}
-                      placeholder="Search entries..."
+                      placeholder="Search Entries..."
                       className="h-7 pl-8 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52 placeholder:text-white/40 invoice-header-search-input"
                     />
                   </div>
@@ -636,7 +645,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     icon={Plus}
                     onClick={addItem}
                   >
-                    Add item
+                    Add Item
                   </Button>
                 </div>
               </div>
@@ -659,7 +668,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                       <th className={`px-3 py-2.5 text-left ${priceWidth} border-l border-slate-100 whitespace-nowrap`}>Price (Rs.)</th>
                       <th className={`px-3 py-2.5 text-left ${discountWidth} border-l border-slate-100 whitespace-nowrap`}>Discount (Rs.)</th>
                       <th className={`px-3 py-2.5 text-left ${taxWidth} border-l border-slate-100 whitespace-nowrap`}>Tax (Rs.)</th>
-                      <th className={`px-3 py-2.5 text-left ${furtherTaxWidth} border-l border-slate-100 whitespace-nowrap`}>Further tax (Rs.)</th>
+                      <th className={`px-3 py-2.5 text-left ${furtherTaxWidth} border-l border-slate-100 whitespace-nowrap`}>Further Tax (Rs.)</th>
                       <th className={`px-4 py-2.5 text-left ${totalWidth} border-l border-slate-100 whitespace-nowrap`}>Total (Rs.)</th>
                       <th className="px-3 py-2.5 w-12 border-l border-slate-100" />
                     </tr>
@@ -680,7 +689,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                             <ComboBox
                               autoFocus={item.id === lastAddedId}
                               variant="compact"
-                              placeholder="Search code..."
+                              placeholder="Search Code..."
                               value={item.productCode}
                               options={sampleProducts.map(p => ({ id: p.id, name: p.id, subtitle: p.name }))}
                               onChange={(id) => {
@@ -698,7 +707,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                           <td className="px-2 py-3 border-l border-slate-50">
                             <Input
                               variant="transparent"
-                              placeholder="Enter item description..."
+                              placeholder="Enter Item Description..."
                               className="!text-[12px] font-normal text-slate-700 placeholder:text-slate-400 placeholder:font-normal"
                               value={item.description}
                               onChange={(e) => updateItem(item.id, { description: e.target.value })}
@@ -716,7 +725,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                           <td className="px-2 py-3 border-l border-slate-50">
                             <Input
                               variant="compact"
-                              placeholder="Unit details..."
+                              placeholder="Unit Details..."
                               className="!bg-white border-slate-200 !text-[12px] font-normal text-slate-700 placeholder:text-slate-400 placeholder:font-normal"
                               value={item.unitDetails}
                               onChange={(e) => updateItem(item.id, { unitDetails: e.target.value })}
@@ -774,7 +783,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                             <Button
                               variant="danger"
                               size="xs"
-                              className="!px-0 !w-6 !h-6 flex items-center justify-center rounded-lg mx-auto [&>svg]:w-3 [&>svg]:h-3"
+                              className="!px-0 !w-6 !h-6 flex items-center justify-center  :h-3"
                               icon={Trash2}
                               onClick={() => removeItem(item.id)}
                             />
@@ -788,8 +797,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                         <td colSpan={12} className="px-6 py-16 text-center">
                           <div className="flex flex-col items-center gap-3 opacity-20">
                             <Plus className="w-12 h-12" />
-                            <p className="text-[11px] font-black uppercase tracking-widest">
-                              {data.items.length === 0 ? 'No entries found — Click "Add Item" to start' : 'No items match your search'}
+                            <p className="text-[11px] font-black tracking-widest">
+                              {data.items.length === 0 ? 'No entries found — click "Add item" to start' : 'No items match your search'}
                             </p>
                           </div>
                         </td>
@@ -802,7 +811,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     <tfoot className="sticky bottom-0 z-10 bg-white border-t-2 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] invoice-recent-table-footer">
                       <tr>
                         <td className="px-3 py-3 text-[10px] text-black text-center">Σ</td>
-                        <td colSpan={4} className="px-4 py-3 text-[10px] text-black uppercase tracking-widest text-right pr-10 border-l border-slate-50">Total Summary</td>
+                        <td colSpan={4} className="px-4 py-3 text-[10px] text-black tracking-widest text-right pr-10 border-l border-slate-50">Total Summary</td>
                         <td className="px-2 py-3 text-center text-[12px] text-slate-700 border-l border-slate-50">
                           {data.items.reduce((sum, i) => sum + i.quantity, 0)}
                         </td>
@@ -840,10 +849,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
               <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col h-full invoice-matrix-container">
                 <div className="pt-3 px-3 pb-2 space-y-2 flex-1 flex flex-col">
                   <div className="flex items-center justify-between px-1">
-                    <p className="text-[10px] font-medium text-black">Notes & special terms</p>
+                    <p className="text-[10px] font-medium text-black">Notes & Special Terms</p>
                   </div>
                   <div className="w-full flex-1">
-                    <TextArea placeholder="Enter payment terms, bank details, or special instructions..." className="h-full min-h-[100px] !text-[12px]"
+                    <TextArea placeholder="Enter Payment Terms, Bank Details, Or Special Instructions..." className="h-full min-h-[100px] !text-[12px]"
                       value={data.notes} onChange={(e) => onChange({ ...data, notes: e.target.value })} />
                   </div>
                 </div>
@@ -886,17 +895,16 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
                 <div className="pt-3 px-3 pb-2 space-y-2 flex-1 flex flex-col">
                   <div className="flex items-center justify-between px-1">
-                    <p className="text-[10px] font-medium text-black">Document attachments</p>
+                    <p className="text-[10px] font-medium text-black">Document Attachments</p>
                     <span className="text-[10px] font-medium text-slate-400">
-                      {uploadSuccess ? 'Upload success!' : `${files.length} ${files.length === 1 ? 'file' : 'files'}`}
+                      {uploadSuccess ? 'Upload Success!' : `${files.length} ${files.length === 1 ? 'file' : 'files'}`}
                     </span>
                   </div>
                   <div className="w-full flex-1">
                     {/* Upload Zone */}
                     <div
-                      className={`border-2 border-dashed rounded-[12px] bg-white relative shadow-sm h-[80px] transition-colors border-slate-200 flex flex-col ${
-                        files.length === 0 ? 'items-center justify-center py-2' : 'items-stretch justify-start p-1'
-                      }`}
+                      className={`border-2 border-dashed rounded-[12px] bg-white relative shadow-sm h-[80px] transition-colors border-slate-200 flex flex-col ${files.length === 0 ? 'items-center justify-center py-2' : 'items-stretch justify-start p-1'
+                        }`}
                     >
                       {files.length === 0 ? (
                         <>
@@ -906,7 +914,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                             </div>
                           </div>
                           <div className="text-center">
-                            <p className="text-[9px] font-black text-slate-800">Drop files</p>
+                            <p className="text-[9px] font-black text-slate-800">Drop Files</p>
                             <p className="text-[6px] font-medium text-slate-400">IMG, PDF, Excel, Word</p>
                           </div>
                         </>
@@ -957,8 +965,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
                   {/* Compact Buttons */}
                   <div className="flex justify-end gap-2 pt-0.5 border-t border-slate-50">
-                    <Button
-                      variant="primary"
+                    <Button                      variant="primary"
                       size="md"
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -966,8 +973,8 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                     </Button>
                   </div>
                 </div>
-                </div>
               </div>
+            </div>
 
             {/* Right: Financial Matrix */}
             <div className="lg:col-span-4 flex flex-col h-full">
@@ -993,7 +1000,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   {/* Shipping Charges */}
                   <div className="grid grid-cols-12 gap-3 items-center">
                     <div className="col-span-8">
-                      <span className="text-[11px] font-bold text-black">Shipping charges</span>
+                      <span className="text-[11px] font-bold text-black">Shipping Charges</span>
                     </div>
                     <div className="col-span-4">
                       <Input
@@ -1009,7 +1016,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   {/* Round Off */}
                   <div className="grid grid-cols-12 gap-3 items-center">
                     <div className="col-span-8">
-                      <span className="text-[11px] font-bold text-black">Round off</span>
+                      <span className="text-[11px] font-bold text-black">Round Off</span>
                     </div>
                     <div className="col-span-4">
                       <Input
@@ -1026,7 +1033,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
                   {/* Gross */}
                   <div className="flex justify-between items-center px-1">
-                    <span className="text-[11px] font-bold text-black">Gross subtotal</span>
+                    <span className="text-[11px] font-bold text-black">Gross Subtotal</span>
                     <span className="text-[12px] font-normal text-slate-700">{fmt(subtotal)}</span>
                   </div>
 
@@ -1043,7 +1050,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
                   {/* Net */}
                   <div className="flex justify-between items-center px-1 py-1">
-                    <span className="text-[11px] font-bold text-slate-700">Net total (Rs.)</span>
+                    <span className="text-[11px] font-bold text-slate-700">Net Total (Rs.)</span>
                     <span className="text-[16px] font-bold text-brand-primary">{fmt(netPayable)}</span>
                   </div>
                 </div>
@@ -1080,17 +1087,17 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
         {/* Billing Details Block */}
         <div className="printable-billing-grid">
           <div>
-            <h3 className="printable-billing-section-title">FROM</h3>
+            <h3 className="printable-billing-section-title">From</h3>
             <h4 className="printable-billing-name">{data.senderName || 'Antigravity Creative Studio'}</h4>
             <p className="printable-billing-address">
               {data.senderAddress}
             </p>
           </div>
           <div>
-            <h3 className="printable-billing-section-title">BILL TO</h3>
-            <h4 className="printable-billing-name">{data.clientName || 'Unnamed Client'}</h4>
+            <h3 className="printable-billing-section-title">Bill To</h3>
+            <h4 className="printable-billing-name">{data.customerName || 'Unnamed Customer'}</h4>
             <p className="printable-billing-address">
-              {data.clientAddress}
+              {data.customerAddress}
             </p>
           </div>
         </div>
@@ -1101,7 +1108,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
           <thead>
             <tr className="printable-table-head-row">
               {['Code', 'Description', 'Unit', 'Qty', 'Rate (Rs.)', 'Tax (Rs.)', 'Discount (Rs.)', 'Total (Rs.)'].map(h => (
-                <th key={h} style={{ textAlign: (h === 'Description' || h === 'Code') ? 'left' : 'right' }} className="p-3 text-[9px] font-bold uppercase tracking-widest text-[#64748b] whitespace-nowrap">{h}</th>
+                <th key={h} style={{ textAlign: (h === 'Description' || h === 'Code') ? 'left' : 'right' }} className="p-3 text-[9px] font-bold tracking-widest text-[#64748b] whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -1128,7 +1135,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
         <div className="printable-totals-wrapper">
           <div className="printable-totals-container">
             <div className="printable-totals-row">
-              <span className="printable-totals-text-muted">Gross subtotal:</span>
+              <span className="printable-totals-text-muted">Gross Subtotal:</span>
               <span className="printable-totals-val">{fmt(subtotal)}</span>
             </div>
             <div className="printable-totals-row">
@@ -1142,13 +1149,40 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
               </div>
             )}
             <div className="printable-totals-row-net">
-              <span>Net total (Rs.):</span>
+              <span>Net Total (Rs.):</span>
               <span className="printable-totals-val-net">{fmt(netPayable)}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+      {/* Confirm Modals */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen && confirmModal.type === 'new'}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={doNewInvoice}
+        title="Create New Invoice?"
+        message="Are you sure you want to start a new invoice? All unsaved changes on the current invoice will be lost."
+        confirmLabel="Yes, New Invoice"
+        variant="warning"
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen && confirmModal.type === 'close'}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={doClose}
+        title="Discard Changes?"
+        message="Are you sure you want to close the editor? All unsaved changes will be discarded and you will be returned to the dashboard."
+        confirmLabel="Yes, Discard"
+        variant="warning"
+      />
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title="Required Fields Missing"
+        message={alertModal.message}
+        variant="warning"
+      />
   </>
   );
 };

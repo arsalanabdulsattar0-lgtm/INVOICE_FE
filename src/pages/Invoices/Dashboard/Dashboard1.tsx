@@ -9,6 +9,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import Card from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/FormControls';
 import type { Invoice } from '../invoiceTypes';
+import { AlertModal } from '../../../components/ui/AlertModal';
 
 interface Dashboard1Props {
   invoiceItems?: Invoice[];
@@ -20,6 +21,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
   const [aiQuery, setAiQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   // Add Product form state
   const [productCode, setProductCode] = useState('');
@@ -58,7 +60,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
       else if (q.includes('pending') || q.includes('unpaid')) list = list.filter(i => i.status === 'Pending');
       else if (q.includes('draft')) list = list.filter(i => i.status === 'Draft');
       else list = list.filter(i =>
-        i.client.toLowerCase().includes(q) ||
+        i.customer.toLowerCase().includes(q) ||
         i.id.toLowerCase().includes(q) ||
         i.amount.toLowerCase().includes(q)
       );
@@ -72,7 +74,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!productCode || !productName || !productPrice) {
-      alert('Please fill in all required fields.');
+      setAlertModal({ isOpen: true, message: 'Please fill in all required fields: Product Code, Product Name, and Price.' });
       return;
     }
     const newProd = {
@@ -127,7 +129,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Paid</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Paid</p>
                 <p className="text-xl font-black text-slate-900">{paidInvoices.length}</p>
               </div>
             </Card>
@@ -137,7 +139,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <Clock className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Pending</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Pending</p>
                 <p className="text-xl font-black text-slate-900">{pendingInvoices.length}</p>
               </div>
             </Card>
@@ -147,7 +149,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <AlertCircle className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Overdue</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Overdue</p>
                 <p className="text-xl font-black text-rose-600">{overdueInvoices.length}</p>
               </div>
             </Card>
@@ -157,7 +159,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <FileText className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Draft</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Draft</p>
                 <p className="text-xl font-black text-slate-900">{draftInvoices.length}</p>
               </div>
             </Card>
@@ -167,22 +169,22 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
         {/* Revenue Summary */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-5" style={{ borderColor: brand.dark + '10' }}>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Total Revenue</p>
+            <p className="text-[10px] font-black tracking-wider text-slate-400 mb-1">Total Revenue</p>
             <h3 className="text-3xl font-black tracking-tight" style={{ color: brand.primary }}>{formatCurrency(totalRevenue)}</h3>
           </Card>
           <Card className="p-5" style={{ borderColor: brand.dark + '10' }}>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Pending Amount</p>
+            <p className="text-[10px] font-black tracking-wider text-slate-400 mb-1">Pending Amount</p>
             <h3 className="text-3xl font-black text-amber-600 tracking-tight">{formatCurrency(pendingAmount)}</h3>
           </Card>
         </section>
 
         {/* Quick Actions */}
         <section>
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">Quick Actions</h2>
+          <h2 className="text-sm font-black tracking-widest text-slate-400 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Create Invoice', icon: Plus, onClick: () => onViewChange?.('add-invoice-v4'), color: brand.primary, bg: 'bg-indigo-50' },
-              { label: 'Add Customer', icon: Users, onClick: () => onViewChange?.('clients'), color: '#0EA5E9', bg: 'bg-sky-50' },
+              { label: 'Add Customer', icon: Users, onClick: () => onViewChange?.('customers'), color: '#0EA5E9', bg: 'bg-sky-50' },
               { label: 'Add Product', icon: Box, onClick: () => setShowAddProductModal(true), color: '#F59E0B', bg: 'bg-amber-50' },
               { label: 'View Reports', icon: BarChart3, onClick: () => { setToastMessage('Reports & Analytics feature coming soon!'); setTimeout(() => setToastMessage(null), 3000); }, color: '#10B981', bg: 'bg-emerald-50' },
             ].map(action => (
@@ -210,7 +212,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
           <section className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                <h2 className="text-sm font-black tracking-widest text-slate-400">
                   {aiQuery ? 'Search Results' : 'Recent Invoices'}
                 </h2>
                 {aiQuery && (
@@ -240,7 +242,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                   className="mt-4 text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer"
                   style={{ color: brand.primary, backgroundColor: brand.surface }}
                 >
-                  Clear search
+                  Clear Search
                 </button>
               </Card>
             ) : (
@@ -256,7 +258,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                     >
                       <div className="flex items-center gap-3">
                         <div>
-                          <h4 className="text-sm font-bold text-slate-900">{inv.client}</h4>
+                          <h4 className="text-sm font-bold text-slate-900">{inv.customer}</h4>
                           <span className="text-xs font-medium text-slate-400">#{inv.id}</span>
                         </div>
                       </div>
@@ -282,7 +284,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
 
           {/* Quick Insights */}
           <section>
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-4">Quick Insights</h2>
+            <h2 className="text-sm font-black tracking-widest text-slate-400 mb-4">Quick Insights</h2>
             <Card className="p-4 space-y-4" style={{ borderColor: brand.dark + '10' }}>
               <div>
                 <h3 className="text-xs font-bold text-slate-500 mb-3">Invoice Summary</h3>
@@ -341,7 +343,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                   { label: 'Product Code', value: productCode, setter: setProductCode, placeholder: 'e.g. PROD-001' },
                   { label: 'Product Name', value: productName, setter: setProductName, placeholder: 'e.g. Web Design Package' },
                   { label: 'Price (PKR)', value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
-                  { label: 'SKU (optional)', value: productSku, setter: setProductSku, placeholder: 'e.g. SKU-WDP-01' },
+                  { label: 'SKU (Optional)', value: productSku, setter: setProductSku, placeholder: 'e.g. SKU-WDP-01' },
                 ].map(f => (
                   <Input
                     key={f.label}
@@ -362,6 +364,14 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title="Required Fields Missing"
+        message={alertModal.message}
+        variant="warning"
+      />
 
     </div>
   );

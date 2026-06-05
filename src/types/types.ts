@@ -1,3 +1,19 @@
+export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
+
+export interface Invoice {
+  id: string;
+  customer: string;
+  customerInitials: string;
+  customerColor: string;
+  issueDate: string;
+  dueDate: string;
+  amount: string;
+  rawAmount: number;
+  status: InvoiceStatus;
+  payment: string;
+  type: string;
+}
+
 export interface InvoiceItem {
   id: string;
   productCode: string;
@@ -17,8 +33,8 @@ export interface InvoiceData {
   dueDate: string;
   senderName: string;
   senderAddress: string;
-  clientName: string;
-  clientAddress: string;
+  customerName: string;
+  customerAddress: string;
   subject: string;
   reference: string;
   productCode: string;

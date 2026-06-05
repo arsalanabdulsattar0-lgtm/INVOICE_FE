@@ -13,6 +13,10 @@ import Card from '../../components/ui/Card';
 import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import { Chip, FilerChip, NonFilerChip, ActiveChip, InactiveChip } from '../../components/ui/Chip';
 import { SALES_PERSONS } from '../../utils/customerData';
+import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { AlertModal } from '../../components/ui/AlertModal';
+import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
 
 // ---------------------------------------------------------------------------
 // Types – reflect the backend model supplied by the user
@@ -131,6 +135,9 @@ const CustomerManagement: React.FC = () => {
   const sortRef = useRef<HTMLDivElement>(null);
   const perPage = 15;
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+  const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -216,12 +223,14 @@ const CustomerManagement: React.FC = () => {
   }, []);
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      const newList = customers.filter(c => c.id !== id);
-      setCustomers(newList);
-      persist(newList);
-      setSelectedCustomerIds(prev => prev.filter(x => x !== id));
-    }
+    setDeleteModal({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    const newList = customers.filter(c => c.id !== deleteModal.id);
+    setCustomers(newList);
+    persist(newList);
+    setSelectedCustomerIds(prev => prev.filter(x => x !== deleteModal.id));
   };
 
   const handleToggleActive = (id: string) => {
@@ -277,7 +286,7 @@ const CustomerManagement: React.FC = () => {
   const handleSave = () => {
     if (!editing) return;
     if (!editing.name.trim() || !editing.email.trim()) {
-      alert('Name and Email are required');
+      setAlertModal({ isOpen: true, message: 'Customer Name and Email are required fields. Please fill them in before saving.' });
       return;
     }
     const existingIndex = customers.findIndex(c => c.id === editing.id);
@@ -309,12 +318,14 @@ const CustomerManagement: React.FC = () => {
   };
 
   const handleBulkDelete = () => {
-    if (window.confirm(`Are you sure you want to delete the ${selectedCustomerIds.length} selected customers?`)) {
-      const newList = customers.filter(c => !selectedCustomerIds.includes(c.id));
-      setCustomers(newList);
-      persist(newList);
-      setSelectedCustomerIds([]);
-    }
+    setBulkConfirmModal(true);
+  };
+
+  const doBulkDelete = () => {
+    const newList = customers.filter(c => !selectedCustomerIds.includes(c.id));
+    setCustomers(newList);
+    persist(newList);
+    setSelectedCustomerIds([]);
   };
 
   const handleBulkToggleFiler = (filer: boolean) => {
@@ -412,8 +423,8 @@ const CustomerManagement: React.FC = () => {
   const totalBalance = customers.reduce((acc, c) => acc + (c.opening_balance || 0), 0);
 
   const stats = [
-    { label: 'Total Customers', value: totalCount.toString(), sub: `${totalCount} clients database`, icon: User, color: brand.primary, bg: brand.surface },
-    { label: 'Tax Filers', value: filersCount.toString(), sub: `${totalCount > 0 ? ((filersCount / totalCount) * 100).toFixed(0) : 0}% of client base`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
+    { label: 'Total Customers', value: totalCount.toString(), sub: `${totalCount} customers database`, icon: User, color: brand.primary, bg: brand.surface },
+    { label: 'Tax Filers', value: filersCount.toString(), sub: `${totalCount > 0 ? ((filersCount / totalCount) * 100).toFixed(0) : 0}% of customer base`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
     { label: 'Walk-in Accounts', value: walkinCount.toString(), sub: `${walkinCount} retail accounts`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
     { label: 'Total Balance', value: `Rs. ${totalBalance.toLocaleString()}`, sub: 'Total outstanding balance', icon: CreditCard, color: '#BE123C', bg: '#FFF1F2' },
   ];
@@ -426,51 +437,42 @@ const CustomerManagement: React.FC = () => {
     { key: 'opening_balance', label: 'Total Balance' },
   ];
 
-  const SortArrow = ({ col }: { col: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' }) => (
-    <span className="ml-1 inline-block opacity-50" style={{ color: sortKey === col ? brand.primary : brand.dark }}>
-      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-    </span>
-  );
-
 
 
   return (
     <div className="min-h-full p-6 space-y-5" style={{ background: '#F4F7FD' }}>
 
       {/* ── Page Header ── */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Customer List</h1>
-          <p className="text-[12px] font-medium text-slate-400 mt-0.5">
-            {filteredCustomers.length} customers found · Last updated just now
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="white"
-            size="md"
-            icon={SlidersHorizontal}
-            onClick={() => setShowFilterDrawer(true)}
-            className="relative"
-          >
-            Filter
-            {(selectedFilerStatus !== 'all' || selectedWalkinStatus !== 'all' || selectedActiveStatus !== 'all' || selectedSalesPerson !== 'all' || search !== '') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
-                style={{ background: brand.accent || '#EF4444' }}>!</span>
-            )}
-          </Button>
-          <Button
-            onClick={openCreate}
-            variant="primary"
-            size="md"
-            icon={Plus}
-            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-          >
-            Add Customer
-          </Button>
-        </div>
-      </motion.div>
+      <PageHeader
+        title="Customer List"
+        subtitle={`${filteredCustomers.length} customers found · Last updated just now`}
+        actions={
+          <>
+            <Button
+              variant="white"
+              size="md"
+              icon={SlidersHorizontal}
+              onClick={() => setShowFilterDrawer(true)}
+              className="relative"
+            >
+              Filter
+              {(selectedFilerStatus !== 'all' || selectedWalkinStatus !== 'all' || selectedActiveStatus !== 'all' || selectedSalesPerson !== 'all' || search !== '') && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
+                  style={{ background: brand.accent || '#EF4444' }}>!</span>
+              )}
+            </Button>
+            <Button
+              onClick={openCreate}
+              variant="primary"
+              size="md"
+              icon={Plus}
+              className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+            >
+              Add Customer
+            </Button>
+          </>
+        }
+      />
 
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -504,14 +506,7 @@ const CustomerManagement: React.FC = () => {
         {/* ── Solid Header Bar ── */}
         <div className="px-4 py-2.5 flex items-center justify-between text-white"
           style={{ backgroundColor: brand.primary }}>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Customer Records</h3>
-            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filteredCustomers.length} Customers
-            </span>
-          </div>
+          <CardTitle title="Customer Records" count={filteredCustomers.length} countLabel="customers" />
 
           {/* Search inside header bar */}
           <div className="flex items-center gap-2">
@@ -520,7 +515,7 @@ const CustomerManagement: React.FC = () => {
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Search customers..."
+                placeholder="Search Customers..."
                 className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
                 style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
@@ -540,14 +535,14 @@ const CustomerManagement: React.FC = () => {
               <AnimatePresence>
                 {showSortPanel && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                    className="absolute right-0 top-9 z-30 bg-white rounded-xl shadow-xl border overflow-hidden w-44"
-                    style={{ borderColor: brand.dark + '15' }}>
+                     initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                     animate={{ opacity: 1, scale: 1, y: 0 }}
+                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                     className="absolute right-0 top-9 z-30 bg-white rounded-xl shadow-xl border overflow-hidden w-44"
+                     style={{ borderColor: brand.dark + '15' }}>
                     {sortOptions.map(opt => (
                       <button key={opt.key} onClick={() => handleSort(opt.key)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold hover:bg-slate-50 transition-all"
+                        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold hover:bg-slate-50 transition-all cursor-pointer text-left"
                         style={{ color: sortKey === opt.key ? brand.primary : brand.dark }}>
                         {opt.label}
                         {sortKey === opt.key && (
@@ -664,29 +659,29 @@ const CustomerManagement: React.FC = () => {
                               type="checkbox"
                               checked={filteredCustomers.length > 0 && selectedCustomerIds.length === filteredCustomers.length}
                               onChange={handleSelectAll}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer w-4 h-4"
+                              className="rounded border-slate-300 text-blue-650 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
                             />
                           </th>
                           {([
-                            { label: 'Customer details', key: 'name', width: 'w-[22%]' },
-                            { label: 'Phone number', key: 'email', width: 'w-[13%]' },
+                            { label: 'Customer Details', key: 'name', width: 'w-[22%]' },
+                            { label: 'Phone Number', key: 'email', width: 'w-[13%]' },
                             { label: 'City', key: null, width: 'w-[11%]' },
-                            { label: 'Credit limit (Rs.)', key: 'credit_limit', width: 'w-[11%]' },
-                            { label: 'Total balance (Rs.)', key: 'opening_balance', width: 'w-[11%]' },
-                            { label: 'Tax status', key: null, width: 'w-[17%]' },
+                            { label: 'Credit Limit (Rs.)', key: 'credit_limit', width: 'w-[11%]' },
+                            { label: 'Total Balance (Rs.)', key: 'opening_balance', width: 'w-[11%]' },
+                            { label: 'Tax Status', key: null, width: 'w-[17%]' },
                             { label: 'Status', key: 'status', width: 'w-[15%]' },
                             { label: 'Actions', key: null, width: 'w-20' },
                           ] as { label: string; key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' | null; width: string }[]).map((h, idx) => (
-                            <th key={h.label}
-                              className={`${h.label === 'Actions' ? 'px-2' : 'px-4'} py-3 text-left border-b ${h.key ? 'cursor-pointer hover:bg-blue-50/40 select-none' : ''} transition-colors ${idx !== 0 ? 'border-l border-slate-100' : ''} ${h.width}`}
-                              style={{ borderColor: brand.dark + '10' }}
-                              onClick={() => h.key && handleSort(h.key)}>
-                              <span className="text-[10px] font-black tracking-widest inline-flex items-center gap-0.5 whitespace-nowrap"
-                                style={{ color: sortKey === h.key ? brand.primary : '#000000' }}>
-                                {h.label}
-                                {h.key && <SortArrow col={h.key} />}
-                              </span>
-                            </th>
+                            <TableHeader
+                              key={h.label}
+                              label={h.label}
+                              sortKey={h.key || undefined}
+                              activeSortKey={sortKey}
+                              sortDir={sortDir}
+                              onSort={(key) => handleSort(key)}
+                              width={h.width}
+                              borderLeft={idx !== 0}
+                            />
                           ))}
                         </tr>
                       </thead>
@@ -904,136 +899,85 @@ const CustomerManagement: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 md:p-8 shadow-2xl relative border border-slate-100 font-sans"
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative border border-slate-150"
             >
-              <button
-                onClick={() => setViewingCustomer(null)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Modal Header */}
+              <ModalHeader
+                title={viewingCustomer.name}
+                subtitle={viewingCustomer.customer_id || `C-${viewingCustomer.id.slice(0, 4).toUpperCase()}`}
+                onClose={() => setViewingCustomer(null)}
+              />
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-mono font-bold text-sm shadow-md">
-                  {viewingCustomer.customer_id || `C-${viewingCustomer.id.slice(0, 4).toUpperCase()}`}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${viewingCustomer.is_filer
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'bg-amber-50 text-amber-600'
-                      }`}>
-                      {viewingCustomer.is_filer ? 'Tax Filer' : 'Non-Filer'}
-                    </span>
-                    {viewingCustomer.is_walkin && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-550 uppercase tracking-wider">Walk-in</span>}
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${viewingCustomer.is_active
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'bg-red-50 text-red-600'
-                      }`}>
-                      {viewingCustomer.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 mt-1">{viewingCustomer.name}</h2>
-                  <p className="text-xs font-bold text-slate-400">{viewingCustomer.email} • {viewingCustomer.phone || 'No phone'}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
-                <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Client Contact & Location</h3>
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Mobile</span>
-                      <span className="text-slate-800 font-bold">{viewingCustomer.mobile || 'N/A'}</span>
+              {/* Modal Body */}
+              <div className="flex-grow overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+                {/* SECTION 1: Customer Contact & Location */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Customer Contact & Location" icon={MapPin} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input variant="compact" label="Email Address" readOnly value={viewingCustomer.email || 'N/A'} />
+                      <Input variant="compact" label="Phone Number" readOnly value={viewingCustomer.phone || 'N/A'} />
+                      <Input variant="compact" label="Mobile" readOnly value={viewingCustomer.mobile || 'N/A'} />
+                      <Input variant="compact" label="Website" readOnly value={viewingCustomer.website || 'N/A'} />
+                      <Input variant="compact" label="City / Province" readOnly value={viewingCustomer.city ? `${viewingCustomer.city}, ${viewingCustomer.province}` : 'N/A'} />
+                      <Input variant="compact" label="Country" readOnly value={viewingCustomer.country || 'N/A'} />
+                      <div className="col-span-2">
+                        <Input variant="compact" label="Address" readOnly value={viewingCustomer.address || 'N/A'} />
+                      </div>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Website</span>
-                      <span className="text-slate-850 font-bold hover:underline" style={{ color: brand.primary }}>{viewingCustomer.website || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">City / Province</span>
-                      <span className="text-slate-880 font-bold">{viewingCustomer.city ? `${viewingCustomer.city}, ${viewingCustomer.province}` : 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Country</span>
-                      <span className="text-slate-800 font-bold">{viewingCustomer.country || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Address</span>
-                      <span className="text-slate-800 font-bold text-right max-w-[200px] truncate">{viewingCustomer.address || 'N/A'}</span>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
 
-                <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Business Settings & Credit</h3>
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Credit Limit</span>
-                      <span className="text-slate-800 font-black text-blue-600">Rs. {viewingCustomer.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                {/* SECTION 2: Business Settings & Credit */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Business Settings & Credit" icon={CreditCard} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input variant="compact" label="Credit Limit (Rs.)" readOnly value={viewingCustomer.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      <Input variant="compact" label="Total Balance (Rs.)" readOnly value={viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      <Input variant="compact" label="Payment Terms" readOnly value={`${viewingCustomer.payment_term_days} days`} />
+                      <Input variant="compact" label="Discount Percent" readOnly value={`${viewingCustomer.discount_percent}%`} />
+                      <Input variant="compact" label="Sales Person" readOnly value={SALES_PERSONS.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'} />
+                      <Input variant="compact" label="Walk-in Customer" readOnly value={viewingCustomer.is_walkin ? 'Yes' : 'No'} />
+                      <Input variant="compact" label="Tax Filer" readOnly value={viewingCustomer.is_filer ? 'Filer' : 'Non-Filer'} />
+                      <Input variant="compact" label="Status" readOnly value={viewingCustomer.is_active ? 'Active' : 'Inactive'} />
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Total Balance</span>
-                      <span className="text-slate-880 font-bold" style={{ color: viewingCustomer.opening_balance > 0 ? '#BE123C' : undefined }}>
-                        Rs. {viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Payment Terms</span>
-                      <span className="text-slate-800 font-bold">{viewingCustomer.payment_term_days} days</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Discount Percent</span>
-                      <span className="text-slate-800 font-bold">{viewingCustomer.discount_percent}%</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-50 text-xs">
-                      <span className="text-slate-500 font-medium">Sales Person</span>
-                      <span className="text-slate-800 font-bold">
-                        {SALES_PERSONS.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
 
-                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Tax Compliance Registry</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">NTN Code</div>
-                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.ntn || 'N/A'}</div>
+                {/* SECTION 3: Tax Compliance Registry */}
+                <div className="space-y-1.5">
+                  <SectionHeader title="Tax Compliance Registry" icon={ShieldCheck} />
+                  <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input variant="compact" label="NTN Code" readOnly value={viewingCustomer.ntn || 'N/A'} />
+                      <Input variant="compact" label="STRN Registry" readOnly value={viewingCustomer.stn || 'N/A'} />
+                      <Input variant="compact" label="CNIC Number" readOnly value={viewingCustomer.cnic || 'N/A'} />
+                      <Input variant="compact" label="WHT Category" readOnly value={viewingCustomer.wht_type || 'N/A'} />
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">STN Registry</div>
-                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.stn || 'N/A'}</div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">CNIC Number</div>
-                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.cnic || 'N/A'}</div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                      <div className="text-[10px] text-slate-400 font-bold uppercase">WHT Category</div>
-                      <div className="text-xs font-black text-slate-700 mt-1">{viewingCustomer.wht_type || 'N/A'}</div>
-                    </div>
-                  </div>
+                  </Card>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-                <button
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-2 px-6 py-4 border-t bg-slate-50 flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
+                <Button
+                  variant="white"
+                  size="md"
                   onClick={() => {
                     setViewingCustomer(null);
                     openEdit(viewingCustomer);
                   }}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all cursor-pointer"
                 >
                   Edit Customer Profile
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={() => setViewingCustomer(null)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
                 >
                   Close
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -1051,19 +995,10 @@ const CustomerManagement: React.FC = () => {
               className="bg-white rounded-3xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative border border-slate-100 font-sans"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 bg-white border-b flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black" style={{ color: brand.dark }}>
-                    {editing.name ? `Edit Customer: ${editing.name}` : 'Create New Customer'}
-                  </h2>
-                </div>
-                <button
-                  onClick={closeModal}
-                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <ModalHeader
+                title={editing.name ? `Edit Customer: ${editing.name}` : 'Create New Customer'}
+                onClose={closeModal}
+              />
 
               {/* Stepper Wizard Progression */}
               <div className="px-6 pb-6 flex justify-center flex-shrink-0 bg-white pt-4">
@@ -1106,7 +1041,7 @@ const CustomerManagement: React.FC = () => {
                       type="button"
                       onClick={() => {
                         if (!editing.name?.trim() || !editing.email?.trim()) {
-                          alert("Please fill in required fields (Name & Email).");
+                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
                           return;
                         }
                         setActiveTab('settings');
@@ -1130,7 +1065,7 @@ const CustomerManagement: React.FC = () => {
                       type="button"
                       onClick={() => {
                         if (!editing.name?.trim() || !editing.email?.trim()) {
-                          alert("Please fill in required fields (Name & Email).");
+                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
                           return;
                         }
                         setActiveTab('accounting');
@@ -1157,9 +1092,7 @@ const CustomerManagement: React.FC = () => {
                   <div className="space-y-6 animate-fadeIn">
                     {/* SECTION 1: BASIC INFO */}
                     <div className="space-y-1.5">
-                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                        <User className="w-3.5 h-3.5" /> Basic Contact Information
-                      </h4>
+                      <SectionHeader title="Basic Contact Information" icon={User} className="text-slate-700" />
                       <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                         <div className="grid grid-cols-3 gap-3">
                           <Input variant="compact" label="Customer ID" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUST-001" />
@@ -1172,15 +1105,13 @@ const CustomerManagement: React.FC = () => {
                       </Card>
                     </div>
 
-                    {/* SECTION 4: ADDRESS BLOCK */}
+                    {/* SECTION 4: PHYSICAL ADDRESS */}
                     <div className="space-y-1.5">
-                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5" /> Physical Address
-                      </h4>
+                      <SectionHeader title="Physical Address" icon={MapPin} className="text-slate-700" />
                       <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="col-span-2">
-                            <TextArea className="!rounded-lg text-[11px] py-1.5 px-3 h-14" label="Billing Street Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="e.g. Suite #12, 3rd Floor, Commercial Plaza" />
+                            <TextArea className="!rounded-lg !text-[11px] py-1.5 px-3 h-14" label="Billing Street Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="e.g. Suite #12, 3rd Floor, Commercial Plaza" />
                           </div>
                           <Input variant="compact" label="City" value={editing.city} onChange={(e) => setEditing({ ...editing, city: e.target.value })} placeholder="Karachi" />
                           <Input variant="compact" label="Province/State" value={editing.province} onChange={(e) => setEditing({ ...editing, province: e.target.value })} placeholder="Sindh" />
@@ -1195,13 +1126,11 @@ const CustomerManagement: React.FC = () => {
                   <div className="space-y-6 animate-fadeIn">
                     {/* SECTION 2: BUSINESS SETTINGS */}
                     <div className="space-y-1.5">
-                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                        <ShieldCheck className="w-3.5 h-3.5" /> Business & Tax Settings
-                      </h4>
+                      <SectionHeader title="Business & Tax Settings" icon={ShieldCheck} className="text-slate-700" />
                       <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                         <div className="space-y-4">
                           <div className="flex items-center gap-6 flex-wrap pt-1">
-                            <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk-in Retail Client" />
+                            <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk-in Retail Customer" />
                             <Toggle checked={editing.is_filer} onChange={(v) => setEditing({ ...editing, is_filer: v })} label="Registered Tax Filer" />
                             <Toggle checked={editing.is_active} onChange={(v) => setEditing({ ...editing, is_active: v })} label="Active Account Status" />
                           </div>
@@ -1216,14 +1145,12 @@ const CustomerManagement: React.FC = () => {
 
                     {/* SECTION 5: TAX LAWS */}
                     <div className="space-y-1.5">
-                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                        <Globe className="w-3.5 h-3.5" /> Government Registries & WHT
-                      </h4>
+                      <SectionHeader title="Government Registries & WHT" icon={Globe} className="text-slate-700" />
                       <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                         <div className="grid grid-cols-3 gap-3">
                           <Input variant="compact" label="National Tax Number (NTN)" value={editing.ntn} onChange={(e) => setEditing({ ...editing, ntn: e.target.value })} placeholder="1234567-8" />
-                          <Input variant="compact" label="Sales Tax Number (STN)" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} placeholder="STN-12345" />
-                          <Input variant="compact" label="CNIC Number (individuals)" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} placeholder="42101-1234567-1" />
+                          <Input variant="compact" label="Sales Tax Number (STRN)" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} placeholder="STN-12345" />
+                          <Input variant="compact" label="CNIC Number" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} placeholder="42101-1234567-1" />
                           <Input variant="compact" label="Withholding Tax (WHT) Type" value={editing.wht_type} onChange={(e) => setEditing({ ...editing, wht_type: e.target.value })} placeholder="Active / Exempt / Suspended" />
                         </div>
                       </Card>
@@ -1235,19 +1162,17 @@ const CustomerManagement: React.FC = () => {
                   <div className="space-y-6 animate-fadeIn">
                     {/* SECTION 3: FINANCIAL ACCOUNTING */}
                     <div className="space-y-1.5">
-                      <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                        <CreditCard className="w-3.5 h-3.5" /> Accounting Details
-                      </h4>
+                      <SectionHeader title="Accounting Details" icon={CreditCard} className="text-slate-700" />
                       <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                         <div className="grid grid-cols-3 gap-3">
                           <Input variant="compact" label="Total Balance (Rs.)" type="number" value={editing.opening_balance?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, opening_balance: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
                           <Select
                             variant="compact"
-                            label="Sales Person"
+                            label="Salesperson"
                             value={editing.sales_person_id || ''}
                             onChange={(e) => setEditing({ ...editing, sales_person_id: e.target.value })}
                             options={[
-                              { value: '', label: 'Select sales person...' },
+                              { value: '', label: 'Select Salesperson...' },
                               ...SALES_PERSONS.map(sp => ({ value: sp.id, label: sp.name }))
                             ]}
                           />
@@ -1293,7 +1218,7 @@ const CustomerManagement: React.FC = () => {
                       iconPosition="right"
                       onClick={() => {
                         if (!editing.name?.trim() || !editing.email?.trim()) {
-                          alert("Please fill in required fields (Name & Email).");
+                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
                           return;
                         }
                         if (activeTab === 'general') setActiveTab('settings');
@@ -1379,7 +1304,7 @@ const CustomerManagement: React.FC = () => {
 
         {/* Account Status */}
         <div className="space-y-1.5">
-          <label className="block text-[11px] font-bold text-slate-500">Account status</label>
+          <label className="block text-[11px] font-bold text-slate-500">Account Status</label>
           <div className="grid grid-cols-3 gap-1 bg-slate-100/60 p-0.5 rounded-lg border border-slate-200/30">
             {[
               { key: 'all', label: 'All' },
@@ -1406,16 +1331,41 @@ const CustomerManagement: React.FC = () => {
 
         {/* Sales Person */}
         <div className="space-y-1.5">
-          <label className="block text-[11px] font-bold text-slate-500">Sales person</label>
+          <label className="block text-[11px] font-bold text-slate-500">Sales Person</label>
           <ComboBox
             value={selectedSalesPerson === 'all' ? '' : selectedSalesPerson}
             onChange={(val) => { setSelectedSalesPerson(val || 'all'); setCurrentPage(1); }}
             options={SALES_PERSONS}
-            placeholder="Select sales person..."
+            placeholder="Select Sales Person..."
             variant="compact"
           />
         </div>
       </FilterDrawer>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDelete}
+        title="Delete Customer?"
+        itemName={deleteModal.name}
+        warningText="This action cannot be undone and all associated customer records will be permanently removed."
+      />
+      <ConfirmModal
+        isOpen={bulkConfirmModal}
+        onClose={() => setBulkConfirmModal(false)}
+        onConfirm={doBulkDelete}
+        title={`Delete ${selectedCustomerIds.length} Customers?`}
+        message={`Are you sure you want to permanently delete the ${selectedCustomerIds.length} selected customer${selectedCustomerIds.length !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmLabel="Yes, Delete All"
+        variant="danger"
+      />
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title="Required Fields Missing"
+        message={alertModal.message}
+        variant="warning"
+      />
     </div>
   );
 };

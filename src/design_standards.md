@@ -856,7 +856,7 @@ Koi bhi screen ya feature banana se pehle:
 - [ ] Table header cells and list page heading numbers use `color: brand.dark` (black) — never slate/gray
 - [ ] Form section headings follow the standard `<h4>` + Lucide icon pattern (see § Form Section Headings)
 - [ ] All form buttons use `size="md"` — no over-wide full-width buttons on modal/drawer footers
-- [ ] Dashboard trend card uses the Invoice Activity pattern (filter tabs + large count + gradient area chart)
+- [ ] Dashboard trend card uses the Revenue Trend pattern (3M/6M/12M range filters + dual AreaChart for revenue/target + custom tooltip)
 - [ ] `Header` (`AICommandBar`) is hidden/null on the Settings page — `if (activeView === 'settings') return null`
 
 ---
@@ -1001,53 +1001,58 @@ import { User, MapPin, Building2, CreditCard, FileText } from 'lucide-react';
 
 ## 📊 Dashboard — Standard Widgets
 
-### Invoice Activity Trend Card
+### 1. Top Header Bar & Greeting Bar
+- **Top Header Bar**: Background `#FFFFFF`, border-bottom `1px solid #e5e7eb`, height `58px`. Contains Logo + Name ("Ledger"), navigation links (`["Dashboard", "Invoices", "Clients", "Reports"]`), notification bell icon, and a user profile avatar with name and role ("Admin").
+- **Greeting & Quick Action Bar**: Background `#FFFFFF`, border-bottom `1px solid #e5e7eb`, padding `10px 28px`. Includes a greeting ("Good evening, Aman.") and secondary status subtitle ("Saturday, May 23 • 14 invoices need your attention"). On the right, contains two main action buttons: "Add Client" and "New Invoice".
 
-The **Invoice Activity** card is the standard trend chart widget on the dashboard. It must follow this layout:
-
-```
-┌─────────────────────────────────────┐
-│ [All] [Paid] [Pending] [Overdue]   1,930 │
-│                              Total Invoices │
-│ Invoice Activity                          │
-│ Total invoices issued across all statuses │
-│                                           │
-│  ╭──────────────────────── (peak dot) ──╮ │
-│ ╱                                        │
-│╱                                         │
-│ Jan Feb Mar Apr May Jun Jul Aug Sep Oct  │
-└─────────────────────────────────────────┘
-```
-
-**Spec:**
-- Filter tabs: `All / Paid / Pending / Overdue` — pill segmented control (`bg-slate-100`, active tab `bg-white shadow`)
-- Large count: top-right, `font-weight: 900`, `font-size: 30px`, dynamic from filtered invoice count
-- Chart: `AreaChart` (Recharts) with **dual-layer gradient** — pink-to-indigo stroke + soft lavender background layer
-- Gradient stroke: `linearGradient` from `#f43f5e` → `#818cf8` (horizontal)
-- Fill: `linearGradient` from `#818cf8 @ 25%` → `#f43f5e @ 0%` (vertical)
-- Peak dot: dark `#1e293b` circle with white count label at the highest data point month
-- Tooltip: dark `#1e293b` background, white text, `border-radius: 10px`
-- Fallback data: smooth bell-curve `[2,3,4,5,5,9,7,6,5,4,3,2]` when no real invoices exist
-- Card padding: `20px 22px 0` (chart bleeds to bottom edge)
-- Chart height: `120px`
-
-```tsx
-// Imports
-import { useState, useMemo } from "react";
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-const [trendFilter, setTrendFilter] = useState<'All'|'Paid'|'Pending'|'Overdue'>('All');
-```
-
-### Dashboard Stats Cards
-
-Stats cards at the top of the dashboard follow the existing 4-column grid pattern:
+### 2. Dashboard Stats Cards (4-Column Grid)
+Stats cards at the top of the dashboard follow a 4-column grid layout. Each card has a left-edge colored accent bar (4px wide), uppercase label, large bold value, and helper sub-text.
 - `Outstanding` → accent `#2563eb`
 - `Paid this month` → accent `#16a34a`
 - `Overdue` → accent `#dc2626`
 - `Avg. Invoice` → accent `#7c3aed`
 
-Each card has a left-edge colored accent bar (4px wide), large bold value, and muted sub-label.
+### 3. Revenue Trend Card (Last 12 Months)
+The **Revenue — Last 12 Months** card is the standard trend chart widget. It must follow this specification:
+- **Header**: Includes title, trend percentage (`↑ 58.4% vs last month`), and time range selector tabs (`3M`, `6M`, `12M`).
+- **Chart**: `AreaChart` (Recharts) of height `180px` containing:
+  - `CartesianGrid` (dasharray `"3 3"`, stroke `#f1f5f9`, vertical false).
+  - `XAxis` showing months, `YAxis` showing formatted tick marks (e.g. `$50k`).
+  - **Revenue Area**: stroke `#16a34a`, strokeWidth `2.5`, fill `url(#revGrad)`, and active dot.
+  - **Target Area**: stroke `#cbd5e1`, strokeWidth `1.5`, dashed line (`strokeDasharray="4 4"`), fill `url(#targGrad)`.
+  - **Gradients**: 
+    - `revGrad`: linearGradient from `#16a34a` (opacity 0.18) to (opacity 0).
+    - `targGrad`: linearGradient from `#94a3b8` (opacity 0.1) to (opacity 0).
+  - **Custom Tooltip**: White background, light border, rounded-lg (`10px`), subtle shadow, showing Month, Revenue, and Target.
+  - **Legend**: Colored markers at the bottom indicating "Revenue" and "Target", with a bold total revenue label (e.g. `Total: $61,400`).
+
+### 4. Recent Invoices Table
+- Table showing recent invoices with columns: `Invoice`, `Client`, `Date`, `Due`, `Amount`, `Status`.
+- **Status Badges**: Styled pill badges with semantic backgrounds and text colors:
+  - `Paid` → bg `#dcfce7`, text `#15803d`
+  - `Pending` → bg `#fef9c3`, text `#a16207`
+  - `Overdue` → bg `#fee2e2`, text `#b91c1c`
+
+### 5. Invoice Status Donut Card
+- SVG donut chart displaying status distribution.
+- **Spec**: Outer concentric SVG circle breakdown representing:
+  - Track: `#f1f5f9`
+  - `Paid`: `#16a34a`
+  - `Pending`: `#fbbf24`
+  - `Overdue`: `#dc2626`
+  - Centered text displaying total invoice amount and "Total" label.
+- **Legend**: Right-side details showing status name, percentage share, and total value.
+
+### 6. Top Clients Card
+- Displays top clients of the quarter ranked by revenue.
+- Includes a progress bar with a client-specific accent color (`progress` percentage mapped to width).
+
+### 7. Quick Actions Card
+- Grid of 4 quick action buttons with pastel colored backgrounds and emoji/icons:
+  - `Send Reminder` → bg `#fef9c3`, text `#92400e`
+  - `Export CSV` → bg `#eff6ff`, text `#1d4ed8`
+  - `Mark Paid` → bg `#f0fdf4`, text `#166534`
+  - `New Client` → bg `#fdf4ff`, text `#7e22ce`
 
 ---
 

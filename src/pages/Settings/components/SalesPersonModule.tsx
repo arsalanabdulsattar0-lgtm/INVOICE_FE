@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Eye, User, ShieldCheck } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Eye, User, ShieldCheck, Hash } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
+import { ComboBox } from '../../../components/ui/ComboBox';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
 import { FilterDrawer } from '../../../components/ui/FilterDrawer';
 import { Modal } from '../../../components/ui/Modal';
+import { TableHeader, SectionHeader } from '../../../components/ui/Typography';
 import Card from '../../../components/ui/Card';
 import { useTheme } from '../../../context/ThemeContext';
 import { seedSalespeople } from '../../../utils/settingsData';
+import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
+import { SalesTargetsModal } from './SalesTargetsModal';
 
 export interface SalesPerson {
   id: string;
@@ -49,7 +53,7 @@ interface SalesPersonModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
 }
 
-const emptySP = (): Omit<SalesPerson, 'id'> => ({
+const emptySP = (): Omit<SalesPerson, 'id'> & { spId: string } => ({
   name: '',
   targetAmount: 0,
   targetQuantity: 0,
@@ -81,6 +85,7 @@ const emptySP = (): Omit<SalesPerson, 'id'> => ({
   DecT: 0,
   SPUserName: '',
   MtargetQty: 0,
+  spId: '',
 });
 
 export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) => {
@@ -90,8 +95,16 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
   const [filterStatus, setFilterStatus] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<SalesPerson | null>(null);
-  const [form, setForm] = useState<Omit<SalesPerson, 'id'>>(emptySP());
+  const [form, setForm] = useState<Omit<SalesPerson, 'id'> & { spId: string }>(emptySP());
   const [viewingTarget, setViewingTarget] = useState<SalesPerson | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+
+  // Build options list for Salesperson ID combo box
+  const spIdOptions = people.map(p => ({
+    id: p.id,
+    name: p.id,
+    subtitle: p.name,
+  }));
 
   const filtered = people.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -140,6 +153,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
       DecT: p.DecT ?? 0,
       SPUserName: p.SPUserName ?? '',
       MtargetQty: p.MtargetQty ?? p.targetQuantity ?? 0,
+      spId: p.id,
     });
     setShowForm(true);
   };
@@ -168,8 +182,13 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
   const handleToggleActive = (id: string) =>
     setPeople(prev => prev.map(p => (p.id === id ? { ...p, active: !p.active } : p)));
 
-  const handleDelete = (id: string) =>
-    setPeople(prev => prev.filter(p => p.id !== id));
+  const handleDelete = (id: string, name: string) => {
+    setDeleteModal({ isOpen: true, id, name });
+  };
+
+  const confirmDelete = () => {
+    setPeople(prev => prev.filter(p => p.id !== deleteModal.id));
+  };
 
   const handleReset = () => setFilterStatus('all');
 
@@ -183,7 +202,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
             icon={Search}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name..."
+            placeholder="Search By Name..."
           />
         </div>
         <div className="flex items-center gap-2">
@@ -197,7 +216,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
             onClick={openAdd}
             style={{ backgroundColor: brand.primary }}
           >
-            Add salesperson
+            Add Salesperson
           </Button>
         </div>
       </div>
@@ -217,7 +236,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
         >
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Salesperson list</h3>
+            <h3 className="text-[11px] font-black tracking-wide">Salesperson List</h3>
             <span
               className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
               style={{ backgroundColor: brand.soft, color: brand.dark }}
@@ -239,21 +258,16 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                     { label: 'Telephone 1', w: 'min-w-[100px]' },
                     { label: 'Email', w: 'min-w-[130px]' },
                     { label: 'Status', w: 'min-w-[80px]' },
-                    { label: 'Created date', w: 'min-w-[90px]' },
+                    { label: 'Created Date', w: 'min-w-[90px]' },
                     { label: 'Actions', w: 'w-20' },
                   ].map((h, idx) => (
-                    <th
+                    <TableHeader
                       key={h.label}
-                      className={`px-2 py-2 text-left border-b ${idx !== 0 ? 'border-l border-slate-50' : ''} ${h.w} ${h.label === 'Actions' ? '!px-2' : ''}`}
-                      style={{ borderColor: brand.dark + '10' }}
-                    >
-                      <span
-                        className="text-[10px] font-black tracking-widest whitespace-nowrap"
-                        style={{ color: brand.dark }}
-                      >
-                        {h.label}
-                      </span>
-                    </th>
+                      label={h.label}
+                      width={h.w}
+                      padding="px-2"
+                      borderLeft={idx !== 0}
+                    />
                   ))}
                 </tr>
               </thead>
@@ -308,7 +322,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                             variant="ghost"
                             size="xs"
                             icon={Eye}
-                            title="View targets"
+                            title="View Targets"
                             className="!px-1 text-slate-500 hover:text-slate-800"
                             onClick={() => setViewingTarget(p)}
                           />
@@ -326,7 +340,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                             icon={Trash2}
                             title="Delete"
                             className="!px-1 !text-red-500"
-                            onClick={() => handleDelete(p.id)}
+                            onClick={() => handleDelete(p.id, p.name)}
                           />
                         </div>
                       </td>
@@ -343,7 +357,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
       <Modal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title={editing ? 'Edit salesperson' : 'Add salesperson'}
+        title={editing ? 'Edit Salesperson' : 'Add Salesperson'}
         size="lg"
         footer={
           <>
@@ -357,7 +371,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
               onClick={handleSave}
               style={{ backgroundColor: brand.primary }}
             >
-              {editing ? 'Update salesperson' : 'Save salesperson'}
+              {editing ? 'Update Salesperson' : 'Save Salesperson'}
             </Button>
           </>
         }
@@ -365,24 +379,27 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
         <div className="space-y-5">
           {/* Section 1: Basic contact information */}
           <div className="space-y-1.5">
-            <h4
-              className="text-[13px] font-black ml-1 flex items-center gap-2"
-              style={{ color: brand.dark }}
-            >
-              <User className="w-3.5 h-3.5" />
-              Basic contact information
-            </h4>
+            <SectionHeader title="Basic Contact Information" icon={User} />
             <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
               <div className="grid grid-cols-2 gap-4">
+                <ComboBox
+                  label="Salesperson ID"
+                  value={form.spId}
+                  onChange={val => setForm({ ...form, spId: val })}
+                  options={spIdOptions}
+                  placeholder="Search Salesperson ID..."
+                  variant="compact"
+                  icon={Hash}
+                />
                 <Input
-                  label="Salesperson name *"
+                  label="Salesperson Name *"
                   variant="compact"
                   placeholder="e.g. Ahmed Raza"
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                 />
                 <Input
-                  label="SP user name"
+                  label="Username"
                   variant="compact"
                   placeholder="e.g. ahmed.raza"
                   value={form.SPUserName}
@@ -451,13 +468,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
 
           {/* Section 2: Targets and commission */}
           <div className="space-y-1.5">
-            <h4
-              className="text-[13px] font-black ml-1 flex items-center gap-2"
-              style={{ color: brand.dark }}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Targets and commission
-            </h4>
+            <SectionHeader title="Targets And Commission" icon={ShieldCheck} />
             <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
               <div className="grid grid-cols-3 gap-4">
                 <Input
@@ -472,7 +483,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                   }}
                 />
                 <Input
-                  label="Monthly target amount (Rs.)"
+                  label="Monthly Target Amount (Rs.)"
                   variant="compact"
                   type="number"
                   placeholder="0"
@@ -483,7 +494,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                   }}
                 />
                 <Input
-                  label="Monthly target qty"
+                  label="Monthly Target Qty"
                   variant="compact"
                   type="number"
                   placeholder="0"
@@ -499,28 +510,22 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
 
           {/* Section 3: Monthly targets breakdown */}
           <div className="space-y-1.5">
-            <h4
-              className="text-[13px] font-black ml-1 flex items-center gap-2"
-              style={{ color: brand.dark }}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Monthly targets breakdown (Rs.)
-            </h4>
+            <SectionHeader title="Monthly Targets Breakdown (Rs.)" icon={SlidersHorizontal} />
             <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
               <div className="grid grid-cols-4 gap-3">
                 {[
-                  { label: 'Jan target', key: 'JanT' },
-                  { label: 'Feb target', key: 'FebT' },
-                  { label: 'March target', key: 'MarchT' },
-                  { label: 'April target', key: 'AprilT' },
-                  { label: 'May target', key: 'MayT' },
-                  { label: 'June target', key: 'JuneT' },
-                  { label: 'July target', key: 'JulyT' },
-                  { label: 'Aug target', key: 'AugT' },
-                  { label: 'Sept target', key: 'SeptT' },
-                  { label: 'Oct target', key: 'OctT' },
-                  { label: 'Nov target', key: 'NovT' },
-                  { label: 'Dec target', key: 'DecT' },
+                  { label: 'Jan Target', key: 'JanT' },
+                  { label: 'Feb Target', key: 'FebT' },
+                  { label: 'March Target', key: 'MarchT' },
+                  { label: 'April Target', key: 'AprilT' },
+                  { label: 'May Target', key: 'MayT' },
+                  { label: 'June Target', key: 'JuneT' },
+                  { label: 'July Target', key: 'JulyT' },
+                  { label: 'Aug Target', key: 'AugT' },
+                  { label: 'Sept Target', key: 'SeptT' },
+                  { label: 'Oct Target', key: 'OctT' },
+                  { label: 'Nov Target', key: 'NovT' },
+                  { label: 'Dec Target', key: 'DecT' },
                 ].map(m => (
                   <Input
                     key={m.key}
@@ -544,18 +549,12 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
 
           {/* Section 4: System configuration */}
           <div className="space-y-1.5">
-            <h4
-              className="text-[13px] font-black ml-1 flex items-center gap-2"
-              style={{ color: brand.dark }}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              System configuration
-            </h4>
+            <SectionHeader title="System Configuration" icon={ShieldCheck} />
             <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
               <div className="flex items-center justify-between">
                 <div className="w-1/2">
                   <Input
-                    label="Created date"
+                    label="Created Date"
                     variant="compact"
                     type="date"
                     value={form.createdDate}
@@ -576,86 +575,11 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
       </Modal>
 
       {/* Modal: View sales targets */}
-      <Modal
+      <SalesTargetsModal
         isOpen={!!viewingTarget}
         onClose={() => setViewingTarget(null)}
-        title={`Sales targets — ${viewingTarget?.name || ''}`}
-        size="md"
-        footer={
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setViewingTarget(null)}
-            style={{ backgroundColor: brand.primary }}
-          >
-            Close
-          </Button>
-        }
-      >
-        {viewingTarget && (
-          <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
-            {/* Summary row */}
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Monthly target (Rs.)"
-                variant="compact"
-                readOnly
-                value={
-                  viewingTarget.MTarget !== undefined
-                    ? viewingTarget.MTarget.toLocaleString(undefined, { minimumFractionDigits: 2 })
-                    : '0.00'
-                }
-              />
-              <Input
-                label="Monthly target qty"
-                variant="compact"
-                readOnly
-                value={
-                  viewingTarget.MtargetQty !== undefined
-                    ? viewingTarget.MtargetQty.toLocaleString()
-                    : '0'
-                }
-              />
-            </div>
-
-            {/* Monthly breakdown */}
-            <div className="mt-4">
-              <h4
-                className="text-[13px] font-black flex items-center gap-2 mb-3"
-                style={{ color: brand.dark }}
-              >
-                Monthly breakdown
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'January', val: viewingTarget.JanT },
-                  { label: 'February', val: viewingTarget.FebT },
-                  { label: 'March', val: viewingTarget.MarchT },
-                  { label: 'April', val: viewingTarget.AprilT },
-                  { label: 'May', val: viewingTarget.MayT },
-                  { label: 'June', val: viewingTarget.JuneT },
-                  { label: 'July', val: viewingTarget.JulyT },
-                  { label: 'August', val: viewingTarget.AugT },
-                  { label: 'September', val: viewingTarget.SeptT },
-                  { label: 'October', val: viewingTarget.OctT },
-                  { label: 'November', val: viewingTarget.NovT },
-                  { label: 'December', val: viewingTarget.DecT },
-                ].map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 border rounded-xl bg-white flex flex-col gap-0.5 border-slate-100 hover:border-slate-200 transition-colors"
-                  >
-                    <span className="text-[10px] font-bold text-slate-400">{m.label}</span>
-                    <span className="text-[12px] font-black" style={{ color: brand.dark }}>
-                      {(m.val || 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        )}
-      </Modal>
+        salesPerson={viewingTarget}
+      />
 
       {/* Filter drawer */}
       <FilterDrawer
@@ -663,7 +587,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
         onClose={() => setShowFilter(false)}
         onReset={handleReset}
         onApply={() => setShowFilter(false)}
-        title="Filter salespersons"
+        title="Filter Salespersons"
       >
         <div className="space-y-1.5">
           <label className="block text-[11px] font-bold text-slate-500">Status</label>
@@ -676,11 +600,10 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
               <button
                 key={opt.key}
                 onClick={() => setFilterStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${
-                  filterStatus === opt.key
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${filterStatus === opt.key
                     ? 'bg-white shadow-xs border border-slate-200/40'
                     : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'
-                }`}
+                  }`}
                 style={{ color: filterStatus === opt.key ? brand.primary : undefined }}
               >
                 {opt.label}
@@ -689,6 +612,15 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
           </div>
         </div>
       </FilterDrawer>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDelete}
+        title="Delete Salesperson?"
+        itemName={deleteModal.name}
+        warningText="This action cannot be undone and this salesperson will be permanently removed from the list."
+      />
     </div>
   );
 };

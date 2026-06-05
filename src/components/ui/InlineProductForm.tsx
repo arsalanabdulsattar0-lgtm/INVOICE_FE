@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileText, Save, Percent, ChevronLeft, ChevronRight, Package, Tag, Layers, Box } from 'lucide-react';
+import { FileText, Save, Percent, ChevronLeft, ChevronRight, Package, Tag, Layers, Box } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { Input, TextArea, ComboBox, Toggle } from './FormControls';
 import Card from './Card';
 import { Button } from './Button';
+import { SectionHeader, ModalHeader } from './Typography';
 import type { Product } from '../../pages/Products/ProductList';
+import { AlertModal } from './AlertModal';
 import {
   ProductCategory,
   ProductBrand,
@@ -63,6 +65,7 @@ const FbrSaleTypeOptions = [
 const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) => {
   const { brand } = useTheme();
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax'>('general');
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     code: '',
@@ -151,11 +154,11 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
 
   const handleSave = () => {
     if (!formData.name?.trim()) {
-      alert("Product name is required");
+      setAlertModal({ isOpen: true, title: 'Product name required', message: 'Please enter a product name before saving.' });
       return;
     }
     if (!formData.code?.trim()) {
-      alert("Product code is required");
+      setAlertModal({ isOpen: true, title: 'Product code required', message: 'Please enter a product code before saving.' });
       return;
     }
 
@@ -218,7 +221,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
       onClose();
     } catch (e) {
       console.error(e);
-      alert("Failed to save product.");
+      setAlertModal({ isOpen: true, title: 'Save failed', message: 'Failed to save product. Please try again.' });
     }
   };
 
@@ -274,11 +277,11 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   const handleNext = () => {
     if (activeTab === 'general') {
       if (!formData.name?.trim()) {
-        alert("Product name is required");
+        setAlertModal({ isOpen: true, title: 'Product name required', message: 'Please enter a product name before proceeding to the next step.' });
         return;
       }
       if (!formData.code?.trim()) {
-        alert("Product code is required");
+        setAlertModal({ isOpen: true, title: 'Product code required', message: 'Please enter a product code before proceeding to the next step.' });
         return;
       }
       setActiveTab('tax');
@@ -288,7 +291,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   };
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {isOpen && (
         <>
           {/* Glass Overlay */}
@@ -311,19 +315,10 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
             style={{ borderColor: brand.dark + '10' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-white border-b flex-shrink-0" style={{ borderColor: brand.dark + '10' }}>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black" style={{ color: brand.dark }}>
-                  {initialData?.id ? `Edit Product: ${formData.name || ''}` : 'Create New Product'}
-                </h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <ModalHeader
+              title={initialData?.id ? `Edit Product: ${formData.name || ''}` : 'Create New Product'}
+              onClose={onClose}
+            />
 
             {/* Stepper Wizard Progression */}
             <div className="px-6 pb-6 flex justify-center flex-shrink-0 bg-white">
@@ -366,7 +361,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                     type="button"
                     onClick={() => {
                       if (!formData.name?.trim() || !formData.code?.trim()) {
-                        alert("Please fill in the required fields (Name & Code) first.");
+                        setAlertModal({ isOpen: true, title: 'Required fields missing', message: 'Please fill in the required fields (Name & Code) first.' });
                         return;
                       }
                       setActiveTab('tax');
@@ -390,7 +385,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                     type="button"
                     onClick={() => {
                       if (!formData.name?.trim() || !formData.code?.trim()) {
-                        alert("Please fill in the required fields (Name & Code) first.");
+                        setAlertModal({ isOpen: true, title: 'Required fields missing', message: 'Please fill in the required fields (Name & Code) first.' });
                         return;
                       }
                       setActiveTab('pricing');
@@ -417,27 +412,23 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
               {activeTab === 'general' && (
                 <div className="space-y-4 animate-fadeIn">
                   <div className="space-y-1.5">
-                    <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                      <Tag className="w-3.5 h-3.5" /> Basic Information
-                    </h4>
+                    <SectionHeader title="Basic Information" icon={Tag} />
                     <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input variant="compact" label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic Board Pro v4" />
-                      <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PROD-1001" />
-                      <ComboBox variant="compact" label="UOM" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
-                      <Input variant="compact" label="Sale Price" type="number" value={formData.sale_price || ''} onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <Input variant="compact" label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <Input variant="compact" label="MRP Ex Tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <Input variant="compact" label="MRP Inc Tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                    </div>
-                  </Card>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input variant="compact" label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic board pro v4" />
+                        <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PROD-1001" />
+                        <ComboBox variant="compact" label="UOM" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
+                        <Input variant="compact" label="Sale Price" type="number" value={formData.sale_price || ''} onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="MRP ex tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="MRP inc tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      </div>
+                    </Card>
                   </div>
 
                   {/* Card 2: Classification & Description */}
                   <div className="space-y-1.5">
-                    <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5" /> Classification & Details
-                    </h4>
+                    <SectionHeader title="Classification & Details" icon={Layers} />
                     <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -456,7 +447,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                             <TextArea className="!rounded-lg text-[11px] py-1.5 px-3 h-14" label="Notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Internal notes..." />
                           </div>
                           <div className="pt-1">
-                            <Toggle checked={!!formData.is_active} onChange={(val) => setFormData({ ...formData, is_active: val })} label="Product is Active" />
+                            <Toggle checked={!!formData.is_active} onChange={(val) => setFormData({ ...formData, is_active: val })} label="Product Is Active" />
                           </div>
                         </div>
                       </div>
@@ -467,67 +458,63 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
 
               {activeTab === 'pricing' && (
                 <div className="space-y-1.5 animate-fadeIn">
-                  <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                    <Box className="w-3.5 h-3.5" /> Inventory & Dimensions
-                  </h4>
+                  <SectionHeader title="Inventory & Dimensions" icon={Box} />
                   <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
-                  <div className="space-y-4">
-                    {/* Row 1: Stock Info (3 inputs) */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input variant="compact" label="Opening Qty" type="number" value={formData.opening_qty || ''} onChange={(e) => setFormData({ ...formData, opening_qty: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                      <Input variant="compact" label="Opening Rate" type="number" value={formData.opening_rate || ''} onChange={(e) => setFormData({ ...formData, opening_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <Input variant="compact" label="Low Stock Level" type="number" value={formData.low_stock_level || ''} onChange={(e) => setFormData({ ...formData, low_stock_level: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                    </div>
+                    <div className="space-y-4">
+                      {/* Row 1: Stock Info (3 inputs) */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input variant="compact" label="Opening Qty" type="number" value={formData.opening_qty || ''} onChange={(e) => setFormData({ ...formData, opening_qty: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="Opening Rate" type="number" value={formData.opening_rate || ''} onChange={(e) => setFormData({ ...formData, opening_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="Low Stock Level" type="number" value={formData.low_stock_level || ''} onChange={(e) => setFormData({ ...formData, low_stock_level: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      </div>
 
-                    {/* Row 2: Weight & Dimensions (3 inputs) */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input variant="compact" label="Weight (kg)" type="number" value={formData.weight || ''} onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <Input variant="compact" label="Length" type="number" value={formData.length || ''} onChange={(e) => setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                      <Input variant="compact" label="Width" type="number" value={formData.width || ''} onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                    </div>
+                      {/* Row 2: Weight & Dimensions (3 inputs) */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input variant="compact" label="Weight (kg)" type="number" value={formData.weight || ''} onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="Length" type="number" value={formData.length || ''} onChange={(e) => setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="Width" type="number" value={formData.width || ''} onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input variant="compact" label="Sale Discount %" type="number" value={formData.sale_discount || ''} onChange={(e) => setFormData({ ...formData, sale_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                      <Input variant="compact" label="Purchase Discount %" type="number" value={formData.purchase_discount || ''} onChange={(e) => setFormData({ ...formData, purchase_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input variant="compact" label="Sale Discount %" type="number" value={formData.sale_discount || ''} onChange={(e) => setFormData({ ...formData, sale_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="Purchase Discount %" type="number" value={formData.purchase_discount || ''} onChange={(e) => setFormData({ ...formData, purchase_discount: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
                 </div>
               )}
 
               {activeTab === 'tax' && (
                 <div className="space-y-1.5 animate-fadeIn">
-                  <h4 className="text-[13px] font-black text-slate-700 ml-1 flex items-center gap-2">
-                    <Percent className="w-3.5 h-3.5" /> Tax Compliance & FBR Linking
-                  </h4>
+                  <SectionHeader title="Tax Compliance & FBR Linking" icon={Percent} />
                   <Card className="p-4 shadow-sm" style={{ borderColor: brand.dark + '10' }}>
-                  <div className="space-y-4">
-                    {/* Tax Configuration Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input variant="compact" label="GST %" type="number" value={formData.gst_rate || ''} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                      <Input variant="compact" label="Non-Filer GST %" type="number" value={formData.non_filer_gst_rate || ''} onChange={(e) => setFormData({ ...formData, non_filer_gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                      <Input variant="compact" label="ADT %" type="number" value={formData.adt_rate || ''} onChange={(e) => setFormData({ ...formData, adt_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
-                    </div>
+                    <div className="space-y-4">
+                      {/* Tax Configuration Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <Input variant="compact" label="GST %" type="number" value={formData.gst_rate || ''} onChange={(e) => setFormData({ ...formData, gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="Non-Filer GST %" type="number" value={formData.non_filer_gst_rate || ''} onChange={(e) => setFormData({ ...formData, non_filer_gst_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="ADT %" type="number" value={formData.adt_rate || ''} onChange={(e) => setFormData({ ...formData, adt_rate: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                      </div>
 
-                    {/* FBR / Compliance Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <ComboBox variant="compact" label="FBR UOM" value={formData.fbr_uom || ''} onChange={(val) => setFormData({ ...formData, fbr_uom: val })} options={FbrUomOptions} placeholder="Select FBR UOM" />
-                      <Input variant="compact" label="SRO Item Serial No" value={formData.sro_item_serial_no} onChange={(e) => setFormData({ ...formData, sro_item_serial_no: e.target.value })} placeholder="SRO Serial No" />
-                      <Input variant="compact" label="SRO Schedule No" value={formData.sro_schedule_no} onChange={(e) => setFormData({ ...formData, sro_schedule_no: e.target.value })} placeholder="SRO Schedule No" />
-                      <Input variant="compact" label="FBR Sale Rate" type="number" value={formData.fbr_sale_rate || ''} onChange={(e) => setFormData({ ...formData, fbr_sale_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                      <ComboBox variant="compact" label="FBR Sale Type" value={formData.fbr_sale_type || ''} onChange={(val) => setFormData({ ...formData, fbr_sale_type: val })} options={FbrSaleTypeOptions} placeholder="Select Sale Type" />
-                      <Input variant="compact" label="HS Code" value={formData.hs_code} onChange={(e) => setFormData({ ...formData, hs_code: e.target.value })} placeholder="HS Code" />
-                    </div>
+                      {/* FBR / Compliance Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <ComboBox variant="compact" label="FBR UOM" value={formData.fbr_uom || ''} onChange={(val) => setFormData({ ...formData, fbr_uom: val })} options={FbrUomOptions} placeholder="Select FBR UOM" />
+                        <Input variant="compact" label="SRO Item Serial No" value={formData.sro_item_serial_no} onChange={(e) => setFormData({ ...formData, sro_item_serial_no: e.target.value })} placeholder="SRO Serial No" />
+                        <Input variant="compact" label="SRO Schedule No" value={formData.sro_schedule_no} onChange={(e) => setFormData({ ...formData, sro_schedule_no: e.target.value })} placeholder="SRO Schedule No" />
+                        <Input variant="compact" label="FBR Sale Rate" type="number" value={formData.fbr_sale_rate || ''} onChange={(e) => setFormData({ ...formData, fbr_sale_rate: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <ComboBox variant="compact" label="FBR Sale Type" value={formData.fbr_sale_type || ''} onChange={(val) => setFormData({ ...formData, fbr_sale_type: val })} options={FbrSaleTypeOptions} placeholder="Select Sale Type" />
+                        <Input variant="compact" label="HS Code" value={formData.hs_code} onChange={(e) => setFormData({ ...formData, hs_code: e.target.value })} placeholder="HS Code" />
+                      </div>
 
-                    {/* Tax Linking Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <ComboBox variant="compact" label="GST Tax Linking" value={formData.gst_tax_id || ''} onChange={(val) => setFormData({ ...formData, gst_tax_id: val })} options={TaxOptions} placeholder="Select GST Link" />
-                      <ComboBox variant="compact" label="Non-Filer Tax Linking" value={formData.non_filer_tax_id || ''} onChange={(val) => setFormData({ ...formData, non_filer_tax_id: val })} options={NonFilerTaxOptions} placeholder="Select Non-Filer Link" />
-                      <ComboBox variant="compact" label="ADT Tax Linking" value={formData.adt_tax_id || ''} onChange={(val) => setFormData({ ...formData, adt_tax_id: val })} options={AdtTaxOptions} placeholder="Select ADT Link" />
-                      <ComboBox variant="compact" label="FBR Tax Linking" value={formData.fbr_tax_id || ''} onChange={(val) => setFormData({ ...formData, fbr_tax_id: val })} options={FbrTaxOptions} placeholder="Select FBR Link" />
+                      {/* Tax Linking Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <ComboBox variant="compact" label="GST Tax Linking" value={formData.gst_tax_id || ''} onChange={(val) => setFormData({ ...formData, gst_tax_id: val })} options={TaxOptions} placeholder="Select GST Link" />
+                        <ComboBox variant="compact" label="Non-Filer Tax Linking" value={formData.non_filer_tax_id || ''} onChange={(val) => setFormData({ ...formData, non_filer_tax_id: val })} options={NonFilerTaxOptions} placeholder="Select Non-Filer Link" />
+                        <ComboBox variant="compact" label="ADT Tax Linking" value={formData.adt_tax_id || ''} onChange={(val) => setFormData({ ...formData, adt_tax_id: val })} options={AdtTaxOptions} placeholder="Select ADT Link" />
+                        <ComboBox variant="compact" label="FBR Tax Linking" value={formData.fbr_tax_id || ''} onChange={(val) => setFormData({ ...formData, fbr_tax_id: val })} options={FbrTaxOptions} placeholder="Select FBR Link" />
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
                 </div>
               )}
 
@@ -594,6 +581,15 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
         </>
       )}
     </AnimatePresence>
+
+    <AlertModal
+      isOpen={alertModal.isOpen}
+      onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+      title={alertModal.title}
+      message={alertModal.message}
+      variant="warning"
+    />
+    </>
   );
 };
 

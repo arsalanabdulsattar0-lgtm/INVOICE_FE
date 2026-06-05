@@ -49,17 +49,29 @@ interface ParsedCommand {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface StoredInvoice {
-  id: string; client: string; clientInitials: string; clientColor: string;
+  id: string; customer: string; customerInitials: string; customerColor: string;
   issueDate: string; dueDate: string; amount: string; rawAmount: number;
   status: string; payment: string; type: string;
 }
 
-interface StoredClient {
+interface StoredCustomer {
   name: string; email: string; phone: string; location: string; totalInvoiced: string;
 }
 
 function readInvoices(): StoredInvoice[] {
-  try { const d = localStorage.getItem('invoice_list'); return d ? JSON.parse(d) : []; } catch { return []; }
+  try {
+    const d = localStorage.getItem('invoice_list');
+    if (!d) return [];
+    const parsed = JSON.parse(d) as any[];
+    return parsed.map((inv: any) => ({
+      ...inv,
+      customer: inv.customer || inv.client || 'Unknown Customer',
+      customerInitials: inv.customerInitials || inv.clientInitials || (inv.customer || inv.client || 'UC').slice(0, 2).toUpperCase(),
+      customerColor: inv.customerColor || inv.clientColor || '#16a34a',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function writeInvoices(data: StoredInvoice[]) {
@@ -67,12 +79,12 @@ function writeInvoices(data: StoredInvoice[]) {
   window.dispatchEvent(new CustomEvent('ai-sync-data'));
 }
 
-function readClients(): StoredClient[] {
-  try { const d = localStorage.getItem('client_list'); return d ? JSON.parse(d) : []; } catch { return []; }
+function readCustomers(): StoredCustomer[] {
+  try { const d = localStorage.getItem('customer_list'); return d ? JSON.parse(d) : []; } catch { return []; }
 }
 
-function writeClients(data: StoredClient[]) {
-  try { localStorage.setItem('client_list', JSON.stringify(data)); } catch { /* */ }
+function writeCustomers(data: StoredCustomer[]) {
+  try { localStorage.setItem('customer_list', JSON.stringify(data)); } catch { /* */ }
   window.dispatchEvent(new CustomEvent('ai-sync-data'));
 }
 
@@ -83,7 +95,7 @@ function writeClients(data: StoredClient[]) {
 const NAV_MAP: Record<string, string> = {
   dashboard: 'dashboard1', home: 'dashboard1', main: 'dashboard1', overview: 'dashboard1',
   invoices: 'invoices', invoice: 'invoices', bills: 'invoices',
-  clients: 'clients', customers: 'clients', client: 'clients', customer: 'clients',
+  clients: 'customers', customers: 'customers', client: 'customers', customer: 'customers',
   products: 'products', inventory: 'products', product: 'products',
   settings: 'settings', preferences: 'settings', config: 'settings',
   help: 'help', support: 'help',
@@ -105,7 +117,7 @@ function parseCommand(input: string): ParsedCommand {
   // ── Create Invoice for X ──
   const createInvMatch = lower.match(/^(?:create|make|new|generate)\s+(?:an?\s+)?invoice\s+(?:for\s+)?(.+)?/);
   if (createInvMatch) {
-    return { intent: 'create-invoice', raw, entities: { clientName: createInvMatch[1]?.trim() || '' } };
+    return { intent: 'create-invoice', raw, entities: { customerName: createInvMatch[1]?.trim() || '' } };
   }
 
   // ── Add Customer ──
@@ -180,7 +192,7 @@ function parseCommand(input: string): ParsedCommand {
   // ── Select customer ──
   const selectCustMatch = lower.match(/select\s+(?:customer|client)\s+(.+)/);
   if (selectCustMatch) {
-    return { intent: 'select-customer', raw, entities: { clientName: selectCustMatch[1].trim() } };
+    return { intent: 'select-customer', raw, entities: { customerName: selectCustMatch[1].trim() } };
   }
 
   // ── Delete customer ──
@@ -201,12 +213,12 @@ function parseCommand(input: string): ParsedCommand {
   if (/unpaid|pending\s+invoices/i.test(lower)) return { intent: 'query-pending-invoices', raw, entities: {} };
   if (/pending\s+amount|amount\s+pending|how\s+much\s+.*(pending|owed|due)/i.test(lower)) return { intent: 'query-pending-amount', raw, entities: {} };
   if (/revenue|income|earned|total\s+paid/i.test(lower)) return { intent: 'query-revenue', raw, entities: {} };
-  if (/top\s+client|best\s+client/i.test(lower)) return { intent: 'query-top-clients', raw, entities: {} };
+  if (/top\s+customer|best\s+customer/i.test(lower)) return { intent: 'query-top-customers', raw, entities: {} };
   if (/top\s+product|best\s+product|selling/i.test(lower)) return { intent: 'query-top-products', raw, entities: {} };
   if (/paid\s+invoices/i.test(lower)) return { intent: 'query-paid', raw, entities: {} };
   if (/draft\s+invoices/i.test(lower)) return { intent: 'query-drafts', raw, entities: {} };
   if (/total\s+invoices|how\s+many\s+invoices/i.test(lower)) return { intent: 'query-total-invoices', raw, entities: {} };
-  if (/active\s+customer|active\s+client/i.test(lower)) return { intent: 'query-active-clients', raw, entities: {} };
+  if (/active\s+customer/i.test(lower)) return { intent: 'query-active-customers', raw, entities: {} };
 
   // ── Find invoice by ID ──
   const findInvMatch = lower.match(/(?:find|search|show|get)\s+(?:invoice\s+)?(?:#?)?(si-\d+|inv-\d+)/i);
@@ -258,7 +270,7 @@ function executeCommand(
   brandPrimary: string,
 ): AIResult {
   const invoices = readInvoices();
-  const clients = readClients();
+  const customers = readCustomers();
 
   switch (cmd.intent) {
 
@@ -328,15 +340,15 @@ function executeCommand(
 
     case 'select-customer':
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('ai-invoice-action', { detail: { action: 'set-client', value: cmd.entities.clientName } }));
+        window.dispatchEvent(new CustomEvent('ai-invoice-action', { detail: { action: 'set-customer', value: cmd.entities.customerName } }));
       }, 300);
-      return { type: 'success', icon: Users, color: '#2759CD', title: `Selected customer ${cmd.entities.clientName}` };
+      return { type: 'success', icon: Users, color: '#2759CD', title: `Selected customer ${cmd.entities.customerName}` };
 
     case 'delete-customer':
       const nameToDelete = cmd.entities.name;
-      const filtered = clients.filter(c => c.name.toLowerCase() !== nameToDelete.toLowerCase());
-      if (filtered.length < clients.length) {
-        writeClients(filtered);
+      const filtered = customers.filter(c => c.name.toLowerCase() !== nameToDelete.toLowerCase());
+      if (filtered.length < customers.length) {
+        writeCustomers(filtered);
         return { type: 'success', icon: Trash2, color: '#EF4444', title: `Deleted ${nameToDelete}` };
       }
       return { type: 'error', icon: AlertCircle, color: '#EF4444', title: 'Customer not found' };
@@ -368,14 +380,14 @@ function executeCommand(
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('ai-open-inline-panel', {
           detail: {
-            client: cmd.entities.clientName || '',
-            focusField: cmd.entities.clientName ? 'items' : 'client',
+            customer: cmd.entities.customerName || '',
+            focusField: cmd.entities.customerName ? 'items' : 'customer',
           },
         }));
       }, 200);
       return {
         type: 'success', icon: FileText, color: '#10B981',
-        title: cmd.entities.clientName ? `Opening invoice for ${cmd.entities.clientName}` : 'Opening inline invoice creator',
+        title: cmd.entities.customerName ? `Opening invoice for ${cmd.entities.customerName}` : 'Opening inline invoice creator',
         subtitle: 'A floating form will appear — no page change needed ✨',
       };
     }
@@ -383,20 +395,20 @@ function executeCommand(
     // ── CREATE CUSTOMER ──
     case 'create-customer': {
       const name = cmd.entities.name || 'New Customer';
-      const newClient: StoredClient = {
+      const newCustomer: StoredCustomer = {
         name,
         email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
         phone: '+1 000 000 0000',
         location: 'Not specified',
         totalInvoiced: 'Rs. 0.00',
       };
-      const updated = [newClient, ...clients];
-      writeClients(updated);
+      const updated = [newCustomer, ...customers];
+      writeCustomers(updated);
       return {
         type: 'success', icon: Users, color: '#10B981',
         title: `Customer "${name}" created`,
-        subtitle: `Added to client database • ${updated.length} total clients`,
-        actions: [{ label: 'View Clients', action: () => onViewChange('clients') }],
+        subtitle: `Added to customer database • ${updated.length} total customers`,
+        actions: [{ label: 'View customers', action: () => onViewChange('customers') }],
       };
     }
 
@@ -435,7 +447,7 @@ function executeCommand(
       const lastInv = invoices[0];
       if (lastInv) {
         window.dispatchEvent(new CustomEvent('ai-invoice-action', { detail: { action: 'fill-last', invoiceId: lastInv.id } }));
-        return { type: 'success', icon: Copy, color: '#2759CD', title: `Filling from ${lastInv.id}`, subtitle: `Copying data from invoice to ${lastInv.client}.` };
+        return { type: 'success', icon: Copy, color: '#2759CD', title: `Filling from ${lastInv.id}`, subtitle: `Copying data from invoice to ${lastInv.customer}.` };
       }
       return { type: 'error', icon: AlertCircle, color: '#EF4444', title: 'No previous invoice found', subtitle: 'There are no saved invoices to copy from.' };
     }
@@ -447,7 +459,7 @@ function executeCommand(
       if (exists) {
         writeInvoices(invoices.filter(i => i.id.toUpperCase() !== id));
         try { localStorage.removeItem(`invoice_detail_${exists.id}`); } catch { /* */ }
-        return { type: 'success', icon: Trash2, color: '#EF4444', title: `Invoice ${exists.id} deleted`, subtitle: `Removed invoice for ${exists.client}.` };
+        return { type: 'success', icon: Trash2, color: '#EF4444', title: `Invoice ${exists.id} deleted`, subtitle: `Removed invoice for ${exists.customer}.` };
       }
       return { type: 'error', icon: AlertCircle, color: '#EF4444', title: `Invoice "${id}" not found`, subtitle: 'Check the invoice ID and try again.' };
     }
@@ -476,7 +488,7 @@ function executeCommand(
       if (overdue.length === 0) return { type: 'info', icon: CheckCircle, color: '#10B981', title: 'No overdue invoices', subtitle: 'All invoices are current! 🎉' };
       const totalAmt = overdue.reduce((s, i) => s + i.rawAmount, 0);
       const overdueChartBars: ChartBar[] = overdue.slice(0, 6).map(i => ({
-        label: i.client.split(' ')[0],
+        label: i.customer.split(' ')[0],
         value: i.rawAmount,
         color: '#EF4444',
       }));
@@ -485,8 +497,8 @@ function executeCommand(
         title: `${overdue.length} Overdue Invoice${overdue.length > 1 ? 's' : ''}`,
         subtitle: `Total overdue: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         chartBars: overdueChartBars,
-        columns: ['ID', 'Client', 'Amount', 'Due'],
-        rows: overdue.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Due: i.dueDate })),
+        columns: ['ID', 'Customer', 'Amount', 'Due'],
+        rows: overdue.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, Amount: i.amount, Due: i.dueDate })),
         actions: [{ label: 'View All Invoices', action: () => onViewChange('invoices') }],
       };
     }
@@ -499,8 +511,8 @@ function executeCommand(
         type: 'data', icon: Clock, color: '#F59E0B',
         title: `${pending.length} Pending Invoice${pending.length > 1 ? 's' : ''}`,
         subtitle: `Total pending: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        columns: ['ID', 'Client', 'Amount', 'Due'],
-        rows: pending.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount, Due: i.dueDate })),
+        columns: ['ID', 'Customer', 'Amount', 'Due'],
+        rows: pending.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, Amount: i.amount, Due: i.dueDate })),
         actions: [{ label: 'View All Invoices', action: () => onViewChange('invoices') }],
       };
     }
@@ -556,8 +568,8 @@ function executeCommand(
         type: 'data', icon: CheckCircle, color: '#10B981',
         title: `${paid.length} Paid Invoice${paid.length > 1 ? 's' : ''}`,
         subtitle: `Total: Rs. ${paid.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        columns: ['ID', 'Client', 'Amount'],
-        rows: paid.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, Amount: i.amount })),
+        columns: ['ID', 'Customer', 'Amount'],
+        rows: paid.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, Amount: i.amount })),
       };
     }
 
@@ -567,8 +579,8 @@ function executeCommand(
       return {
         type: 'data', icon: FileText, color: '#64748B',
         title: `${drafts.length} Draft Invoice${drafts.length > 1 ? 's' : ''}`,
-        columns: ['ID', 'Client', 'Amount (Rs.)'],
-        rows: drafts.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '') })),
+        columns: ['ID', 'Customer', 'Amount (Rs.)'],
+        rows: drafts.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, '') })),
       };
     }
 
@@ -591,35 +603,35 @@ function executeCommand(
       };
     }
 
-    // ── QUERY: Top Clients ──
-    case 'query-top-clients': {
-      const clientMap: Record<string, number> = {};
-      invoices.forEach(i => { clientMap[i.client] = (clientMap[i.client] || 0) + i.rawAmount; });
-      const sorted = Object.entries(clientMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-      const clientColors = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981'];
-      const clientBars: ChartBar[] = sorted.map(([name, amt], idx) => ({
+    // ── QUERY: Top Customers ──
+    case 'query-top-customers': {
+      const customerMap: Record<string, number> = {};
+      invoices.forEach(i => { customerMap[i.customer] = (customerMap[i.customer] || 0) + i.rawAmount; });
+      const sorted = Object.entries(customerMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const customerColors = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981'];
+      const customerBars: ChartBar[] = sorted.map(([name, amt], idx) => ({
         label: name.split(' ')[0],
         value: amt,
-        color: clientColors[idx % clientColors.length],
+        color: customerColors[idx % customerColors.length],
       }));
       return {
         type: 'data', icon: Users, color: '#8B5CF6',
-        title: 'Top Clients by Revenue',
-        chartBars: clientBars,
-        columns: ['Client', 'Total Revenue (Rs.)'],
-        rows: sorted.map(([name, amt]) => ({ Client: name, 'Total Revenue (Rs.)': amt.toLocaleString(undefined, { minimumFractionDigits: 2 }) })),
+        title: 'Top customers by revenue',
+        chartBars: customerBars,
+        columns: ['Customer', 'Total revenue (Rs.)'],
+        rows: sorted.map(([name, amt]) => ({ Customer: name, 'Total revenue (Rs.)': amt.toLocaleString(undefined, { minimumFractionDigits: 2 }) })),
       };
     }
 
-    // ── QUERY: Active Clients ──
-    case 'query-active-clients': {
-      if (clients.length === 0) return { type: 'info', icon: Users, color: '#64748B', title: 'No clients found', subtitle: 'Your client database is empty.' };
+    // ── QUERY: Active Customers ──
+    case 'query-active-customers': {
+      if (customers.length === 0) return { type: 'info', icon: Users, color: '#64748B', title: 'No customers found', subtitle: 'Your customer database is empty.' };
       return {
         type: 'data', icon: Users, color: '#10B981',
-        title: `${clients.length} Active Client${clients.length > 1 ? 's' : ''}`,
+        title: `${customers.length} Active customer${customers.length > 1 ? 's' : ''}`,
         columns: ['Name', 'Email', 'Invoiced'],
-        rows: clients.slice(0, 6).map(c => ({ Name: c.name, Email: c.email, Invoiced: c.totalInvoiced })),
-        actions: [{ label: 'View All Clients', action: () => onViewChange('clients') }],
+        rows: customers.slice(0, 6).map(c => ({ Name: c.name, Email: c.email, Invoiced: c.totalInvoiced })),
+        actions: [{ label: 'View all customers', action: () => onViewChange('customers') }],
       };
     }
 
@@ -631,14 +643,14 @@ function executeCommand(
         return {
           type: 'data', icon: FileText, color: '#2759CD',
           title: `Invoice ${inv.id}`,
-          subtitle: `${inv.client} • ${inv.status} • ${inv.issueDate}`,
+          subtitle: `${inv.customer} • ${inv.status} • ${inv.issueDate}`,
           columns: ['Field', 'Value'],
           rows: [
-            { Field: 'Client', Value: inv.client },
+            { Field: 'Customer', Value: inv.customer },
             { Field: 'Amount', Value: inv.amount },
             { Field: 'Status', Value: inv.status },
-            { Field: 'Issue Date', Value: inv.issueDate },
-            { Field: 'Due Date', Value: inv.dueDate },
+            { Field: 'Issue date', Value: inv.issueDate },
+            { Field: 'Due date', Value: inv.dueDate },
             { Field: 'Type', Value: inv.type },
           ],
           actions: [{ label: 'Edit Invoice', action: () => { window.dispatchEvent(new CustomEvent('ai-edit-invoice', { detail: { id: inv.id } })); } }],
@@ -650,7 +662,7 @@ function executeCommand(
     // ── SEARCH CUSTOMER ──
     case 'search-customer': {
       const q = (cmd.entities.query || '').toLowerCase();
-      const found = clients.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q));
+      const found = customers.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q));
       if (found.length === 0) return { type: 'info', icon: Search, color: '#64748B', title: 'No customers found', subtitle: `No results for "${cmd.entities.query}".` };
       return {
         type: 'data', icon: Users, color: '#2759CD',
@@ -666,8 +678,8 @@ function executeCommand(
       return {
         type: 'data', icon: TrendingUp, color: '#8B5CF6',
         title: 'Invoices by Highest Amount',
-        columns: ['ID', 'Client', 'Amount (Rs.)', 'Status'],
-        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
+        columns: ['ID', 'Customer', 'Amount (Rs.)', 'Status'],
+        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
         actions: [{ label: 'View All', action: () => onViewChange('invoices') }],
       };
     }
@@ -678,8 +690,8 @@ function executeCommand(
       return {
         type: 'data', icon: TrendingUp, color: '#0EA5E9',
         title: 'Invoices by Lowest Amount',
-        columns: ['ID', 'Client', 'Amount (Rs.)', 'Status'],
-        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
+        columns: ['ID', 'Customer', 'Amount (Rs.)', 'Status'],
+        rows: sorted.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Status: i.status })),
       };
     }
 
@@ -691,15 +703,15 @@ function executeCommand(
         type: 'data', icon: CalendarDays, color: '#0EA5E9',
         title: `${recent.length} Invoices (Last 30 Days)`,
         subtitle: `Total: Rs. ${recent.reduce((s, i) => s + i.rawAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        columns: ['ID', 'Client', 'Amount (Rs.)', 'Date'],
-        rows: recent.slice(0, 6).map(i => ({ ID: i.id, Client: i.client, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Date: i.issueDate })),
+        columns: ['ID', 'Customer', 'Amount (Rs.)', 'Date'],
+        rows: recent.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, 'Amount (Rs.)': i.amount.replace(/^(Rs\.|PKR|\$)\s*/i, ''), Date: i.issueDate })),
       };
     }
 
     // ── UPDATE NTN ──
     case 'update-ntn': {
-      setTimeout(() => onViewChange('clients'), 300);
-      return { type: 'info', icon: Pencil, color: '#F59E0B', title: 'Update NTN', subtitle: 'Navigating to clients page. Select a client to update their NTN.' };
+      setTimeout(() => onViewChange('customers'), 300);
+      return { type: 'info', icon: Pencil, color: '#F59E0B', title: 'Update NTN', subtitle: 'Navigating to customers page. Select a customer to update their NTN.' };
     }
 
     // ── SHORTCUTS ──
@@ -741,7 +753,7 @@ function executeCommand(
       return {
         type: 'info', icon: Sparkles, color: brandPrimary,
         title: `Understanding: "${cmd.raw}"`,
-        subtitle: "I'm not sure what you mean. Try commands like:\n• \"Show overdue invoices\"\n• \"Create invoice for Ali\"\n• \"Go to clients\"\n• \"What is pending amount?\"",
+        subtitle: "I'm not sure what you mean. Try commands like:\n• \"Show overdue invoices\"\n• \"Create invoice for Ali\"\n• \"Go to customers\"\n• \"What is pending amount?\"",
       };
   }
 }
@@ -764,14 +776,14 @@ function getSuggestions(activeView: string): Suggestion[] {
       { label: 'Show overdue invoices', icon: AlertCircle, color: '#EF4444', command: 'Show overdue invoices' },
       { label: 'Show pending payments', icon: DollarSign, color: '#F59E0B', command: 'What is pending amount?' },
       { label: 'Create invoice', icon: PlusCircle, color: '#10B981', command: 'Create invoice' },
-      { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to clients' },
+      { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to customers' },
     ],
     'dashboard1': [
       { label: 'Show total revenue', icon: TrendingUp, color: '#10B981', command: 'Show revenue this month' },
       { label: 'Show overdue invoices', icon: AlertCircle, color: '#EF4444', command: 'Show overdue invoices' },
       { label: 'Show pending payments', icon: DollarSign, color: '#F59E0B', command: 'What is pending amount?' },
       { label: 'Create invoice', icon: PlusCircle, color: '#10B981', command: 'Create invoice' },
-      { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to clients' },
+      { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to customers' },
     ],
     'invoices': [
       { label: 'Show unpaid invoices', icon: Clock, color: '#F59E0B', command: 'Show pending invoices' },
@@ -788,7 +800,7 @@ function getSuggestions(activeView: string): Suggestion[] {
       { label: 'Select customer', icon: Users, color: '#2759CD', command: 'Select customer ' },
       { label: 'Fill from last invoice', icon: Copy, color: '#8B5CF6', command: 'Fill from last invoice' },
     ],
-    'clients': [
+    'customers': [
       { label: 'Add new customer', icon: PlusCircle, color: '#10B981', command: 'Add customer ' },
       { label: 'Search customer', icon: Search, color: '#2759CD', command: 'Search customer ' },
       { label: 'Update NTN', icon: Pencil, color: '#F59E0B', command: 'Update NTN' },
@@ -844,13 +856,13 @@ const quickCommands: QuickCommand[] = [
   // Navigation
   { label: 'Go to Dashboard', icon: LayoutDashboard, category: 'Navigate', categoryColor: '#2759CD', keywords: ['dashboard', 'home', 'main'], command: 'Go to dashboard' },
   { label: 'Go to Invoices', icon: FileText, category: 'Navigate', categoryColor: '#2759CD', keywords: ['invoices', 'bills', 'list'], command: 'Go to invoices' },
-  { label: 'Go to Clients', icon: Users, category: 'Navigate', categoryColor: '#2759CD', keywords: ['clients', 'customers'], command: 'Go to clients' },
+  { label: 'Go to Customers', icon: Users, category: 'Navigate', categoryColor: '#2759CD', keywords: ['customers'], command: 'Go to customers' },
   { label: 'Go to Settings', icon: Settings, category: 'Navigate', categoryColor: '#2759CD', keywords: ['settings', 'config'], command: 'Go to settings' },
   { label: 'Go to Help', icon: HelpCircle, category: 'Navigate', categoryColor: '#2759CD', keywords: ['help', 'support'], command: 'Go to help' },
   // Actions
   { label: 'Create Invoice', icon: PlusCircle, category: 'Action', categoryColor: '#10B981', keywords: ['create', 'new', 'invoice', 'make'], command: 'Create invoice' },
   { label: 'Add Product', icon: PlusCircle, category: 'Action', categoryColor: '#10B981', keywords: ['add', 'product', 'item', 'line'], command: 'Add product' },
-  { label: 'Add Customer', icon: PlusCircle, category: 'Action', categoryColor: '#10B981', keywords: ['add', 'customer', 'client', 'new'], command: 'Add customer ' },
+  { label: 'Add Customer', icon: PlusCircle, category: 'Action', categoryColor: '#10B981', keywords: ['add', 'customer', 'new'], command: 'Add customer ' },
   { label: 'Apply Discount', icon: Tag, category: 'Action', categoryColor: '#10B981', keywords: ['apply', 'discount', 'percent', 'off'], command: 'Apply 10% discount' },
   { label: 'Fill from Last Invoice', icon: Copy, category: 'Action', categoryColor: '#10B981', keywords: ['fill', 'last', 'copy', 'template'], command: 'Fill from last invoice' },
   { label: 'Save Invoice', icon: CheckCircle, category: 'Action', categoryColor: '#10B981', keywords: ['save', 'submit'], command: 'Save' },
@@ -860,7 +872,7 @@ const quickCommands: QuickCommand[] = [
   { label: 'Show Pending Invoices', icon: Clock, category: 'Query', categoryColor: '#F59E0B', keywords: ['pending', 'unpaid', 'waiting'], command: 'Show pending invoices' },
   { label: 'Pending Amount', icon: DollarSign, category: 'Query', categoryColor: '#F59E0B', keywords: ['pending', 'amount', 'total', 'owed'], command: 'What is pending amount?' },
   { label: 'Revenue Summary', icon: TrendingUp, category: 'Query', categoryColor: '#F59E0B', keywords: ['revenue', 'income', 'total', 'earned'], command: 'Show revenue this month' },
-  { label: 'Top Clients', icon: Users, category: 'Query', categoryColor: '#F59E0B', keywords: ['top', 'best', 'clients', 'revenue'], command: 'Show top clients' },
+  { label: 'Top Customers', icon: Users, category: 'Query', categoryColor: '#F59E0B', keywords: ['top', 'best', 'customers', 'revenue'], command: 'Show top customers' },
   { label: 'Show Paid Invoices', icon: CheckCircle, category: 'Query', categoryColor: '#F59E0B', keywords: ['paid', 'completed', 'cleared'], command: 'Show paid invoices' },
   { label: 'Show Drafts', icon: FileText, category: 'Query', categoryColor: '#F59E0B', keywords: ['draft', 'drafts', 'incomplete'], command: 'Show draft invoices' },
   { label: 'Sort by Amount', icon: TrendingUp, category: 'Query', categoryColor: '#F59E0B', keywords: ['sort', 'highest', 'amount', 'biggest'], command: 'Sort by highest amount' },
@@ -1221,7 +1233,7 @@ const AICommandBar: React.FC<Props> = ({ activeView, onViewChange }) => {
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-100">
                             {result.columns.map(col => (
-                              <th key={col} className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">{col}</th>
+                              <th key={col} className="px-3 py-2 text-[10px] font-black tracking-widest" style={{ color: brand.dark }}>{col}</th>
                             ))}
                           </tr>
                         </thead>
@@ -1265,7 +1277,7 @@ const AICommandBar: React.FC<Props> = ({ activeView, onViewChange }) => {
               {/* ── AUTOCOMPLETE RESULTS ── */}
               {showAutocomplete && !isProcessing && (
                 <div className="p-3" ref={listRef}>
-                  <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-slate-400 mb-2 px-2">Commands</p>
+                  <p className="text-[10px] font-bold mb-2 px-2" style={{ color: brand.dark }}>Commands</p>
                   <div className="space-y-0.5">
                     {filteredCmds.map((cmd, i) => {
                       const CmdIcon = cmd.icon;
