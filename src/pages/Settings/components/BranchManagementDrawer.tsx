@@ -38,7 +38,7 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
   onDelete,
 }) => {
   const { brand } = useTheme();
-  
+
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [form, setForm] = useState<Omit<Branch, 'id'>>(emptyBranch(company?.id || ''));

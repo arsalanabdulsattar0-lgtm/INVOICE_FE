@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
   Building2, Phone, MapPin, Globe, ChevronLeft, ChevronRight, Home,
+  CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, TextArea, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -225,7 +226,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
       label: 'Active Companies',
       value: totalActive,
       sub: 'Currently active',
-      icon: Building2,
+      icon: CheckCircle,
       color: '#16a34a',
       bg: '#f0fdf4',
     },
@@ -233,7 +234,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
       label: 'Inactive Companies',
       value: totalInactive,
       sub: 'Deactivated records',
-      icon: Building2,
+      icon: AlertCircle,
       color: '#dc2626',
       bg: '#fef2f2',
     },
@@ -252,24 +253,24 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
+            className="bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md transition-all group cursor-default"
+            style={{ borderColor: brand.dark + '10' }}
           >
-            <Card
-              className="p-4 flex items-center gap-3 hover:shadow-md transition-all group cursor-default"
-              style={{ borderColor: brand.dark + '10' }}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                style={{ background: stat.bg }}
-              >
-                <stat.icon className="w-4.5 h-4.5" style={{ color: stat.color }} />
-              </div>
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] font-black tracking-wider text-slate-400">{stat.label}</p>
-                <p className="text-xl font-black text-slate-900 mt-0.5" style={{ color: brand.dark }}>
+                <p className="text-[11px] font-bold text-black tracking-wide">{stat.label}</p>
+                <p className="text-2xl font-black mt-1 tracking-tight" style={{ color: brand.dark }}>
                   {stat.value}
                 </p>
+                <p className="text-[10px] font-medium text-slate-400 mt-1">{stat.sub}</p>
               </div>
-            </Card>
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                style={{ background: stat.bg }}
+              >
+                <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+              </div>
+            </div>
           </motion.div>
         ))}
       </div>
