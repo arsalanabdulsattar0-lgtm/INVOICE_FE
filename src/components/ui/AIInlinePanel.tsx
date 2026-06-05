@@ -19,7 +19,7 @@ interface LineItem {
 }
 
 interface InlineFormData {
-  client: string;
+  customer: string;
   subject: string;
   dueDate: string;
   discount: number;
@@ -27,7 +27,7 @@ interface InlineFormData {
 }
 
 const emptyForm = (): InlineFormData => ({
-  client: '',
+  customer: '',
   subject: '',
   dueDate: '',
   discount: 0,
@@ -55,13 +55,12 @@ const AIInlinePanel: React.FC = () => {
   /* ── Listen for AI events ── */
   useEffect(() => {
     const handleOpen = (e: CustomEvent) => {
+      const detail = e.detail || {};
       setIsOpen(true);
       setSaved(false);
-      const detail = e.detail || {};
-
       setForm(prev => ({
         ...emptyForm(),
-        client: detail.client || prev.client || '',
+        customer: detail.customer || prev.customer || '',
         subject: detail.subject || '',
         dueDate: detail.dueDate || '',
         discount: typeof detail.discount === 'number' ? detail.discount : prev.discount,
@@ -92,9 +91,9 @@ const AIInlinePanel: React.FC = () => {
       setHighlightField('discount');
     };
 
-    const handleSetClient = (e: CustomEvent) => {
-      setForm(prev => ({ ...prev, client: e.detail?.value || '' }));
-      setHighlightField('client');
+    const handleSetCustomer = (e: CustomEvent) => {
+      setForm(prev => ({ ...prev, customer: e.detail?.value || '' }));
+      setHighlightField('customer');
     };
 
     const handleDueDate = (e: CustomEvent) => {
@@ -105,14 +104,14 @@ const AIInlinePanel: React.FC = () => {
     window.addEventListener('ai-open-inline-panel', handleOpen as EventListener);
     window.addEventListener('ai-inline-add-product', handleAddProduct as EventListener);
     window.addEventListener('ai-inline-discount', handleDiscount as EventListener);
-    window.addEventListener('ai-inline-set-client', handleSetClient as EventListener);
+    window.addEventListener('ai-inline-set-customer', handleSetCustomer as EventListener);
     window.addEventListener('ai-inline-due-date', handleDueDate as EventListener);
 
     return () => {
       window.removeEventListener('ai-open-inline-panel', handleOpen as EventListener);
       window.removeEventListener('ai-inline-add-product', handleAddProduct as EventListener);
       window.removeEventListener('ai-inline-discount', handleDiscount as EventListener);
-      window.removeEventListener('ai-inline-set-client', handleSetClient as EventListener);
+      window.removeEventListener('ai-inline-set-customer', handleSetCustomer as EventListener);
       window.removeEventListener('ai-inline-due-date', handleDueDate as EventListener);
     };
   }, [isOpen]);
@@ -163,16 +162,16 @@ const AIInlinePanel: React.FC = () => {
     const discountAmt = subtotal * (form.discount / 100);
     const total = subtotal - discountAmt;
     const invId = 'INV-' + Math.floor(1000 + Math.random() * 9000);
-    const initials = form.client ? form.client.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : 'IV';
+    const initials = form.customer ? form.customer.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : 'IV';
     const colors = ['#2759CD', '#10B981', '#F59E0B', '#8B5CF6', '#EE4932', '#0EA5E9'];
     const color = colors[Math.floor(Math.random() * colors.length)];
     const now = new Date().toISOString().split('T')[0];
 
     const invoice = {
       id: invId,
-      client: form.client || 'Unknown Client',
-      clientInitials: initials,
-      clientColor: color,
+      customer: form.customer || 'Unknown Customer',
+      customerInitials: initials,
+      customerColor: color,
       issueDate: now,
       dueDate: form.dueDate || now,
       amount: `Rs. ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
@@ -184,7 +183,12 @@ const AIInlinePanel: React.FC = () => {
 
     try {
       const stored = localStorage.getItem('invoice_list');
-      const list = stored ? JSON.parse(stored) : [];
+      const list = stored ? (JSON.parse(stored) as any[]).map((inv: any) => ({
+        ...inv,
+        customer: inv.customer || inv.client || 'Unknown Customer',
+        customerInitials: inv.customerInitials || inv.clientInitials || (inv.customer || inv.client || 'UC').slice(0, 2).toUpperCase(),
+        customerColor: inv.customerColor || inv.clientColor || '#16a34a',
+      })) : [];
       localStorage.setItem('invoice_list', JSON.stringify([invoice, ...list]));
       window.dispatchEvent(new CustomEvent('ai-sync-data'));
     } catch { /* */ }
@@ -251,7 +255,7 @@ const AIInlinePanel: React.FC = () => {
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-grow">
-                  <h2 className="text-[15px] font-black text-slate-800">AI Invoice Creator</h2>
+                  <h2 className="text-[15px] font-black text-slate-800">AI invoice creator</h2>
                   <p className="text-[11px] text-slate-400 font-medium">Inline • No navigation needed</p>
                 </div>
                 <button
@@ -267,14 +271,14 @@ const AIInlinePanel: React.FC = () => {
 
                 {/* Row 1: Client + Subject */}
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Client */}
+                  {/* Customer */}
                   <Input
-                    label={<span className="flex items-center gap-1.5"><User className="w-3 h-3" /> Client Name</span>}
-                    value={form.client}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, client: e.target.value }))}
+                    label={<span className="flex items-center gap-1.5"><User className="w-3 h-3" /> Customer name</span>}
+                    value={form.customer}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(p => ({ ...p, customer: e.target.value }))}
                     placeholder="e.g. BlueRitt Technologies"
                     size="md"
-                    style={fieldGlow('client')}
+                    style={fieldGlow('customer')}
                   />
                   {/* Subject */}
                   <Input
@@ -321,12 +325,12 @@ const AIInlinePanel: React.FC = () => {
                       className="flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold transition-all hover:opacity-90 cursor-pointer"
                       style={{ background: `${brand.primary}12`, color: brand.primary }}
                     >
-                      <Plus className="w-3 h-3" /> Add Item
+                      <Plus className="w-3 h-3" /> Add item
                     </button>
                   </div>
 
                   {/* Items header */}
-                  <div className="grid text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 pb-1.5"
+                  <div className="grid text-[10px] font-bold text-slate-400 px-3 pb-1.5"
                     style={{ gridTemplateColumns: '1fr 60px 90px 60px 28px' }}>
                     <span>Description</span>
                     <span className="text-center">Qty</span>
@@ -440,7 +444,7 @@ const AIInlinePanel: React.FC = () => {
                       style={{ background: '#10B981' }}
                     >
                       <CheckCircle className="w-4 h-4" />
-                      Invoice Saved!
+                      Invoice saved!
                     </motion.div>
                   ) : (
                     <motion.button
@@ -455,7 +459,7 @@ const AIInlinePanel: React.FC = () => {
                       style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.primary}cc)` }}
                     >
                       <Save className="w-4 h-4" />
-                      Save Invoice
+                      Save invoice
                       <ArrowRight className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
