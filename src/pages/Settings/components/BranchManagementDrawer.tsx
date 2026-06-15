@@ -10,6 +10,7 @@ import Card from '../../../components/ui/Card';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import type { Company } from './CompanyModule';
 import type { Branch } from '../../../utils/settingsData';
+import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
 
 interface BranchManagementDrawerProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface BranchManagementDrawerProps {
 const emptyBranch = (companyId: string): Omit<Branch, 'id'> => ({
   companyId,
   name: '',
+  code: '',
   address: '',
   is_head_office: false,
 });
@@ -54,8 +56,13 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
   }, [isOpen, company]);
 
   const handleAddClick = () => {
+    const companyId = company?.id || '';
+    const generatedCode = generateNextCode('branch', companyId, 'all');
     setEditingBranch(null);
-    setForm(emptyBranch(company?.id || ''));
+    setForm({
+      ...emptyBranch(companyId),
+      code: generatedCode
+    });
     setError('');
     setView('form');
   };
@@ -65,6 +72,7 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
     setForm({
       companyId: branch.companyId,
       name: branch.name,
+      code: branch.code || '',
       address: branch.address,
       is_head_office: branch.is_head_office,
     });
@@ -77,6 +85,10 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
       setError('Branch Name is required.');
       return;
     }
+    if (!form.code || !form.code.trim()) {
+      setError('Branch Code is required.');
+      return;
+    }
     if (!form.address.trim()) {
       setError('Address is required.');
       return;
@@ -84,6 +96,10 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
     if (!form.companyId) {
       setError('Company is required.');
       return;
+    }
+
+    if (!editingBranch) {
+      incrementNextCode('branch', form.companyId, 'all');
     }
 
     onSave({
@@ -140,7 +156,7 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer outline-none focus:outline-none"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -185,6 +201,7 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs font-bold text-slate-700">{b.name}</span>
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">{b.code}</span>
                                     {b.is_head_office && (
                                       <ActiveChip label="Head Office" size="xs" />
                                     )}
@@ -242,6 +259,14 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
                           placeholder="e.g. Lahore Head Office"
                           value={form.name}
                           onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+
+                        <Input
+                          label="Branch Code *"
+                          variant="compact"
+                          placeholder="e.g. LHO"
+                          value={form.code}
+                          readOnly
                         />
 
                         <TextArea

@@ -1,19 +1,48 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import loginIllustration from '../../assets/login-illustration.png';
 
 interface Props {
-  onLogin: () => void;
+  companies: any[];
+  branches: any[];
+  onLoginSuccess: (companyId: string, branchId: string, setAsDefault: boolean) => void;
 }
 
-const Login: React.FC<Props> = ({ onLogin }) => {
+const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
   const { brand } = useTheme();
 
   const [email, setEmail] = useState('admin@invoiceflow.com');
   const [password, setPassword] = useState('password123');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showContextSelection, setShowContextSelection] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(true);
+
+  const [tempSelectedCompanyId, setTempSelectedCompanyId] = useState(() => {
+    try {
+      const activeCos = companies.filter((c: any) => c.is_active);
+      return activeCos.length > 0 ? activeCos[0].id : '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [tempSelectedBranchId, setTempSelectedBranchId] = useState(() => {
+    try {
+      const activeCos = companies.filter((c: any) => c.is_active);
+      if (activeCos.length > 0) {
+        const activeCoId = activeCos[0].id;
+        const firstBr = branches.find((b: any) => b.companyId === activeCoId);
+        return firstBr ? firstBr.id : '';
+      }
+    } catch {}
+    return '';
+  });
+
+  const [tempSetAsDefault, setTempSetAsDefault] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,116 +50,302 @@ const Login: React.FC<Props> = ({ onLogin }) => {
       alert('Please fill in all fields.');
       return;
     }
-    onLogin();
+    
+    // Check if default company and branch exist in localStorage
+    const defCoId = localStorage.getItem('default_company_id');
+    const defBrId = localStorage.getItem('default_branch_id');
+    
+    if (defCoId && defBrId) {
+      const foundCo = companies.find((c: any) => c.id === defCoId);
+      const foundBr = branches.find((b: any) => b.companyId === defCoId && b.id === defBrId);
+      if (foundCo && foundBr) {
+        onLoginSuccess(defCoId, defBrId, true);
+        return;
+      }
+    }
+    
+    setShowContextSelection(true);
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500"
-      style={{ backgroundColor: brand.surface }}
-    >
-      {/* Background Decor with dynamic theme colors */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+    <div className="min-h-screen font-sans flex flex-col lg:flex-row transition-colors duration-500 overflow-hidden bg-white">
+      {/* ─── LEFT SIDE: PREMIUM ILLUSTRATION PANEL ─── */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-white items-center justify-center p-12 overflow-hidden border-r border-slate-100">
+        {/* Soft, Brand-Colored Glow Blobs */}
         <div
-          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-[120px] animate-pulse"
-          style={{ background: `${brand.primary}12` }}
+          className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full filter blur-3xl opacity-20 pointer-events-none"
+          style={{ background: 'rgba(186, 230, 253, 0.4)' }}
         />
         <div
-          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-[120px] animate-pulse delay-1000"
-          style={{ background: `${brand.accent || brand.primary}12` }}
+          className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full filter blur-3xl opacity-20 pointer-events-none"
+          style={{ background: 'rgba(219, 234, 254, 0.4)' }}
+        />
+
+        <img
+          src={loginIllustration}
+          alt="Login Illustration"
+          className="w-full h-full object-contain select-none pointer-events-none z-10"
+          style={{ clipPath: 'inset(8px)' }}
         />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
+      {/* ─── RIGHT SIDE: THEMED LOGIN PANEL ─── */}
+      <div
+        className="flex-1 flex flex-col justify-center px-6 sm:px-16 lg:px-24 py-16 relative items-center transition-colors duration-500"
+        style={{
+          backgroundColor: brand.mainBg
+        }}
       >
+        {/* Soft radial glow in top right */}
         <div
-          className="bg-white/80 backdrop-blur-2xl border p-10 rounded-[2.5rem] shadow-2xl transition-all duration-300"
-          style={{
-            borderColor: brand.primary + '15',
-            boxShadow: `0 20px 40px -15px ${brand.primary}15`
-          }}
-        >
+          className="absolute -top-30 -right-30 w-80 h-80 rounded-full filter blur-3xl opacity-15 pointer-events-none"
+          style={{ background: brand.primary }}
+        />
 
-          {/* Logo / Brand Header */}
-          <div className="text-center mb-8">
+        {/* Outer centered container holding Logo + Card */}
+        <div className="w-full max-w-[390px] space-y-6 relative z-10">
+          
+          {/* InvoiceFlow App Logo */}
+          <div className="flex items-center gap-3 justify-center">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transition-all duration-300"
+              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-lg"
               style={{
-                background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent || brand.primary})`,
-                boxShadow: `0 10px 20px ${brand.primary}30`
+                backgroundColor: brand.primary,
+                boxShadow: `0 4px 12px ${brand.primary}40`,
+                fontSize: 18
               }}
             >
-              <span className="text-white font-bold text-3xl">I</span>
+              I
             </div>
-            <h1
-              className="text-3xl font-extrabold tracking-tight mb-2 transition-colors duration-300"
-              style={{ color: brand.dark }}
-            >
-              Welcome Back
-            </h1>
-            <p className="text-slate-400 text-sm font-medium">
-              Log in to manage your professional invoices
-            </p>
+            <span className="text-2xl font-bold tracking-tight text-slate-800">InvoiceFlow</span>
           </div>
 
-          {/* Form */}
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {/* Email Address field */}
-            <Input
-              label="Email Address *"
-              icon={Mail}
-              type="email"
-              required
-              placeholder="admin@invoiceflow.com"
-              size="lg"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-
-            {/* Password field */}
-            <Input
-              label={
-                <div className="flex justify-between items-center w-full">
-                  <span>Password *</span>
-                  <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); alert('Password reset link sent (Simulation).'); }}
-                    className="text-[10px] font-bold hover:underline transition-colors ml-auto"
-                    style={{ color: brand.primary }}
-                  >
-                    Forgot?
-                  </a>
+          {/* Standard Themed Login Card */}
+          <Card
+            className="p-8"
+            style={{
+              background: `linear-gradient(${brand.cardBg}, ${brand.cardBg}) padding-box, linear-gradient(135deg, ${brand.primary}, #38bdf8) border-box`,
+              border: '1px solid transparent',
+              borderRadius: '1rem',
+              height: '455px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            {showContextSelection ? (
+              <div className="w-full">
+                {/* Title & Subtitle */}
+                <div className="text-center mb-5">
+                  <h2 className="text-[22px] font-extrabold text-slate-800 tracking-tight mb-1">Select Context</h2>
+                  <p className="text-xs font-semibold text-slate-500">
+                    Choose the company and branch to log in.
+                  </p>
                 </div>
-              }
-              icon={Lock}
-              type="password"
-              required
-              placeholder="••••••••"
-              size="lg"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
 
-            {/* Action button */}
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              fullWidth
-              icon={ArrowRight}
-              iconPosition="right"
-              style={{ backgroundColor: brand.primary, boxShadow: `0 8px 24px -5px ${brand.primary}40` }}
-              className="py-3.5 rounded-2xl mt-4 hover:opacity-95 transition-opacity"
-            >
-              Sign In to Flow
-            </Button>
-          </form>
+                {/* Company & Branch form */}
+                <div className="space-y-4">
+                  {/* Company Select */}
+                  <div className="w-full space-y-1">
+                    <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
+                      Select Company
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={tempSelectedCompanyId}
+                        onChange={(e) => {
+                          const coId = e.target.value;
+                          setTempSelectedCompanyId(coId);
+                          const firstBr = branches.find((b: any) => b.companyId === coId);
+                          setTempSelectedBranchId(firstBr ? firstBr.id : '');
+                        }}
+                        className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
+                      >
+                        <option value="" disabled>Choose a company...</option>
+                        {companies.filter((c: any) => c.is_active).map((co: any) => (
+                          <option key={co.id} value={co.id}>
+                            {co.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Branch Select */}
+                  <div className="w-full space-y-1">
+                    <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
+                      Select Branch
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={tempSelectedBranchId}
+                        onChange={(e) => setTempSelectedBranchId(e.target.value)}
+                        className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
+                        disabled={!tempSelectedCompanyId}
+                      >
+                        <option value="" disabled>Choose a branch...</option>
+                        {branches.filter((b: any) => b.companyId === tempSelectedCompanyId).map((br: any) => (
+                          <option key={br.id} value={br.id}>
+                            {br.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={tempSetAsDefault}
+                        onChange={(e) => setTempSetAsDefault(e.target.checked)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-[11px] text-slate-600 font-bold">Set As Default Company & Branch</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    className="text-white font-extrabold text-sm h-11 rounded-xl shadow-lg border-transparent transition-all"
+                    style={{
+                      backgroundColor: brand.primary,
+                      boxShadow: `0 10px 20px -5px ${brand.primary}40`,
+                      border: 'none'
+                    }}
+                    onClick={() => {
+                      if (tempSelectedCompanyId && tempSelectedBranchId) {
+                        onLoginSuccess(tempSelectedCompanyId, tempSelectedBranchId, tempSetAsDefault);
+                      }
+                    }}
+                    disabled={!tempSelectedCompanyId || !tempSelectedBranchId}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full">
+                {/* Title & Subtitle */}
+                <div className="text-center mb-5">
+                  <h2 className="text-[26px] font-extrabold text-slate-800 tracking-tight mb-1">Welcome Back</h2>
+                  <p className="text-xs font-semibold text-slate-500">
+                    Login to manage your business with InvoiceFlow ERP.
+                  </p>
+                </div>
+
+                {/* Login form */}
+                <form onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    {/* Email Input */}
+                    <div>
+                      <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
+                        Email Address
+                      </label>
+                      <Input
+                        type="email"
+                        placeholder="user@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        icon={Mail}
+                        size="md"
+                        required
+                        className="bg-white text-slate-800 placeholder:text-slate-400 focus:border-[var(--brand-primary)]"
+                        style={{ borderColor: brand.border }}
+                      />
+                    </div>
+
+                    {/* Password Input */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5 px-1">
+                        <label className="text-[11px] font-bold text-slate-500">
+                          Password
+                        </label>
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            alert('Simulated password reset trigger.');
+                          }}
+                          className="text-[11px] font-bold hover:underline"
+                          style={{ color: brand.primary }}
+                        >
+                          Forgot Password?
+                        </a>
+                      </div>
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        icon={Lock}
+                        size="md"
+                        required
+                        className="bg-white text-slate-800 focus:border-[var(--brand-primary)]"
+                        style={{ borderColor: brand.border }}
+                        suffix={
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="pointer-events-auto text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer flex items-center justify-center p-1"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        }
+                      />
+                    </div>
+
+                    <div className="pt-1">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={agreeToTerms}
+                          onChange={(e) => setAgreeToTerms(e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-600 font-bold">I agree to the Terms & Conditions</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Log In button */}
+                  <div className="mt-6">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      type="submit"
+                      className="text-white font-extrabold text-sm h-11 rounded-xl shadow-lg border-transparent transition-all"
+                      style={{
+                        backgroundColor: brand.primary,
+                        boxShadow: `0 10px 20px -5px ${brand.primary}40`,
+                        border: 'none'
+                      }}
+                      disabled={!agreeToTerms}
+                    >
+                      Log In
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </Card>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Pencil, Trash2, Check, List } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { Button } from '../../../components/ui/Button';
-import { Input, Select, Toggle, ScrollArea } from '../../../components/ui/FormControls';
+import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
 import { SectionHeader, TableHeader } from '../../../components/ui/Typography';
 import Card from '../../../components/ui/Card';
@@ -14,7 +14,6 @@ interface ProductSetupValuesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   setupType: ProductSetupType | null;
-  allSetupTypes: ProductSetupType[];
   values: ProductSetupValue[];
   onSave: (val: Omit<ProductSetupValue, 'id' | 'typeId' | 'typeName' | 'code'> & { id?: string; typeId?: string }) => void;
   onDelete: (id: string) => void;
@@ -25,7 +24,6 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
   isOpen,
   onClose,
   setupType,
-  allSetupTypes,
   values,
   onSave,
   onDelete,
@@ -164,15 +162,11 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
                     const filteredValues = values.filter(v => v.typeId === selectedCategoryFilter);
                     return (
                       <div className="space-y-4">
-                        {/* Toolbar containing Category Filter and Add Value Button */}
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="w-48">
-                            <Select
-                              variant="compact"
-                              value={selectedCategoryFilter}
-                              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                              options={allSetupTypes.filter(t => t.active).map((t) => ({ value: t.id, label: t.name }))}
-                            />
+                        {/* Toolbar containing Category Label and Add Value Button */}
+                        <div className="flex items-center justify-between gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Active Category</span>
+                            <span className="text-xs font-bold text-slate-700">{setupType.name}</span>
                           </div>
                           <Button
                             variant="primary"
@@ -203,7 +197,7 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
                             <table className="w-full border-collapse">
                               <thead className="sticky top-0 z-10 bg-white">
                                 <tr className="border-b border-[#E2E8F0]">
-                                  {['Code', 'Name', 'Active', 'Actions'].map((h) => (
+                                  {['Preview Code', 'Name', 'Active', 'Actions'].map((h) => (
                                     <TableHeader
                                       key={h}
                                       label={h}
@@ -268,12 +262,11 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
                     <div className="space-y-1.5">
                       <SectionHeader title="Value Details" icon={List} />
                       <Card className="p-4 space-y-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-                        <Select
-                          label="Setup Type *"
+                        <Input
+                          label="Setup Type"
                           variant="compact"
-                          value={form.typeId}
-                          onChange={(e) => setForm({ ...form, typeId: e.target.value })}
-                          options={allSetupTypes.filter(t => t.active).map((t) => ({ value: t.id, label: t.name }))}
+                          value={setupType.name}
+                          readOnly
                         />
 
                         <Input

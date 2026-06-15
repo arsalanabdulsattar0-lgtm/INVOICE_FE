@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, CreditCard, Palette, Receipt, Users, Building2, Shield, Package, Warehouse,
+  User, CreditCard, Palette, Receipt, Users, Building2, Shield, Package, Warehouse, Printer,
+  ChevronDown, Settings2, X, FileText, Binary,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -15,8 +16,11 @@ import { CompanyModule } from './components/CompanyModule';
 import { UserManagementModule } from './components/UserManagementModule';
 import { ProductSetupModule } from './components/ProductSetupModule';
 import { WarehouseModule } from './components/WarehouseModule';
+import { PrintTemplatesModule } from './components/PrintTemplatesModule';
+import { DocumentSettingsModule } from './components/DocumentSettingsModule';
+import { CodeSettingsModule } from './components/CodeSettingsModule';
 
-// Re-export types imported from separate modules (for settingsData.ts and other consumers)
+// Re-export types
 export type { TaxSetup } from './components/TaxSetupModule';
 export type { SalesPerson } from './components/SalesPersonModule';
 export type { Company } from './components/CompanyModule';
@@ -26,138 +30,231 @@ export type { Warehouse } from './components/WarehouseModule';
 
 const Settings: React.FC = () => {
   const { theme: activeTheme, setTheme, brand } = useTheme();
+  const [isOpen, setIsOpen] = useState(true);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const sections = [
-    { id: 'profile', title: 'Profile Settings', desc: 'Manage your public profile and avatar.', icon: User },
-    { id: 'billing', title: 'Billing & Plans', desc: 'Manage your subscription and payment methods.', icon: CreditCard },
-    { id: 'appearance', title: 'Appearance', desc: 'Customize the look and feel of the app.', icon: Palette },
-    { id: 'tax', title: 'Tax Setup', desc: 'Manage tax codes, types, rates, and provinces.', icon: Receipt },
-    { id: 'sales', title: 'Salesperson', desc: 'Manage salespersons, targets, and commissions.', icon: Users },
-    { id: 'company', title: 'Company', desc: 'Manage company profiles, NTN, STN, PRAL tokens and contacts.', icon: Building2 },
-    { id: 'users', title: 'User Management', desc: 'Manage user access, roles, allowed IPs, and company assignments.', icon: Shield },
-    { id: 'product', title: 'Product Setup', desc: 'Configure product setup types, serial prefixes, and lookup values.', icon: Package },
-    { id: 'warehouse', title: 'Warehouse', desc: 'Manage warehouses, storage locations and inventory distribution.', icon: Warehouse },
+    { id: 'profile',         title: 'Profile Settings',  desc: 'Manage your public profile and avatar.',                                    icon: User },
+    { id: 'billing',         title: 'Billing & Plans',   desc: 'Manage your subscription and payment methods.',                             icon: CreditCard },
+    { id: 'appearance',      title: 'Appearance',        desc: 'Customize the look and feel of the app.',                                   icon: Palette },
+    { id: 'tax',             title: 'Tax Setup',         desc: 'Manage tax codes, types, rates, and provinces.',                            icon: Receipt },
+    { id: 'sales',           title: 'Salesperson',       desc: 'Manage salespersons, targets, and commissions.',                            icon: Users },
+    { id: 'company',         title: 'Company',           desc: 'Manage company profiles, NTN, STN, PRAL tokens and contacts.',              icon: Building2 },
+    { id: 'users',           title: 'User Management',   desc: 'Manage user access, roles, allowed IPs, and company assignments.',          icon: Shield },
+    { id: 'code-settings',   title: 'Code Settings',     desc: 'Define auto/manual sequence prefixes and next numbering branch-wise and company-wise.', icon: Binary },
+    { id: 'product',         title: 'Product Setup',     desc: 'Configure product setup types, serial prefixes, and lookup values.',        icon: Package },
+    { id: 'warehouse',       title: 'Warehouse',         desc: 'Manage warehouses, storage locations and inventory distribution.',          icon: Warehouse },
+    { id: 'print-templates', title: 'Print Templates',   desc: 'Create and manage customizable print layouts for invoices and documents.',  icon: Printer },
+    { id: 'documents',       title: 'Document Settings', desc: 'Toggle visibility of header fields and table columns for sales invoices and return screens.', icon: FileText },
   ];
 
-  const toggle = (id: string) =>
-    setActiveSection(prev => (prev === id ? null : id));
+  const renderModule = (id: string) => {
+    switch (id) {
+      case 'profile':         return <ProfileModule brand={brand} />;
+      case 'billing':         return <BillingModule brand={brand} />;
+      case 'appearance':      return <AppearanceModule brand={brand} activeTheme={activeTheme} setTheme={setTheme} />;
+      case 'tax':             return <TaxSetupModule brand={brand} />;
+      case 'sales':           return <SalesPersonModule brand={brand} />;
+      case 'company':         return <CompanyModule brand={brand} />;
+      case 'users':           return <UserManagementModule brand={brand} />;
+      case 'product':         return <ProductSetupModule brand={brand} />;
+      case 'warehouse':       return <WarehouseModule brand={brand} />;
+      case 'print-templates': return <PrintTemplatesModule brand={brand} />;
+      case 'documents':       return <DocumentSettingsModule brand={brand} />;
+      case 'code-settings':   return <CodeSettingsModule brand={brand} />;
+      default:                return null;
+    }
+  };
+
+  const currentSection = sections.find(s => s.id === activeSection);
 
   return (
-    <div className="min-h-full p-6 space-y-5" style={{ backgroundColor: brand.mainBg }}>
+    <div className="flex flex-col p-6 h-full" style={{ backgroundColor: brand.mainBg }}>
 
-      {/* Page Header */}
+      {/* Master collapsible card */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        className="rounded-2xl overflow-hidden flex flex-col flex-1"
+        style={{
+          backgroundColor: brand.cardBg,
+          border: `1px solid ${isOpen ? brand.primary : '#E2E8F0'}`,
+          boxShadow: isOpen ? `0 8px 32px ${brand.primary}18` : '0 1px 4px #0000000a',
+          transition: 'border-color 0.3s, box-shadow 0.3s',
+        }}
       >
-        <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>
-            Settings
-          </h1>
-          <p className="text-[12px] font-medium text-slate-400 mt-0.5">
-            Configure your account preferences and application settings.
-          </p>
-        </div>
-      </motion.div>
+        {/* ── Master Card Header ── */}
+        <div className="flex items-center gap-4 px-6 py-5">
 
-      {/* Grid of section cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sections.map((section, i) => {
-          const isActive = activeSection === section.id;
-          return (
-            <motion.div
-              key={section.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => toggle(section.id)}
-              className="flex items-center gap-6 p-6 rounded-xl transition-all cursor-pointer group"
+          {/* Icon + Title — clickable to open/close */}
+          <button
+            onClick={() => {
+              if (!isOpen) { setIsOpen(true); return; }
+              // if form open, close form first; else collapse master
+              if (activeSection) { setActiveSection(null); } else { setIsOpen(false); }
+            }}
+            className="flex items-center gap-4 flex-grow text-left cursor-pointer group"
+          >
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300"
               style={{
-                backgroundColor: brand.cardBg,
-                border: `1px solid ${isActive ? brand.primary : '#E2E8F0'}`,
-                boxShadow: 'none',
+                background: isOpen
+                  ? `linear-gradient(135deg, ${brand.primary}, ${brand.accent})`
+                  : brand.surface,
+                color: isOpen ? '#ffffff' : brand.textPrimary,
               }}
             >
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all"
-                style={{
-                  backgroundColor: isActive ? brand.primary : brand.surface,
-                  color: isActive ? '#FFFFFF' : '#000000',
-                }}
+              {currentSection
+                ? React.createElement(currentSection.icon, { className: 'w-5 h-5' })
+                : <Settings2 className="w-5 h-5" />}
+            </div>
+
+            <div className="flex-grow min-w-0">
+              <h1
+                className="text-lg font-black tracking-tight transition-colors duration-200"
+                style={{ color: isOpen ? brand.primary : brand.textPrimary }}
               >
-                <section.icon className="w-6 h-6" />
-              </div>
-              <div className="flex-grow">
-                <h3 className="text-sm font-bold transition-colors" style={{ color: isActive ? brand.primary : '#000000' }}>
-                  {section.title}
-                </h3>
-                <p className="text-xs mt-1" style={{ color: '#475569' }}>{section.desc}</p>
+                {currentSection ? currentSection.title : 'Settings'}
+              </h1>
+              <p className="text-[12px] font-medium text-slate-400 mt-0.5 truncate">
+                {currentSection ? currentSection.desc : 'Configure your account preferences and application settings.'}
+              </p>
+            </div>
+          </button>
+
+          {/* Right side: × when form open, chevron otherwise */}
+          <AnimatePresence mode="wait">
+            {activeSection ? (
+              <motion.button
+                key="close"
+                initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setActiveSection(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors hover:bg-red-50"
+                style={{ color: '#EF4444' }}
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            ) : (
+              <motion.button
+                key="chevron"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsOpen(prev => !prev)}
+                className="shrink-0 cursor-pointer"
+                style={{ color: isOpen ? brand.primary : '#CBD5E1' }}
+              >
+                <motion.div
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                  <ChevronDown className="w-5 h-5" />
+                </motion.div>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ── Collapsible Body ── */}
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              key="body"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            >
+              <div style={{ borderTop: `1px solid ${brand.border}`, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+
+                {/* ── Inner content: Grid OR Module Form ── */}
+                <AnimatePresence mode="wait">
+
+                  {/* MODULE FORM VIEW */}
+                  {activeSection ? (
+                    <motion.div
+                      key={`form-${activeSection}`}
+                      initial={{ opacity: 0, x: 30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -30 }}
+                      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                      className="p-6 flex-1 overflow-y-auto pb-12"
+                      style={{ minHeight: 0 }}
+                    >
+                      {renderModule(activeSection)}
+                    </motion.div>
+                  ) : (
+
+                  /* CARDS GRID VIEW */
+                    <motion.div
+                      key="grid"
+                      initial={{ opacity: 0, x: -30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 30 }}
+                      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                      className="p-5"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {sections.map((section, i) => {
+                          const IconComponent = section.icon;
+                          return (
+                            <motion.button
+                              key={section.id}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.03 }}
+                              onClick={() => setActiveSection(section.id)}
+                              className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left cursor-pointer transition-all duration-200 group hover:scale-[1.01]"
+                              style={{
+                                backgroundColor: brand.surface,
+                                border: `1px solid #E2E8F0`,
+                              }}
+                            >
+                              <div
+                                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+                                style={{
+                                  backgroundColor: brand.cardBg,
+                                  color: brand.textSecondary,
+                                  boxShadow: '0 1px 4px #0000000f',
+                                }}
+                              >
+                                <IconComponent className="w-4 h-4" />
+                              </div>
+
+                              <div className="flex-grow min-w-0">
+                                <h3
+                                  className="text-[13px] font-bold transition-colors duration-200 group-hover:text-blue-600"
+                                  style={{ color: brand.textPrimary }}
+                                >
+                                  {section.title}
+                                </h3>
+                                <p className="text-[11px] mt-0.5 truncate" style={{ color: brand.textSecondary }}>
+                                  {section.desc}
+                                </p>
+                              </div>
+
+                              <ChevronDown
+                                className="w-3.5 h-3.5 shrink-0 -rotate-90"
+                                style={{ color: '#CBD5E1' }}
+                              />
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
               </div>
             </motion.div>
-          );
-        })}
-      </div>
-
-      {/* ── Active Panel Display ── */}
-      <AnimatePresence mode="wait">
-        {activeSection && (
-          <motion.div
-            key={activeSection}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 15 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-xl overflow-hidden transition-colors duration-300"
-            style={{ backgroundColor: brand.cardBg, border: '1px solid #E2E8F0', boxShadow: 'none' }}
-          >
-            {/* Header portion dynamically based on active section */}
-            {(() => {
-              const currentSection = sections.find(s => s.id === activeSection);
-              if (!currentSection) return null;
-              const IconComponent = currentSection.icon;
-
-              // Override title and desc for appearance to preserve original branding wording
-              const title = currentSection.id === 'appearance' ? 'Theme & Branding Selector' : currentSection.title;
-              const desc = currentSection.id === 'appearance' ? 'Select a palette to instantly style the entire application.' : currentSection.desc;
-
-              return (
-                <div className="px-6 py-5 border-b" style={{ borderColor: brand.border, background: `linear-gradient(135deg, ${brand.surface}, ${brand.cardBg})` }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: brand.primary }}>
-                      <IconComponent className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: brand.textPrimary }}>{title}</h3>
-                      <p className="text-xs mt-0.5" style={{ color: brand.textSecondary }}>{desc}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Content portion */}
-            <div className="p-6">
-              {activeSection === 'profile' && <ProfileModule brand={brand} />}
-              {activeSection === 'billing' && <BillingModule brand={brand} />}
-              {activeSection === 'appearance' && (
-                <AppearanceModule
-                  brand={brand}
-                  activeTheme={activeTheme}
-                  setTheme={setTheme}
-                />
-              )}
-              {activeSection === 'tax' && <TaxSetupModule brand={brand} />}
-              {activeSection === 'sales' && <SalesPersonModule brand={brand} />}
-              {activeSection === 'company' && <CompanyModule brand={brand} />}
-              {activeSection === 'users' && <UserManagementModule brand={brand} />}
-              {activeSection === 'product' && <ProductSetupModule brand={brand} />}
-              {activeSection === 'warehouse' && <WarehouseModule brand={brand} />}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
     </div>
   );

@@ -16,7 +16,7 @@ interface InvoiceItem {
   dueDate: string;
   amount: string;
   rawAmount: number;
-  status: 'Draft' | 'Paid' | 'Pending' | 'Overdue';
+  status: 'Posted' | 'Unposted';
   payment: string;
   type: string;
 }
@@ -27,15 +27,13 @@ interface DashboardProps {
 }
 
 const statusStyle: Record<InvoiceItem['status'], { bg: string; text: string }> = {
-  Paid: { bg: "#dcfce7", text: "#15803d" },
-  Pending: { bg: "#fef9c3", text: "#a16207" },
-  Overdue: { bg: "#fee2e2", text: "#b91c1c" },
-  Draft: { bg: "#f1f5f9", text: "#64748b" },
+  Posted: { bg: "#dcfce7", text: "#15803d" },
+  Unposted: { bg: "#fef9c3", text: "#a16207" },
 };
 
 
 export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps) {
-  const [trendFilter, setTrendFilter] = useState<'All' | 'Paid' | 'Pending' | 'Overdue'>('All');
+  const [trendFilter, setTrendFilter] = useState<'All' | 'Posted' | 'Unposted'>('All');
 
   const invoicesToUse = useMemo(() => {
     const raw = invoiceItems && invoiceItems.length > 0
@@ -56,43 +54,40 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
   }, [invoiceItems]);
 
   // 1. Compute stats dynamically
-  const outstandingInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Pending' || inv.status === 'Overdue');
-  const outstandingSum = outstandingInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
-  const outstandingCount = outstandingInvoices.length;
+  const postedInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Posted');
+  const postedSum = postedInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
+  const postedCount = postedInvoices.length;
 
-  const paidInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Paid');
-  const paidSum = paidInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
-  const paidCount = paidInvoices.length;
+  const unpostedInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Unposted');
+  const unpostedSum = unpostedInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
+  const unpostedCount = unpostedInvoices.length;
 
-  const overdueInvoices = invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Overdue');
-  const overdueSum = overdueInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
-  const overdueCount = overdueInvoices.length;
+  const totalSum = invoicesToUse.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
+  const totalCount = invoicesToUse.length;
 
-  const avgInvoiceVal = invoicesToUse.length > 0
-    ? invoicesToUse.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0) / invoicesToUse.length
-    : 0;
+  const avgInvoiceVal = totalCount > 0 ? totalSum / totalCount : 0;
 
   const stats = [
     {
-      label: "Outstanding",
-      value: `Rs. ${outstandingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      sub: `${outstandingCount} invoice${outstandingCount !== 1 ? 's' : ''}`,
-      accent: "#2563eb",
-      dataKey: "outstanding"
-    },
-    {
-      label: "Paid This Month",
-      value: `Rs. ${paidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      sub: `${paidCount} invoice${paidCount !== 1 ? 's' : ''}`,
+      label: "Posted Total",
+      value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+      sub: `${postedCount} invoice${postedCount !== 1 ? 's' : ''}`,
       accent: "#16a34a",
-      dataKey: "paid"
+      dataKey: "posted"
     },
     {
-      label: "Overdue",
-      value: `Rs. ${overdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      sub: `${overdueCount} invoice${overdueCount !== 1 ? 's' : ''}`,
-      accent: "#dc2626",
-      dataKey: "overdue"
+      label: "Unposted Total",
+      value: `Rs. ${unpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+      sub: `${unpostedCount} invoice${unpostedCount !== 1 ? 's' : ''}`,
+      accent: "#ea580c",
+      dataKey: "unposted"
+    },
+    {
+      label: "Total Volume",
+      value: `Rs. ${totalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+      sub: `${totalCount} invoice${totalCount !== 1 ? 's' : ''}`,
+      accent: "#2563eb",
+      dataKey: "total"
     },
     {
       label: "Avg. Invoice",
@@ -107,9 +102,9 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
 
   const hasRealData = invoicesToUse.length > 0;
   const fallbackTrends = {
-    outstanding: [3000, 5000, 4000, 6000, 8000, 5000, 7000, 6000, 9000, 8000, 10000, 9000],
-    paid: [10000, 12000, 15000, 18000, 22000, 25000, 24000, 28000, 32000, 30000, 35000, 40000],
-    overdue: [1000, 2000, 1500, 3000, 2500, 1800, 3500, 2000, 1500, 4000, 3000, 2500],
+    posted: [10000, 12000, 15000, 18000, 22000, 25000, 24000, 28000, 32000, 30000, 35000, 40000],
+    unposted: [3000, 5000, 4000, 6000, 8000, 5000, 7000, 6000, 9000, 8000, 10000, 9000],
+    total: [13000, 17000, 19000, 24000, 30000, 30000, 31000, 34000, 41000, 38000, 45000, 49000],
     avg: [12000, 13000, 11000, 14000, 15000, 16000, 14500, 15500, 16500, 17000, 18000, 17500]
   };
 
@@ -121,17 +116,15 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
         return mIdx === idx;
       });
 
-      const outstanding = monthlyInvoices
-        .filter((inv: InvoiceItem) => inv.status === 'Pending' || inv.status === 'Overdue')
+      const posted = monthlyInvoices
+        .filter((inv: InvoiceItem) => inv.status === 'Posted')
         .reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
 
-      const paid = monthlyInvoices
-        .filter((inv: InvoiceItem) => inv.status === 'Paid')
+      const unposted = monthlyInvoices
+        .filter((inv: InvoiceItem) => inv.status === 'Unposted')
         .reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
 
-      const overdue = monthlyInvoices
-        .filter((inv: InvoiceItem) => inv.status === 'Overdue')
-        .reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
+      const total = monthlyInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
 
       const avg = monthlyInvoices.length > 0
         ? monthlyInvoices.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0) / monthlyInvoices.length
@@ -139,41 +132,35 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
 
       return {
         month: m,
-        outstanding,
-        paid,
-        overdue,
+        posted,
+        unposted,
+        total,
         avg
       };
     } else {
       return {
         month: m,
-        outstanding: fallbackTrends.outstanding[idx],
-        paid: fallbackTrends.paid[idx],
-        overdue: fallbackTrends.overdue[idx],
+        posted: fallbackTrends.posted[idx],
+        unposted: fallbackTrends.unposted[idx],
+        total: fallbackTrends.total[idx],
         avg: fallbackTrends.avg[idx]
       };
     }
   });
 
   // 3. Compute breakdown donut chart dynamically
-  const totalInvoiceSum = invoicesToUse.reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0);
-  const hasInvoices = invoicesToUse.length > 0;
-  const displayPaidSum = hasInvoices ? paidSum : 48920;
-  const displayPendingSum = hasInvoices ? (invoicesToUse.filter((inv: InvoiceItem) => inv.status === 'Pending').reduce((sum: number, inv: InvoiceItem) => sum + (inv.rawAmount || 0), 0)) : 9270;
-  const displayOverdueSum = hasInvoices ? overdueSum : 3210;
-  const displayTotalSum = hasInvoices ? totalInvoiceSum : 61400;
+  const displayPostedSum = hasRealData ? postedSum : 48920;
+  const displayUnpostedSum = hasRealData ? unpostedSum : 12480;
+  const displayTotalSum = hasRealData ? totalSum : 61400;
 
-  const displayPaidPercent = displayTotalSum > 0 ? (displayPaidSum / displayTotalSum) * 100 : 0;
-  const displayPendingPercent = displayTotalSum > 0 ? (displayPendingSum / displayTotalSum) * 100 : 0;
-  const displayOverduePercent = displayTotalSum > 0 ? (displayOverdueSum / displayTotalSum) * 100 : 0;
+  const displayPostedPercent = displayTotalSum > 0 ? (displayPostedSum / displayTotalSum) * 100 : 0;
+  const displayUnpostedPercent = displayTotalSum > 0 ? (displayUnpostedSum / displayTotalSum) * 100 : 0;
 
   const circ = 238.76;
-  const paidStroke = (displayPaidPercent / 100) * circ;
-  const pendingStroke = (displayPendingPercent / 100) * circ;
-  const overdueStroke = (displayOverduePercent / 100) * circ;
+  const postedStroke = (displayPostedPercent / 100) * circ;
+  const unpostedStroke = (displayUnpostedPercent / 100) * circ;
 
-  const pendingDashOffset = -paidStroke;
-  const overdueDashOffset = -(paidStroke + pendingStroke);
+  const unpostedDashOffset = -postedStroke;
 
   // 4. Compute top customers dynamically
   const customerTotals: { [name: string]: { name: string; amount: number; color: string } } = {};
@@ -246,18 +233,16 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
     // Fallback if no invoices/revenue exist yet
     if (total === 0) {
       if (trendFilter === 'All') return 120270;
-      if (trendFilter === 'Paid') return 70000;
-      if (trendFilter === 'Pending') return 30000;
-      if (trendFilter === 'Overdue') return 20270;
+      if (trendFilter === 'Posted') return 70000;
+      if (trendFilter === 'Unposted') return 50270;
     }
     return total;
   }, [invoicesToUse, trendFilter]);
 
   const trendDesc: Record<string, string> = {
     All: 'Total revenue across all invoice statuses.',
-    Paid: 'Revenue successfully collected.',
-    Pending: 'Pending revenue from unpaid invoices.',
-    Overdue: 'Overdue revenue past payment deadline.',
+    Posted: 'Revenue successfully collected.',
+    Unposted: 'Pending revenue from unposted invoices.',
   };
 
   // Peak month index for the floating dot
@@ -267,12 +252,12 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
   const recentInvoices = invoicesToUse.length > 0
     ? invoicesToUse.slice(0, 6)
     : [
-        { id: "INV-2024", customer: "Northwind Studio", issueDate: "May 18, 2026", dueDate: "Jun 1, 2026", rawAmount: 4200, status: "Paid" },
-        { id: "INV-2023", customer: "Helix Labs", issueDate: "May 15, 2026", dueDate: "May 30, 2026", rawAmount: 3800, status: "Pending" },
-        { id: "INV-2022", customer: "Marrow & Co.", issueDate: "May 10, 2026", dueDate: "May 25, 2026", rawAmount: 2100, status: "Overdue" },
-        { id: "INV-2021", customer: "Sable Foundry", issueDate: "May 5, 2026", dueDate: "May 20, 2026", rawAmount: 1890, status: "Paid" },
-        { id: "INV-2020", customer: "Quill Press", issueDate: "Apr 28, 2026", dueDate: "May 13, 2026", rawAmount: 1200, status: "Overdue" },
-        { id: "INV-2019", customer: "Northwind Studio", issueDate: "Apr 22, 2026", dueDate: "May 7, 2026", rawAmount: 5600, status: "Paid" },
+        { id: "INV-2024", customer: "Northwind Studio", issueDate: "May 18, 2026", dueDate: "Jun 1, 2026", rawAmount: 4200, status: "Posted" },
+        { id: "INV-2023", customer: "Helix Labs", issueDate: "May 15, 2026", dueDate: "May 30, 2026", rawAmount: 3800, status: "Unposted" },
+        { id: "INV-2022", customer: "Marrow & Co.", issueDate: "May 10, 2026", dueDate: "May 25, 2026", rawAmount: 2100, status: "Unposted" },
+        { id: "INV-2021", customer: "Sable Foundry", issueDate: "May 5, 2026", dueDate: "May 20, 2026", rawAmount: 1890, status: "Posted" },
+        { id: "INV-2020", customer: "Quill Press", issueDate: "Apr 28, 2026", dueDate: "May 13, 2026", rawAmount: 1200, status: "Unposted" },
+        { id: "INV-2019", customer: "Northwind Studio", issueDate: "Apr 22, 2026", dueDate: "May 7, 2026", rawAmount: 5600, status: "Posted" },
       ];
 
   return (
@@ -337,12 +322,12 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
                       </linearGradient>
                     </defs>
                     <Area
-                      type="monotone"
-                      dataKey={s.dataKey}
-                      stroke={s.accent}
-                      strokeWidth={1.8}
-                      fill={`url(#sparkGrad-${s.label.replace(/\s+/g, '')})`}
-                      dot={false}
+                       type="monotone"
+                       dataKey={s.dataKey}
+                       stroke={s.accent}
+                       strokeWidth={1.8}
+                       fill={`url(#sparkGrad-${s.label.replace(/\s+/g, '')})`}
+                       dot={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -370,7 +355,7 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
                 {/* Filter tabs */}
                 <div style={{ display: "flex", gap: 4, background: "#f1f5f9", borderRadius: 10, padding: 3 }}>
-                  {(['All', 'Paid', 'Pending', 'Overdue'] as const).map(f => (
+                  {(['All', 'Posted', 'Unposted'] as const).map(f => (
                     <button
                       key={f}
                       onClick={() => setTrendFilter(f)}
@@ -526,17 +511,15 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
               <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                 <svg width="100" height="100" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="38" fill="none" stroke="#f1f5f9" strokeWidth="14" />
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="#16a34a" strokeWidth="14" strokeDasharray={`${paidStroke} 238.8`} strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 50 50)" />
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="#fbbf24" strokeWidth="14" strokeDasharray={`${pendingStroke} 238.8`} strokeDashoffset={pendingDashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" />
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="#dc2626" strokeWidth="14" strokeDasharray={`${overdueStroke} 238.8`} strokeDashoffset={overdueDashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" />
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#16a34a" strokeWidth="14" strokeDasharray={`${postedStroke} 238.8`} strokeDashoffset={0} strokeLinecap="round" transform="rotate(-90 50 50)" />
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#fbbf24" strokeWidth="14" strokeDasharray={`${unpostedStroke} 238.8`} strokeDashoffset={unpostedDashOffset} strokeLinecap="round" transform="rotate(-90 50 50)" />
                   <text x="50" y="48" textAnchor="middle" fill="#111" fontSize="9" fontWeight="900">Rs. {displayTotalSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}</text>
                   <text x="50" y="60" textAnchor="middle" fill="#9ca3af" fontSize="7.5" fontWeight="700">Total</text>
                 </svg>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    { label: "Paid", pct: `${displayPaidPercent.toFixed(1)}%`, val: `Rs. ${displayPaidSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#16a34a" },
-                    { label: "Pending", pct: `${displayPendingPercent.toFixed(1)}%`, val: `Rs. ${displayPendingSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#fbbf24" },
-                    { label: "Overdue", pct: `${displayOverduePercent.toFixed(1)}%`, val: `Rs. ${displayOverdueSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#dc2626" },
+                    { label: "Posted", pct: `${displayPostedPercent.toFixed(1)}%`, val: `Rs. ${displayPostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#16a34a" },
+                    { label: "Unposted", pct: `${displayUnpostedPercent.toFixed(1)}%`, val: `Rs. ${displayUnpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#fbbf24" },
                   ].map((s) => (
                     <div key={s.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>

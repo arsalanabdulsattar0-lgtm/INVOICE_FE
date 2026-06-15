@@ -1,6 +1,7 @@
 import type { CustomerListItem } from '../pages/Customers/CustomerList';
 
 export const SALES_PERSONS = [
+  { id: 's-arsalan', name: 'Arsalan Ahmed' },
   { id: 'sp-1', name: 'Ahmed Raza' },
   { id: 'sp-2', name: 'Sara Khan' },
   { id: 'sp-3', name: 'Usman Ali' },

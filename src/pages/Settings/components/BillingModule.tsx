@@ -161,7 +161,7 @@ export const BillingModule: React.FC<BillingModuleProps> = ({ brand }) => {
           </div>
         </div>
 
-        <ScrollArea maxHeight="220px">
+        <ScrollArea height="290px">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">

@@ -4,7 +4,7 @@ import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronRight,
-  CreditCard, ShieldCheck
+  CreditCard, ShieldCheck, Printer
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
@@ -85,6 +85,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
   const [stockValue, setStockValue] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'Inactive'>('All');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+  const [fromProductId, setFromProductId] = useState<string>('All');
+  const [toProductId, setToProductId] = useState<string>('All');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
@@ -298,6 +300,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
     setStockValue('');
     setSelectedStatus('All');
     setSelectedSupplier('all');
+    setFromProductId('All');
+    setToProductId('All');
     setSortKey('name');
     setSortDir('asc');
     setSearch('');
@@ -309,6 +313,11 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
     else { setSortKey(key); setSortDir('asc'); }
     setShowSortPanel(false);
   };
+
+  const productCodes = useMemo(() => {
+    const codes = products.map(p => p.code).filter(Boolean);
+    return Array.from(new Set(codes)).sort();
+  }, [products]);
 
   // Filter & Sort Logic
   const filteredProducts = useMemo(() => {
@@ -355,7 +364,17 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
 
       const matchSupplier = selectedSupplier === 'all' || p.preferred_supplier_id === selectedSupplier;
 
-      return matchQuery && matchCategory && matchStatus && matchPrice && matchStock && matchSupplier;
+      let matchFromProduct = true;
+      if (fromProductId && fromProductId !== 'All') {
+        matchFromProduct = p.code >= fromProductId;
+      }
+
+      let matchToProduct = true;
+      if (toProductId && toProductId !== 'All') {
+        matchToProduct = p.code <= toProductId;
+      }
+
+      return matchQuery && matchCategory && matchStatus && matchPrice && matchStock && matchSupplier && matchFromProduct && matchToProduct;
     });
 
     result = [...result].sort((a, b) => {
@@ -374,7 +393,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
     });
 
     return result;
-  }, [products, search, selectedCategory, priceOperator, priceValue, stockOperator, stockValue, selectedStatus, selectedSupplier, sortKey, sortDir]);
+  }, [products, search, selectedCategory, priceOperator, priceValue, stockOperator, stockValue, selectedStatus, selectedSupplier, fromProductId, toProductId, sortKey, sortDir]);
 
   const totalPages = Math.ceil(filteredProducts.length / perPage);
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * perPage, currentPage * perPage);
@@ -418,12 +437,20 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
             <Button
               variant="white"
               size="md"
+              icon={Printer}
+              onClick={() => window.print()}
+            >
+              Print
+            </Button>
+            <Button
+              variant="white"
+              size="md"
               icon={SlidersHorizontal}
               onClick={() => setShowFilterDrawer(true)}
               className="relative"
             >
               Filter
-              {(selectedCategory !== 'cat-1' || search !== '') && (
+              {(selectedCategory !== 'cat-1' || fromProductId !== 'All' || toProductId !== 'All' || priceOperator !== 'all' || stockOperator !== 'all' || selectedStatus !== 'All' || selectedSupplier !== 'all' || search !== '') && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
                   style={{ background: brand.accent || '#EF4444' }}>!</span>
               )}
@@ -442,7 +469,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
       />
 
       {/* ── Stats Cards (InvoiceList Style) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print-hidden">
         {stats.map((stat, i) => (
           <motion.div key={stat.label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -479,7 +506,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
           <CardTitle title="Product Records" count={filteredProducts.length} countLabel="products" />
 
           {/* Search inside header bar */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 print-hidden">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60" />
               <input
@@ -802,7 +829,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
 
         {/* Pagination (InvoiceList Style) */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between"
+          <div className="px-4 py-3 border-t flex items-center justify-between print-hidden"
             style={{ borderColor: '#E2E8F0', background: brand.surface + '60' }}>
             <p className="text-[11px] font-medium text-black">
               Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filteredProducts.length)} of {filteredProducts.length}
@@ -926,6 +953,11 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
         onReset={handleResetFilters}
         selectedCategory={selectedCategory}
         setSelectedCategory={(cat) => { setSelectedCategory(cat); setCurrentPage(1); }}
+        fromProductId={fromProductId}
+        setFromProductId={(val) => { setFromProductId(val); setCurrentPage(1); }}
+        toProductId={toProductId}
+        setToProductId={(val) => { setToProductId(val); setCurrentPage(1); }}
+        productCodes={productCodes}
         priceOperator={priceOperator}
         setPriceOperator={(op) => { setPriceOperator(op); setCurrentPage(1); }}
         priceValue={priceValue}

@@ -127,7 +127,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
           </div>
         </div>
 
-        <ScrollArea maxHeight="248px">
+        <ScrollArea height="290px">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
@@ -251,7 +251,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
               <button
                 key={opt}
                 onClick={() => setTempType(opt)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${tempType === opt ? 'bg-white shadow-xs border border-slate-200/40' : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'}`}
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${tempType === opt ? 'bg-white shadow-xs border border-slate-200/40' : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'}`}
                 style={{ color: tempType === opt ? brand.primary : undefined }}
               >
                 {opt === 'all' ? 'All' : opt}
@@ -275,7 +275,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
               <button
                 key={opt.key}
                 onClick={() => setTempStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${tempStatus === opt.key ? 'bg-white shadow-xs border border-slate-200/40' : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'}`}
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${tempStatus === opt.key ? 'bg-white shadow-xs border border-slate-200/40' : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'}`}
                 style={{ color: tempStatus === opt.key ? brand.primary : undefined }}
               >
                 {opt.label}

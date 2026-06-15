@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2,
@@ -12,8 +12,10 @@ import { FilterDrawer } from '../../../components/ui/FilterDrawer';
 import { TableHeader } from '../../../components/ui/Typography';
 import { useTheme } from '../../../context/ThemeContext';
 import { seedBranches } from '../../../utils/settingsData';
+import type { Branch } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { WarehouseDrawer } from './WarehouseDrawer';
+import { incrementNextCode } from '../../../utils/codeSettingsHelper';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +37,7 @@ interface WarehouseModuleProps {
 
 // ─── Defaults & Seed Data ─────────────────────────────────────────────────────
 
-const seedWarehouses: Warehouse[] = [
+export const seedWarehouses: Warehouse[] = [
   {
     id: 'wh1',
     name: 'Lahore Main Warehouse',
@@ -82,12 +84,24 @@ const seedWarehouses: Warehouse[] = [
   },
 ];
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>(seedWarehouses);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(() => {
+    try {
+      const stored = localStorage.getItem('warehouse_records');
+      return stored ? JSON.parse(stored) : seedWarehouses;
+    } catch {
+      return seedWarehouses;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('warehouse_records', JSON.stringify(warehouses));
+  }, [warehouses]);
+
   const [search, setSearch] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -102,10 +116,19 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
 
+  const branches = useMemo<Branch[]>(() => {
+    try {
+      const stored = localStorage.getItem('branch_records');
+      return stored ? JSON.parse(stored) : seedBranches;
+    } catch {
+      return seedBranches;
+    }
+  }, []);
+
   // ── Helper lookups ────────────────────────────────────────────────────────
 
   const getBranchName = (branchId: string) => {
-    const branch = seedBranches.find(b => b.id === branchId);
+    const branch = branches.find(b => b.id === branchId);
     return branch ? branch.name : '-';
   };
 
@@ -186,6 +209,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
           : prev;
         return [...updated, { ...formWarehouse, id: newId }];
       });
+      // Increment auto-code sequence number if applicable
+      incrementNextCode('warehouse', formWarehouse.companyId, formWarehouse.branchId);
     }
   };
 
@@ -333,7 +358,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
         </div>
 
         {/* Scrollable table with sticky headers */}
-        <ScrollArea maxHeight="233px" className="w-full overflow-x-auto">
+        <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[760px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
@@ -504,7 +529,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
               <button
                 key={opt.key}
                 onClick={() => setTempStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${
                   tempStatus === opt.key
                     ? 'bg-white shadow-xs border border-slate-200/40'
                     : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'

@@ -8,7 +8,7 @@ import { Button } from '../../../components/ui/Button';
 interface InvoiceItem {
   id: string; customer: string; customerInitials: string; customerColor: string;
   issueDate: string; dueDate: string; amount: string; rawAmount: number;
-  status: 'Draft' | 'Paid' | 'Pending' | 'Overdue'; payment: string; type: string;
+  status: 'Posted' | 'Unposted'; payment: string; type: string;
 }
 interface Dashboard2Props { invoiceItems?: InvoiceItem[]; onViewChange?: (view: string) => void; }
 
@@ -35,33 +35,28 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
   }, [invoiceItems]);
 
   const s = (arr: InvoiceItem[]) => arr.reduce((a, i) => a + (i.rawAmount || 0), 0);
-  const paid  = useMemo(() => inv.filter((i: InvoiceItem) => i.status === 'Paid'),    [inv]);
-  const pend  = useMemo(() => inv.filter((i: InvoiceItem) => i.status === 'Pending'), [inv]);
-  const ovd   = useMemo(() => inv.filter((i: InvoiceItem) => i.status === 'Overdue'), [inv]);
+  const posted  = useMemo(() => inv.filter((i: InvoiceItem) => i.status === 'Posted'),    [inv]);
+  const unposted  = useMemo(() => inv.filter((i: InvoiceItem) => i.status === 'Unposted'), [inv]);
 
-  const paidSum  = useMemo(() => s(paid), [paid]);
-  const pendSum  = useMemo(() => s(pend), [pend]);
-  const ovdSum   = useMemo(() => s(ovd),  [ovd]);
+  const postedSum  = useMemo(() => s(posted), [posted]);
+  const unpostedSum  = useMemo(() => s(unposted), [unposted]);
   const total    = useMemo(() => s(inv),  [inv]);
   const avgVal   = useMemo(() => inv.length > 0 ? total / inv.length : 0, [inv, total]);
 
   const hasData = inv.length > 0;
-  const dPaid  = hasData ? paidSum  : 14813;
-  const dPend  = hasData ? pendSum  : 122380;
-  const dOvd   = hasData ? ovdSum   : 98100;
+  const dPaid  = hasData ? postedSum  : 14813;
+  const dPend  = hasData ? unpostedSum  : 122380;
   const dTotal = hasData ? total    : 155120;
   const dAvg   = hasData ? avgVal   : 2780;
 
   const dTotalPct = dTotal > 0;
   const paidPct  = dTotalPct ? (dPaid  / dTotal) * 100 : 30;
-  const pendPct  = dTotalPct ? (dPend  / dTotal) * 100 : 45;
-  const ovdPct   = dTotalPct ? (dOvd   / dTotal) * 100 : 25;
+  const pendPct  = dTotalPct ? (dPend  / dTotal) * 100 : 70;
 
   /* gauge 270° */
   const FULL = 238.76, GAUGE = 179.07;
   const paidArc = (paidPct / 100) * GAUGE;
   const pendArc = (pendPct / 100) * GAUGE;
-  const ovdArc  = (ovdPct  / 100) * GAUGE;
 
   /* sparkline */
   const spark = useMemo(() => {
@@ -95,30 +90,27 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
 
   /* recent invoices */
   const recent = useMemo(() => inv.length > 0 ? inv.slice(0,5) : [
-    { id:'INV-2024', customer:'Northwind Studio', issueDate:'May 18, 2026', dueDate:'Jun 1, 2026',  rawAmount:4200, status:'Paid'    },
-    { id:'INV-2023', customer:'Helix Labs',       issueDate:'May 15, 2026', dueDate:'May 30, 2026', rawAmount:3800, status:'Pending' },
-    { id:'INV-2022', customer:'Marrow & Co.',     issueDate:'May 10, 2026', dueDate:'May 25, 2026', rawAmount:2100, status:'Overdue' },
-    { id:'INV-2021', customer:'Sable Foundry',    issueDate:'May 5, 2026',  dueDate:'May 20, 2026', rawAmount:1890, status:'Paid'    },
-    { id:'INV-2020', customer:'Quill Press',      issueDate:'Apr 28, 2026', dueDate:'May 13, 2026', rawAmount:1200, status:'Overdue' },
+    { id:'INV-2024', customer:'Northwind Studio', issueDate:'May 18, 2026', dueDate:'Jun 1, 2026',  rawAmount:4200, status:'Posted'    },
+    { id:'INV-2023', customer:'Helix Labs',       issueDate:'May 15, 2026', dueDate:'May 30, 2026', rawAmount:3800, status:'Unposted' },
+    { id:'INV-2022', customer:'Marrow & Co.',     issueDate:'May 10, 2026', dueDate:'May 25, 2026', rawAmount:2100, status:'Unposted' },
+    { id:'INV-2021', customer:'Sable Foundry',    issueDate:'May 5, 2026',  dueDate:'May 20, 2026', rawAmount:1890, status:'Posted'    },
+    { id:'INV-2020', customer:'Quill Press',      issueDate:'Apr 28, 2026', dueDate:'May 13, 2026', rawAmount:1200, status:'Unposted' },
   ], [inv]);
 
   const badge: Record<string,{bg:string;color:string}> = {
-    Paid:    {bg:'#dcfce7',color:'#15803d'},
-    Pending: {bg:'#fef9c3',color:'#a16207'},
-    Overdue: {bg:'#fee2e2',color:'#b91c1c'},
-    Draft:   {bg:'#f1f5f9',color:'#64748b'},
+    Posted:   {bg:'#dcfce7',color:'#15803d'},
+    Unposted: {bg:'#fef9c3',color:'#a16207'},
   };
 
   /* bar data — rank-normalised */
-  const barVals = [dPaid, dPend, dOvd, dTotal];
+  const barVals = [dPaid, dPend, dTotal];
   const barSorted = [...barVals].sort((a,b) => a-b);
-  const norm = (v: number) => { const r = barSorted.indexOf(v); return [0.40, 0.60, 0.80, 1.0][r] ?? 1; };
+  const norm = (v: number) => { const r = barSorted.indexOf(v); return [0.50, 0.75, 1.0][r] ?? 1; };
   const BAR_H = 130;
   const bars = [
-    { label:'Profit',  val:dPaid,  h: norm(dPaid)*BAR_H,  color:'#84cc16', gradFrom:'#bef264', pct:'+68%' },
-    { label:'Insight', val:dPend,  h: norm(dPend)*BAR_H,  color:'#93c5fd', gradFrom:'#eff6ff', pct:'+89%' },
-    { label:'Sale',    val:dOvd,   h: norm(dOvd)*BAR_H,   color:'#2563eb', gradFrom:'#60a5fa', pct:'+99%' },
-    { label:'Target',  val:dTotal, h: norm(dTotal)*BAR_H, color:'#94a3b8', gradFrom:'#cbd5e1', pct:'+89%' },
+    { label:'Posted',   val:dPaid,  h: norm(dPaid)*BAR_H,  color:'#84cc16', gradFrom:'#bef264', pct:'+68%' },
+    { label:'Unposted', val:dPend,  h: norm(dPend)*BAR_H,  color:'#93c5fd', gradFrom:'#eff6ff', pct:'+89%' },
+    { label:'Total',    val:dTotal, h: norm(dTotal)*BAR_H, color:'#2563eb', gradFrom:'#60a5fa', pct:'+99%' },
   ];
 
   /* shared card style using inset shadow — so quarter-circle notch covers border cleanly */
@@ -186,7 +178,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           {/* decorative */}
           <div style={{ position:'absolute', bottom:-28, left:-28, width:100, height:100, borderRadius:'50%', border:'22px solid rgba(255,255,255,0.07)' }} />
           <div>
-            <p style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.80)', margin:0, letterSpacing:'0.2px' }}>Total Profit</p>
+            <p style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.80)', margin:0, letterSpacing:'0.2px' }}>Posted Revenue</p>
             <div style={{ display:'flex', alignItems:'baseline', gap:9, marginTop:8 }}>
               <h3 style={{ fontSize:28, fontWeight:900, color:'#fff', margin:0, letterSpacing:'-1px', lineHeight:1 }}>${hasData ? fmt2(dPaid) : '14,813.10'}</h3>
               <span style={{ padding:'2px 7px', borderRadius:6, fontSize:9, fontWeight:800, background:'rgba(255,255,255,0.22)', color:'#fff' }}>+20%</span>
@@ -200,7 +192,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           style={wCard({ height:152, padding:'22px 22px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between' })}>
           <Notch />
           <div>
-            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Total Insight</p>
+            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Unposted Volume</p>
             <div style={{ display:'flex', alignItems:'baseline', gap:9, marginTop:8 }}>
               <h3 style={{ fontSize:28, fontWeight:900, margin:0, letterSpacing:'-1px', lineHeight:1 }}>${hasData ? fmt(dPend) : '122,380'}</h3>
               <span style={{ padding:'2px 7px', borderRadius:6, fontSize:9, fontWeight:800, background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0' }}>+4.2%</span>
@@ -217,17 +209,17 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           style={wCard({ height:152, padding:'22px 22px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between' })}>
           <Notch />
           <div>
-            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Organic Sales</p>
+            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Total Invoices Volume</p>
             <div style={{ display:'flex', alignItems:'baseline', gap:9, marginTop:8 }}>
               <h3 style={{ fontSize:28, fontWeight:900, margin:0, letterSpacing:'-1px', lineHeight:1 }}>
-                {hasData ? (dOvd >= 1000000 ? '$' + (dOvd/1000000).toFixed(1) + 'M' : '$' + (dOvd/1000).toFixed(1) + 'K') : '$98.1M'}
+                {hasData ? (dTotal >= 1000000 ? '$' + (dTotal/1000000).toFixed(1) + 'M' : '$' + (dTotal/1000).toFixed(1) + 'K') : '$98.1M'}
               </h3>
               <span style={{ padding:'2px 7px', borderRadius:6, fontSize:9, fontWeight:800, background:'#fff1f2', color:'#e11d48', border:'1px solid #fecdd3' }}>-2.5%</span>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:5 }}>
             <TrendingDown style={{ width:11, height:11, color:'#e11d48' }} />
-            <p style={{ fontSize:10, color:'#94a3b8', margin:0, fontWeight:500 }}>vs last month {hasData ? '$' + (dOvd * 0.028 / 1000).toFixed(1) + 'K' : '$2.8M'}</p>
+            <p style={{ fontSize:10, color:'#94a3b8', margin:0, fontWeight:500 }}>vs last month {hasData ? '$' + (dTotal * 0.028 / 1000).toFixed(1) + 'K' : '$2.8M'}</p>
           </div>
         </motion.div>
 
@@ -236,7 +228,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           style={wCard({ height:152, padding:'22px 22px 0', display:'flex', flexDirection:'column', justifyContent:'space-between' })}>
           <Notch />
           <div>
-            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Gross Margin</p>
+            <p style={{ fontSize:12, fontWeight:700, color:'#94a3b8', margin:0 }}>Posted Margin</p>
             <div style={{ display:'flex', alignItems:'baseline', gap:9, marginTop:8 }}>
               <h3 style={{ fontSize:28, fontWeight:900, margin:0, letterSpacing:'-1px', lineHeight:1 }}>
                 {hasData ? (dTotal > 0 ? Math.round((dPaid / dTotal) * 100) + '%' : '72%') : '72%'}
@@ -285,7 +277,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 160px', gap:24, alignItems:'flex-end' }}>
             {/* Bars */}
-            <div style={{ position:'relative', display:'flex', alignItems:'flex-end', gap:12, height:`${BAR_H+40}px`, borderBottom:'2px solid #f1f5f9', paddingBottom:0 }}>
+            <div style={{ position:'relative', display:'flex', alignItems:'flex-end', gap:12, height:`${BAR_H}px`, borderBottom:'2px solid #f1f5f9', paddingBottom:0 }}>
               {bars.map((b) => (
                 <div key={b.label} style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:1, height:'100%', justifyContent:'flex-end', position:'relative' }}>
                   {/* pct bubble */}
@@ -300,11 +292,11 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
                 </div>
               ))}
               {/* curved arrow annotation */}
-              <div style={{ position:'absolute', top:8, right:60, fontSize:10, color:'#64748b', fontWeight:600, maxWidth:90, textAlign:'right', lineHeight:1.4 }}>
+              <div style={{ position:'absolute', top:-20, right:60, fontSize:10, color:'#64748b', fontWeight:600, maxWidth:90, textAlign:'right', lineHeight:1.4 }}>
                 Target overflow<br/>
                 <span style={{ color:'#0f172a', fontWeight:800 }}>by $378 profit</span>
               </div>
-              <svg style={{ position:'absolute', top:20, right:12, opacity:0.4 }} width="50" height="35" viewBox="0 0 50 35">
+              <svg style={{ position:'absolute', top:-10, right:12, opacity:0.4 }} width="50" height="35" viewBox="0 0 50 35">
                 <path d="M 45 5 Q 40 30, 15 30" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="3 2" markerEnd="url(#arr)" strokeLinecap="round"/>
                 <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker></defs>
               </svg>
@@ -340,12 +332,10 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
               <svg width="130" height="130" viewBox="0 0 100 100" style={{ position:'absolute', transform:'rotate(135deg)' }}>
                 {/* track */}
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#e8edf5" strokeWidth="13" strokeDasharray="179.07 59.69" strokeLinecap="round"/>
-                {/* paid – green */}
+                {/* paid – green (Posted) */}
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#22c55e" strokeWidth="13" strokeDasharray={`${paidArc} ${FULL}`} strokeDashoffset={0} strokeLinecap="round"/>
-                {/* pending – light blue */}
+                {/* pending – light blue (Unposted) */}
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#93c5fd" strokeWidth="13" strokeDasharray={`${pendArc} ${FULL}`} strokeDashoffset={-paidArc} strokeLinecap="round"/>
-                {/* overdue – dark blue */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#2563eb" strokeWidth="13" strokeDasharray={`${ovdArc} ${FULL}`} strokeDashoffset={-(paidArc+pendArc)} strokeLinecap="round"/>
               </svg>
               {/* center */}
               <div style={{ position:'relative', zIndex:1, textAlign:'center' }}>
@@ -357,9 +347,9 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
             {/* Legend with BIG numbers on top */}
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               {[
-                { label:'On Process', count: pend.length  || 45, color:'#22c55e' },
-                { label:'Canceled',   count: ovd.length   || 23, color:'#93c5fd' },
-                { label:'Delivered',  count: paid.length  || 32, color:'#2563eb' },
+                { label:'Posted',   count: posted.length  || 32, color:'#2563eb' },
+                { label:'Unposted', count: unposted.length || 45, color:'#fbbf24' },
+                { label:'Total',    count: inv.length      || 77, color:'#94a3b8' },
               ].map(item => (
                 <div key={item.label} style={{ display:'flex', flexDirection:'column', alignItems:'flex-start' }}>
                   <span style={{ fontSize:32, fontWeight:900, color:'#0f172a', lineHeight:1 }}>{item.count}</span>

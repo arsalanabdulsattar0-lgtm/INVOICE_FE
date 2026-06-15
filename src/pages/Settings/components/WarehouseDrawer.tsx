@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Database, MapPin, Building, Home } from 'lucide-react';
+import { X, Check, Database } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { Button } from '../../../components/ui/Button';
-import { Input, Select, TextArea, Toggle } from '../../../components/ui/FormControls';
+import { Input, Select, Toggle } from '../../../components/ui/FormControls';
 import { SectionHeader } from '../../../components/ui/Typography';
 import Card from '../../../components/ui/Card';
 import { seedCompanies, seedBranches } from '../../../utils/settingsData';
+import type { Company, Branch } from '../../../utils/settingsData';
 import type { Warehouse } from './WarehouseModule';
+import { getCodeSettingsForBranch } from '../../../utils/codeSettingsHelper';
 
 interface WarehouseDrawerProps {
   isOpen: boolean;
@@ -19,8 +21,8 @@ interface WarehouseDrawerProps {
 const emptyWarehouse = (): Omit<Warehouse, 'id'> => ({
   name: '',
   code: '',
-  companyId: seedCompanies[0]?.id || '',
-  branchId: seedBranches.filter(b => b.companyId === seedCompanies[0]?.id)[0]?.id || '',
+  companyId: 'co1', // Default to co1 (Acme Corporation)
+  branchId: '',
   city: '',
   address: '',
   isDefault: false,
@@ -38,8 +40,36 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
   const [form, setForm] = useState<Omit<Warehouse, 'id'>>(emptyWarehouse());
   const [error, setError] = useState('');
 
+  const companies = useMemo<Company[]>(() => {
+    try {
+      const stored = localStorage.getItem('company_records');
+      return stored ? JSON.parse(stored) : seedCompanies;
+    } catch {
+      return seedCompanies;
+    }
+  }, []);
+
+  const branches = useMemo<Branch[]>(() => {
+    try {
+      const stored = localStorage.getItem('branch_records');
+      return stored ? JSON.parse(stored) : seedBranches;
+    } catch {
+      return seedBranches;
+    }
+  }, []);
+
   // Get branches filtered by selected company in form
-  const availableBranches = seedBranches.filter(b => b.companyId === form.companyId);
+  const availableBranches = branches.filter(b => b.companyId === form.companyId);
+
+  console.log('WarehouseDrawer debugging:', {
+    formCompanyId: form.companyId,
+    branchesCount: branches.length,
+    availableBranchesCount: availableBranches.length,
+    availableBranches,
+  });
+
+  // Get current company name
+  const companyName = companies.find(c => c.id === form.companyId)?.name || 'Acme Corporation';
 
   // Sync form state when drawer opens or warehouse changes
   useEffect(() => {
@@ -62,8 +92,41 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
     }
   }, [isOpen, warehouse]);
 
+  const codeSetting = useMemo(() => {
+    if (!form.companyId || !form.branchId) {
+      return { mode: 'auto' as const, prefix: 'WH-', nextNumber: 1, padding: 3 };
+    }
+    return getCodeSettingsForBranch(form.companyId, form.branchId).warehouse;
+  }, [form.companyId, form.branchId]);
+
+  // Generate code on the fly for new warehouses if auto-coding is enabled
+  useEffect(() => {
+    if (isOpen && !warehouse && form.companyId && form.branchId) {
+      const activeSetting = getCodeSettingsForBranch(form.companyId, form.branchId).warehouse;
+      if (activeSetting.mode === 'auto') {
+        const formattedNum = String(activeSetting.nextNumber).padStart(activeSetting.padding, '0');
+        setForm(prev => ({
+          ...prev,
+          code: `${activeSetting.prefix}${formattedNum}`
+        }));
+      } else {
+        setForm(prev => ({
+          ...prev,
+          code: ''
+        }));
+      }
+    }
+  }, [isOpen, warehouse, form.companyId, form.branchId]);
 
   const handleSaveClick = () => {
+    if (!form.companyId) {
+      setError('Company is required.');
+      return;
+    }
+    if (!form.branchId) {
+      setError('Branch selection is required.');
+      return;
+    }
     if (!form.name.trim()) {
       setError('Warehouse Name is required.');
       return;
@@ -72,25 +135,16 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
       setError('Warehouse Code is required.');
       return;
     }
-    if (!form.companyId) {
-      setError('Company selection is required.');
-      return;
-    }
-    if (!form.branchId) {
-      setError('Branch selection is required.');
-      return;
-    }
-    if (!form.city.trim()) {
-      setError('City is required.');
-      return;
-    }
     if (!form.address.trim()) {
-      setError('Address is required.');
+      setError('Location is required.');
       return;
     }
 
+    const cityValue = warehouse?.city || form.address;
+
     onSave({
       ...form,
+      city: cityValue,
       id: warehouse?.id,
     });
     onClose();
@@ -129,24 +183,59 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer outline-none focus:outline-none"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="flex-grow p-5 overflow-y-auto space-y-5 custom-scrollbar">
+            <div className="flex-grow p-5 overflow-y-auto space-y-4 custom-scrollbar">
               {error && (
                 <div className="p-3 text-[11px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl">
                   {error}
                 </div>
               )}
 
-              {/* Warehouse Basic Info */}
               <div className="space-y-1.5">
                 <SectionHeader title="Warehouse Details" icon={Database} />
                 <Card className="p-4 space-y-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
+                  <Input
+                    label="Company"
+                    variant="compact"
+                    value={companyName}
+                    readOnly
+                  />
+
+                  <Select
+                    label="Branch *"
+                    variant="compact"
+                    value={form.branchId}
+                    onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                    options={[
+                      { value: '', label: 'Select Branch...' },
+                      ...availableBranches.map(b => ({ value: b.id, label: `${b.name} (${b.code})` }))
+                    ]}
+                  />
+
+                  {form.branchId && (
+                    <Input
+                      label="Selected Branch Code"
+                      variant="compact"
+                      value={availableBranches.find(b => b.id === form.branchId)?.code || ''}
+                      readOnly
+                    />
+                  )}
+
+                  <Input
+                    label="Warehouse Code *"
+                    variant="compact"
+                    placeholder="e.g. WH-001"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                    readOnly={codeSetting.mode === 'auto'}
+                  />
+
                   <Input
                     label="Warehouse Name *"
                     variant="compact"
@@ -154,67 +243,16 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
-                  <Input
-                    label="Warehouse Code *"
-                    variant="compact"
-                    placeholder="e.g. LHR-WH-01"
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value })}
-                  />
-                </Card>
-              </div>
 
-              {/* Company & Branch Assignment */}
-              <div className="space-y-1.5">
-                <SectionHeader title="Assignment" icon={Building} />
-                <Card className="p-4 space-y-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                   <Input
-                    label="Company"
+                    label="Location *"
                     variant="compact"
-                    value="Acme Corporation"
-                    readOnly
-                  />
-                  <Select
-                    label="Branch *"
-                    variant="compact"
-                    value={form.branchId}
-                    onChange={(e) => setForm({ ...form, branchId: e.target.value })}
-                    options={availableBranches.map(b => ({ value: b.id, label: b.name }))}
-                  />
-                </Card>
-              </div>
-
-              {/* Location Info */}
-              <div className="space-y-1.5">
-                <SectionHeader title="Location" icon={MapPin} />
-                <Card className="p-4 space-y-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-                  <Input
-                    label="City *"
-                    variant="compact"
-                    placeholder="e.g. Lahore"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  />
-                  <TextArea
-                    label="Address *"
-                    placeholder="Street, industrial zone, city area..."
+                    placeholder="e.g. Gulberg, Lahore"
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    className="!rounded-lg text-[11px] py-1.5 px-3 h-16"
                   />
-                </Card>
-              </div>
 
-              {/* Preferences */}
-              <div className="space-y-1.5">
-                <SectionHeader title="Preferences & Status" icon={Home} />
-                <Card className="p-4 space-y-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-                  <div className="flex flex-col gap-3">
-                    <Toggle
-                      checked={form.isDefault}
-                      onChange={(val) => setForm({ ...form, isDefault: val })}
-                      label="Is Default Warehouse"
-                    />
+                  <div className="pt-2">
                     <Toggle
                       checked={form.isActive}
                       onChange={(val) => setForm({ ...form, isActive: val })}
@@ -226,8 +264,8 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-[#E2E8F0] flex items-center gap-2 bg-slate-50/50 flex-shrink-0">
-              <Button onClick={onClose} variant="white" size="md" className="flex-1">
+            <div className="p-3 border-t border-[#E2E8F0] flex justify-end items-center gap-2 bg-slate-50/50 flex-shrink-0">
+              <Button onClick={onClose} variant="white" size="md">
                 Cancel
               </Button>
               <Button
@@ -235,7 +273,6 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
                 variant="primary"
                 size="md"
                 icon={Check}
-                className="flex-1"
                 style={{ backgroundColor: brand.primary }}
               >
                 {warehouse ? 'Update Warehouse' : 'Save Warehouse'}

@@ -4,7 +4,7 @@ import {
   Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   CheckCircle, Clock, ChevronLeft, ChevronRight,
-  User, ShieldCheck, MapPin, Globe, CreditCard
+  User, ShieldCheck, MapPin, Globe, CreditCard, Printer
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, TextArea, ScrollArea, ComboBox, Select, Toggle } from '../../components/ui/FormControls';
@@ -12,6 +12,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Card from '../../components/ui/Card';
 import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import { Chip, FilerChip, NonFilerChip, ActiveChip, InactiveChip } from '../../components/ui/Chip';
+import { getCodeSettingsForBranch, generateNextCode, incrementNextCode } from '../../utils/codeSettingsHelper';
 import { SALES_PERSONS } from '../../utils/customerData';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -53,7 +54,16 @@ export interface Customer {
 // ---------------------------------------------------------------------------
 const CustomerManagement: React.FC = () => {
   const { brand } = useTheme();
+
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [salesPersonsList] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('sales_persons');
+      return stored ? JSON.parse(stored) : SALES_PERSONS;
+    } catch {
+      return SALES_PERSONS;
+    }
+  });
   const [search, setSearch] = useState('');
 
   // Interactive Filters & Sorting States
@@ -88,6 +98,18 @@ const CustomerManagement: React.FC = () => {
 
   // Editing / Viewing Detail modal states
   const [editing, setEditing] = useState<Customer | null>(null);
+
+  const codeSetting = useMemo(() => {
+    try {
+      const activeCo = sessionStorage.getItem('active_company');
+      const activeBr = sessionStorage.getItem('active_branch');
+      const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+      const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+      return getCodeSettingsForBranch(currentCoId, currentBrId).customer;
+    } catch {
+      return { mode: 'auto' as const, prefix: 'CUS-', nextNumber: 1, padding: 4 };
+    }
+  }, [editing !== null]);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'settings' | 'accounting'>('general');
@@ -247,9 +269,22 @@ const CustomerManagement: React.FC = () => {
 
   const openCreate = () => {
     setActiveTab('general');
+    const activeCo = sessionStorage.getItem('active_company');
+    const activeBr = sessionStorage.getItem('active_branch');
+    const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+    const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+    
+    const settings = getCodeSettingsForBranch(currentCoId, currentBrId).customer;
+    let nextId = '';
+    if (settings.mode === 'auto') {
+      nextId = generateNextCode('customer', currentCoId, currentBrId);
+    } else {
+      nextId = '';
+    }
+
     setEditing({
       id: crypto.randomUUID(),
-      customer_id: `CUST-${String(customers.length + 1).padStart(3, '0')}`,
+      customer_id: nextId,
       name: '',
       email: '',
       phone: '',
@@ -300,6 +335,16 @@ const CustomerManagement: React.FC = () => {
       newList[existingIndex] = editing;
     } else {
       newList = [...customers, editing];
+      
+      // Increment auto-code sequence number if applicable
+      const activeCo = sessionStorage.getItem('active_company');
+      const activeBr = sessionStorage.getItem('active_branch');
+      const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+      const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+      const settings = getCodeSettingsForBranch(currentCoId, currentBrId).customer;
+      if (settings.mode === 'auto' && editing.customer_id) {
+        incrementNextCode('customer', currentCoId, currentBrId);
+      }
     }
     setCustomers(newList);
     persist(newList);
@@ -460,6 +505,14 @@ const CustomerManagement: React.FC = () => {
             <Button
               variant="white"
               size="md"
+              icon={Printer}
+              onClick={() => window.print()}
+            >
+              Print
+            </Button>
+            <Button
+              variant="white"
+              size="md"
               icon={SlidersHorizontal}
               onClick={() => {
                 setTempFilerStatus(selectedFilerStatus);
@@ -490,7 +543,7 @@ const CustomerManagement: React.FC = () => {
       />
 
       {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print-hidden">
         {stats.map((stat, i) => (
           <motion.div key={stat.label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -527,7 +580,7 @@ const CustomerManagement: React.FC = () => {
           <CardTitle title="Customer Records" count={filteredCustomers.length} countLabel="customers" />
 
           {/* Search inside header bar */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 print-hidden">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/60" />
               <input
@@ -886,7 +939,7 @@ const CustomerManagement: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between"
+          <div className="px-4 py-3 border-t flex items-center justify-between print-hidden"
             style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
             <p className="text-[11px] font-medium text-black">
               Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filteredCustomers.length)} of {filteredCustomers.length}
@@ -960,7 +1013,7 @@ const CustomerManagement: React.FC = () => {
                       <Input variant="compact" label="Total Balance (Rs.)" readOnly value={viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
                       <Input variant="compact" label="Payment Terms" readOnly value={`${viewingCustomer.payment_term_days} days`} />
                       <Input variant="compact" label="Discount Percent" readOnly value={`${viewingCustomer.discount_percent}%`} />
-                      <Input variant="compact" label="Sales Person" readOnly value={SALES_PERSONS.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'} />
+                      <Input variant="compact" label="Sales Person" readOnly value={salesPersonsList.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'} />
                       <Input variant="compact" label="Walk-in Customer" readOnly value={viewingCustomer.is_walkin ? 'Yes' : 'No'} />
                       <Input variant="compact" label="Tax Filer" readOnly value={viewingCustomer.is_filer ? 'Filer' : 'Non-Filer'} />
                       <Input variant="compact" label="Status" readOnly value={viewingCustomer.is_active ? 'Active' : 'Inactive'} />
@@ -1119,7 +1172,7 @@ const CustomerManagement: React.FC = () => {
                       <SectionHeader title="Basic Contact Information" icon={User} className="text-slate-700" />
                       <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                         <div className="grid grid-cols-3 gap-3">
-                          <Input variant="compact" label="Customer ID" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUST-001" />
+                          <Input variant="compact" label="Customer Code" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUS-1" readOnly={codeSetting.mode === 'auto'} />
                           <Input variant="compact" label="Customer Name *" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Acme Corporation" />
                           <Input variant="compact" label="Email Address *" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="e.g. accounting@acme.com" />
                           <Input variant="compact" label="Phone Number" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} placeholder="e.g. +92 21 3456789" />
@@ -1197,7 +1250,7 @@ const CustomerManagement: React.FC = () => {
                             onChange={(e) => setEditing({ ...editing, sales_person_id: e.target.value })}
                             options={[
                               { value: '', label: 'Select Salesperson...' },
-                              ...SALES_PERSONS.map(sp => ({ value: sp.id, label: sp.name }))
+                              ...salesPersonsList.map(sp => ({ value: sp.id, label: sp.name }))
                             ]}
                           />
                         </div>
@@ -1366,7 +1419,7 @@ const CustomerManagement: React.FC = () => {
           <ComboBox
             value={tempSalesPerson === 'all' ? '' : tempSalesPerson}
             onChange={(val) => setTempSalesPerson(val || 'all')}
-            options={SALES_PERSONS}
+            options={salesPersonsList}
             placeholder="Select Sales Person..."
             variant="compact"
           />

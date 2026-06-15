@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
   Building2, Phone, MapPin, Globe, ChevronLeft, ChevronRight, Home,
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, Upload, X, Image,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, TextArea, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -30,12 +30,14 @@ export interface Company {
   phone: string;
   mobile: string;
   website: string;
-  pral_token: string;
+  pral_sandbox_token: string;
+  pral_production_token: string;
   city: string;
   zip_code: string;
   business_type: string;
   address3: string;
   is_active: boolean;
+  logo?: string; // base64 or URL
 }
 
 interface CompanyModuleProps {
@@ -53,21 +55,112 @@ const emptyCompany = (): Omit<Company, 'id'> => ({
   phone: '',
   mobile: '',
   website: '',
-  pral_token: '',
+  pral_sandbox_token: '',
+  pral_production_token: '',
   city: '',
   zip_code: '',
   business_type: BUSINESS_TYPES[0],
   address3: '',
   is_active: true,
+  logo: '',
 });
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
-  const [companies, setCompanies] = useState<Company[]>(seedCompanies);
-  const [branches, setBranches] = useState<Branch[]>(seedBranches);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoDragging, setLogoDragging] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>(() => {
+    try {
+      const stored = localStorage.getItem('company_records');
+      if (stored) {
+        let parsed: Company[] = JSON.parse(stored);
+        let hasMigration = false;
+        parsed = parsed.map((c: any) => {
+          if (c.pral_token !== undefined && c.pral_sandbox_token === undefined) {
+            hasMigration = true;
+            const isTest = c.pral_token.startsWith('pral_test_');
+            const { pral_token, ...rest } = c;
+            return {
+              ...rest,
+              pral_sandbox_token: isTest ? pral_token : '',
+              pral_production_token: isTest ? '' : pral_token
+            } as Company;
+          }
+          return c;
+        });
+
+        // Auto-merge: if seed has more companies than stored, add missing ones
+        if (parsed.length < seedCompanies.length) {
+          const storedIds = new Set(parsed.map(c => c.id));
+          const missing = seedCompanies.filter(c => !storedIds.has(c.id));
+          const merged = [...parsed, ...missing];
+          localStorage.setItem('company_records', JSON.stringify(merged));
+          return merged;
+        }
+        if (hasMigration) {
+          localStorage.setItem('company_records', JSON.stringify(parsed));
+        }
+        return parsed;
+      }
+      return seedCompanies;
+    } catch {
+      return seedCompanies;
+    }
+  });
+
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    try {
+      const stored = localStorage.getItem('branch_records');
+      if (stored) {
+        let parsed: Branch[] = JSON.parse(stored);
+        let hasMigration = false;
+        parsed = parsed.map((b: any) => {
+          if (b.code === undefined) {
+            hasMigration = true;
+            const generatedCode = b.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5) || 'BR';
+            return { ...b, code: generatedCode };
+          }
+          return b;
+        });
+
+        // Auto-merge: if seed has more branches than stored, add missing ones
+        if (parsed.length < seedBranches.length) {
+          const storedIds = new Set(parsed.map(b => b.id));
+          const missing = seedBranches.filter(b => !storedIds.has(b.id));
+          const merged = [...parsed, ...missing];
+          localStorage.setItem('branch_records', JSON.stringify(merged));
+          return merged;
+        }
+        if (hasMigration) {
+          localStorage.setItem('branch_records', JSON.stringify(parsed));
+        }
+        return parsed;
+      }
+      return seedBranches;
+    } catch {
+      return seedBranches;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('company_records', JSON.stringify(companies));
+    } catch (e) {
+      console.error('Failed to save companies to localStorage', e);
+    }
+  }, [companies]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('branch_records', JSON.stringify(branches));
+    } catch (e) {
+      console.error('Failed to save branches to localStorage', e);
+    }
+  }, [branches]);
+
   const [activeBranchCompany, setActiveBranchCompany] = useState<Company | null>(null);
   const [search, setSearch] = useState('');
   const [showFilter, setShowFilter] = useState(false);
@@ -144,14 +237,26 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
       phone: c.phone,
       mobile: c.mobile,
       website: c.website,
-      pral_token: c.pral_token,
+      pral_sandbox_token: c.pral_sandbox_token || '',
+      pral_production_token: c.pral_production_token || '',
       city: c.city,
       zip_code: c.zip_code,
       business_type: c.business_type,
       address3: c.address3,
       is_active: c.is_active,
+      logo: c.logo || '',
     });
     setShowForm(true);
+  };
+
+  const handleLogoFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setForm(prev => ({ ...prev, logo: result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = () => {
@@ -341,7 +446,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
           </div>
         </div>
 
-        <ScrollArea maxHeight="233px" className="w-full overflow-x-auto">
+        <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[860px]">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-[#E2E8F0]">
@@ -386,8 +491,20 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
                       transition={{ delay: i * 0.03 }}
                       className="group border-b border-[#E2E8F0] transition-colors hover:bg-slate-50/60 last:border-0"
                     >
-                      <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">
-                        {c.name}
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          {c.logo ? (
+                            <img src={c.logo} alt={c.name} className="w-7 h-7 rounded-lg object-contain border border-slate-100 bg-white shrink-0" />
+                          ) : (
+                            <div
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0"
+                              style={{ background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})` }}
+                            >
+                              {c.name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-[12px] font-normal text-slate-600">{c.name}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">
                         {c.ntn || '-'}
@@ -520,6 +637,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
           <div className="space-y-1.5">
             <SectionHeader title="Company Information" icon={Building2} />
             <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
+
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="Company Name *"
@@ -557,8 +675,71 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
                   onChange={e => setForm({ ...form, cnic: e.target.value })}
                 />
               </div>
+
+              {/* Compact Logo Row — end of card */}
+              <div className="flex items-center gap-3 mt-4 pt-3.5 border-t border-slate-100">
+                {/* Logo Preview */}
+                <div
+                  className="relative w-12 h-12 rounded-xl border-2 border-dashed flex items-center justify-center shrink-0 overflow-hidden transition-all"
+                  style={{ borderColor: form.logo ? brand.primary : '#E2E8F0', background: form.logo ? 'transparent' : '#F8FAFC' }}
+                >
+                  {form.logo ? (
+                    <>
+                      <img src={form.logo} alt="Logo" className="w-full h-full object-contain rounded-xl" />
+                      <button
+                        type="button"
+                        onClick={() => setForm(prev => ({ ...prev, logo: '' }))}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors shadow"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <Image className="w-5 h-5 text-slate-300" />
+                  )}
+                </div>
+
+                {/* Upload Button & Label */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-600 mb-1">Company Logo</p>
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
+                    onDragLeave={() => setLogoDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setLogoDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handleLogoFile(file);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
+                      logoDragging
+                        ? 'border-blue-400 bg-blue-50 text-blue-600'
+                        : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700'
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {form.logo ? 'Change Logo' : 'Upload Logo'}
+                  </button>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLogoFile(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1">PNG, JPG, SVG — drag & drop supported</p>
+                </div>
+              </div>
+
             </Card>
           </div>
+
 
           {/* Section 2: Contact Information */}
           <div className="space-y-1.5">
@@ -636,11 +817,18 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
             <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="PRAL Token"
+                  label="PRAL Sandbox Token"
+                  variant="compact"
+                  placeholder="e.g. pral_test_abc123..."
+                  value={form.pral_sandbox_token}
+                  onChange={e => setForm({ ...form, pral_sandbox_token: e.target.value })}
+                />
+                <Input
+                  label="PRAL Production Token"
                   variant="compact"
                   placeholder="e.g. pral_live_abc123..."
-                  value={form.pral_token}
-                  onChange={e => setForm({ ...form, pral_token: e.target.value })}
+                  value={form.pral_production_token}
+                  onChange={e => setForm({ ...form, pral_production_token: e.target.value })}
                 />
               </div>
             </Card>
@@ -688,7 +876,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
               <button
                 key={opt.key}
                 onClick={() => setTempStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${
                   tempStatus === opt.key
                     ? 'bg-white shadow-xs border border-slate-200/40'
                     : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'

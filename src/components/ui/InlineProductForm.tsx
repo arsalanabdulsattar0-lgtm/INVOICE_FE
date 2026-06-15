@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Save, Percent, ChevronLeft, ChevronRight, Package, Tag, Layers, Box } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -8,6 +8,7 @@ import { Button } from './Button';
 import { SectionHeader, ModalHeader } from './Typography';
 import type { Product } from '../../pages/Products/ProductList';
 import { AlertModal } from './AlertModal';
+import { getCodeSettingsForBranch, generateNextCode, incrementNextCode } from '../../utils/codeSettingsHelper';
 import {
   ProductCategory,
   ProductBrand,
@@ -66,6 +67,19 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   const { brand } = useTheme();
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax'>('general');
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
+
+  const codeSetting = useMemo(() => {
+    try {
+      const activeCo = sessionStorage.getItem('active_company');
+      const activeBr = sessionStorage.getItem('active_branch');
+      const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+      const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+      return getCodeSettingsForBranch(currentCoId, currentBrId).product;
+    } catch {
+      return { mode: 'auto' as const, prefix: 'PRD-', nextNumber: 1, padding: 4 };
+    }
+  }, [isOpen]);
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     code: '',
@@ -110,9 +124,20 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   useEffect(() => {
     if (isOpen) {
       setActiveTab('general');
+      const activeCo = sessionStorage.getItem('active_company');
+      const activeBr = sessionStorage.getItem('active_branch');
+      const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+      const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+      
+      const settings = getCodeSettingsForBranch(currentCoId, currentBrId).product;
+      let nextCode = '';
+      if (settings.mode === 'auto') {
+        nextCode = generateNextCode('product', currentCoId, currentBrId);
+      }
+
       setFormData({
         name: initialData?.name || '',
-        code: initialData?.code || '',
+        code: initialData?.code || nextCode,
         category_id: initialData?.category_id || '',
         brand_id: initialData?.brand_id || '',
         make_id: initialData?.make_id || '',
@@ -214,6 +239,17 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
         else products.push(newProduct);
       } else {
         products.push(newProduct);
+
+        // Increment sequence count if auto coding is enabled
+        const activeCo = sessionStorage.getItem('active_company');
+        const activeBr = sessionStorage.getItem('active_branch');
+        const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+        const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+        
+        const settings = getCodeSettingsForBranch(currentCoId, currentBrId).product;
+        if (settings.mode === 'auto' && formData.code) {
+          incrementNextCode('product', currentCoId, currentBrId);
+        }
       }
 
       localStorage.setItem('products_list', JSON.stringify(products));
@@ -416,7 +452,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                     <Card className="p-4 shadow-none" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <Input variant="compact" label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic board pro v4" />
-                        <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PROD-1001" />
+                        <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PRD-0001" readOnly={codeSetting.mode === 'auto'} />
                         <ComboBox variant="compact" label="UOM" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
                         <Input variant="compact" label="Sale Price" type="number" value={formData.sale_price || ''} onChange={(e) => setFormData({ ...formData, sale_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
                         <Input variant="compact" label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />

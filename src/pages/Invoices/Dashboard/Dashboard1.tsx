@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FileText, CheckCircle2, Clock, AlertCircle,
+  FileText, CheckCircle2, Clock,
   Search, Plus, Users, Box, BarChart3, Sparkles,
   ArrowRight, Edit
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import Card from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/FormControls';
 import type { Invoice } from '../invoiceTypes';
-import { AlertModal } from '../../../components/ui/AlertModal';
 
 interface Dashboard1Props {
   invoiceItems?: Invoice[];
@@ -20,32 +18,13 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
   const { brand } = useTheme();
   const [aiQuery, setAiQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
-
-  // Add Product form state
-  const [productCode, setProductCode] = useState('');
-  const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productSku, setProductSku] = useState('');
-  const [customProducts, setCustomProducts] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem('custom_products');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
 
   // ── Data Calculations ──────────────────────────────────────────────────────
-  const draftInvoices = invoiceItems.filter(inv => inv.status === 'Draft');
-  const paidInvoices = invoiceItems.filter(inv => inv.status === 'Paid');
-  const overdueInvoices = invoiceItems.filter(inv => inv.status === 'Overdue');
-  const pendingInvoices = invoiceItems.filter(inv => inv.status === 'Pending');
+  const unpostedInvoices = invoiceItems.filter(inv => inv.status === 'Unposted');
+  const postedInvoices = invoiceItems.filter(inv => inv.status === 'Posted');
 
-  const totalRevenue = paidInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
-  const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0)
-    + overdueInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const totalRevenue = postedInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
+  const pendingAmount = unpostedInvoices.reduce((sum, inv) => sum + (inv.rawAmount || 0), 0);
 
   const formatCurrency = (value: number) =>
     'Rs. ' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,10 +34,8 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
     let list = [...invoiceItems];
     const q = aiQuery.toLowerCase().trim();
     if (q) {
-      if (q.includes('overdue')) list = list.filter(i => i.status === 'Overdue');
-      else if (q.includes('paid')) list = list.filter(i => i.status === 'Paid');
-      else if (q.includes('pending') || q.includes('unpaid')) list = list.filter(i => i.status === 'Pending');
-      else if (q.includes('draft')) list = list.filter(i => i.status === 'Draft');
+      if (q.includes('unposted')) list = list.filter(i => i.status === 'Unposted');
+      else if (q.includes('posted')) list = list.filter(i => i.status === 'Posted');
       else list = list.filter(i =>
         i.customer.toLowerCase().includes(q) ||
         i.id.toLowerCase().includes(q) ||
@@ -70,33 +47,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
 
   const recentInvoices = filteredInvoices.slice(0, 4);
 
-  // ── Save Product ───────────────────────────────────────────────────────────
-  const handleSaveProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!productCode || !productName || !productPrice) {
-      setAlertModal({ isOpen: true, message: 'Please fill in all required fields: Product Code, Product Name, and Price.' });
-      return;
-    }
-    const newProd = {
-      id: productCode.toUpperCase(),
-      name: productName,
-      subtitle: 'SKU: ' + (productSku || 'SKU-GEN-' + Math.floor(1000 + Math.random() * 9000)) + ' · Rs. ' + parseFloat(productPrice).toFixed(2),
-    };
-    const updated = [...customProducts, newProd];
-    setCustomProducts(updated);
-    try { localStorage.setItem('custom_products', JSON.stringify(updated)); } catch { /* ignore */ }
-    setProductCode(''); setProductName(''); setProductPrice(''); setProductSku('');
-    setShowAddProductModal(false);
-    setToastMessage('Product ' + newProd.id + ' saved successfully!');
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   // ── Status color map ───────────────────────────────────────────────────────
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-    Paid: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
-    Pending: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-    Overdue: { bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3' },
-    Draft: { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1' },
+    Posted: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+    Unposted: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -167,8 +121,8 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black tracking-wider text-slate-400">Paid</p>
-                <p className="text-xl font-black text-slate-900">{paidInvoices.length}</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Posted</p>
+                <p className="text-xl font-black text-slate-900">{postedInvoices.length}</p>
               </div>
             </Card>
 
@@ -177,28 +131,30 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
                 <Clock className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black tracking-wider text-slate-400">Pending</p>
-                <p className="text-xl font-black text-slate-900">{pendingInvoices.length}</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Unposted</p>
+                <p className="text-xl font-black text-slate-900">{unpostedInvoices.length}</p>
+              </div>
+            </Card>
+
+            <Card className="p-4 flex items-center gap-3" style={{ borderColor: brand.dark + '10' }}>
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Total Invoices</p>
+                <p className="text-xl font-black text-slate-900">{invoiceItems.length}</p>
               </div>
             </Card>
 
             <Card className="p-4 flex items-center gap-3" style={{ borderColor: brand.dark + '10' }}>
               <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <AlertCircle className="w-4 h-4" />
+                <BarChart3 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-black tracking-wider text-slate-400">Overdue</p>
-                <p className="text-xl font-black text-rose-600">{overdueInvoices.length}</p>
-              </div>
-            </Card>
-
-            <Card className="p-4 flex items-center gap-3" style={{ borderColor: brand.dark + '10' }}>
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black tracking-wider text-slate-400">Draft</p>
-                <p className="text-xl font-black text-slate-900">{draftInvoices.length}</p>
+                <p className="text-[10px] font-black tracking-wider text-slate-400">Active Rate</p>
+                <p className="text-xl font-black text-slate-900">
+                  {invoiceItems.length > 0 ? Math.round((postedInvoices.length / invoiceItems.length) * 100) : 0}%
+                </p>
               </div>
             </Card>
           </div>
@@ -223,7 +179,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
             {[
               { label: 'Create Invoice', icon: Plus, onClick: () => onViewChange?.('add-invoice-v4'), color: brand.primary, bg: 'bg-indigo-50' },
               { label: 'Add Customer', icon: Users, onClick: () => onViewChange?.('customers'), color: '#0EA5E9', bg: 'bg-sky-50' },
-              { label: 'Add Product', icon: Box, onClick: () => setShowAddProductModal(true), color: '#F59E0B', bg: 'bg-amber-50' },
+              { label: 'Add Product', icon: Box, onClick: () => window.dispatchEvent(new CustomEvent('open-product-form', { detail: {} })), color: '#F59E0B', bg: 'bg-amber-50' },
               { label: 'View Reports', icon: BarChart3, onClick: () => { setToastMessage('Reports & Analytics feature coming soon!'); setTimeout(() => setToastMessage(null), 3000); }, color: '#10B981', bg: 'bg-emerald-50' },
             ].map(action => (
               <motion.button
@@ -286,7 +242,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
             ) : (
               <div className="space-y-3">
                 {recentInvoices.map(inv => {
-                  const c = statusColors[inv.status] || statusColors.Draft;
+                  const c = statusColors[inv.status] || statusColors.Unposted;
                   return (
                     <motion.div
                       key={inv.id}
@@ -341,10 +297,8 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
               <div>
                 <h3 className="text-xs font-bold text-slate-500 mb-3">Status Breakdown</h3>
                 {[
-                  { label: 'Paid', value: paidInvoices.length, color: '#15803D' },
-                  { label: 'Pending', value: pendingInvoices.length, color: '#C2410C' },
-                  { label: 'Overdue', value: overdueInvoices.length, color: '#BE123C' },
-                  { label: 'Draft', value: draftInvoices.length, color: '#64748B' },
+                  { label: 'Posted', value: postedInvoices.length, color: '#15803D' },
+                  { label: 'Unposted', value: unpostedInvoices.length, color: '#C2410C' },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between p-2 rounded-md bg-slate-50 mb-2">
                     <span className="text-xs font-bold text-slate-600">{item.label}</span>
@@ -357,59 +311,6 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ invoiceItems = [], onViewChange
 
         </div>
       </div>
-
-      {/* Add Product Modal */}
-      <AnimatePresence>
-        {showAddProductModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4"
-            onClick={() => setShowAddProductModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm"
-            >
-              <h2 className="text-lg font-black text-slate-900 mb-4">Add New Product</h2>
-              <form onSubmit={handleSaveProduct} className="space-y-3">
-                {[
-                  { label: 'Product Code', value: productCode, setter: setProductCode, placeholder: 'e.g. PROD-001' },
-                  { label: 'Product Name', value: productName, setter: setProductName, placeholder: 'e.g. Web Design Package' },
-                  { label: 'Price (PKR)', value: productPrice, setter: setProductPrice, placeholder: 'e.g. 250.00' },
-                  { label: 'SKU (Optional)', value: productSku, setter: setProductSku, placeholder: 'e.g. SKU-WDP-01' },
-                ].map(f => (
-                  <Input
-                    key={f.label}
-                    label={f.label}
-                    type="text"
-                    value={f.value}
-                    onChange={e => f.setter(e.target.value)}
-                    placeholder={f.placeholder}
-                    size="sm"
-                  />
-                ))}
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setShowAddProductModal(false)} className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-2 rounded-xl text-sm font-bold text-white transition-colors" style={{ backgroundColor: brand.primary }}>Save Product</button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AlertModal
-        isOpen={alertModal.isOpen}
-        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
-        title="Required Fields Missing"
-        message={alertModal.message}
-        variant="warning"
-      />
 
     </div>
   );

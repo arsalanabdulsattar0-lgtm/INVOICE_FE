@@ -485,8 +485,8 @@ function executeCommand(
 
     // ── QUERY: Overdue ──
     case 'query-overdue': {
-      const overdue = invoices.filter(i => i.status === 'Overdue');
-      if (overdue.length === 0) return { type: 'info', icon: CheckCircle, color: '#10B981', title: 'No overdue invoices', subtitle: 'All invoices are current! 🎉' };
+      const overdue = invoices.filter(i => i.status === 'Unposted');
+      if (overdue.length === 0) return { type: 'info', icon: CheckCircle, color: '#10B981', title: 'No unposted invoices', subtitle: 'All invoices are posted! 🎉' };
       const totalAmt = overdue.reduce((s, i) => s + i.rawAmount, 0);
       const overdueChartBars: ChartBar[] = overdue.slice(0, 6).map(i => ({
         label: i.customer.split(' ')[0],
@@ -495,8 +495,8 @@ function executeCommand(
       }));
       return {
         type: 'data', icon: AlertCircle, color: '#EF4444',
-        title: `${overdue.length} Overdue Invoice${overdue.length > 1 ? 's' : ''}`,
-        subtitle: `Total overdue: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        title: `${overdue.length} Unposted Invoice${overdue.length > 1 ? 's' : ''}`,
+        subtitle: `Total unposted: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         chartBars: overdueChartBars,
         columns: ['ID', 'Customer', 'Amount', 'Due'],
         rows: overdue.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, Amount: i.amount, Due: i.dueDate })),
@@ -506,12 +506,12 @@ function executeCommand(
 
     // ── QUERY: Pending Invoices ──
     case 'query-pending-invoices': {
-      const pending = invoices.filter(i => i.status === 'Pending');
+      const pending = invoices.filter(i => i.status === 'Unposted');
       const totalAmt = pending.reduce((s, i) => s + i.rawAmount, 0);
       return {
         type: 'data', icon: Clock, color: '#F59E0B',
-        title: `${pending.length} Pending Invoice${pending.length > 1 ? 's' : ''}`,
-        subtitle: `Total pending: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+        title: `${pending.length} Unposted Invoice${pending.length > 1 ? 's' : ''}`,
+        subtitle: `Total: Rs. ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         columns: ['ID', 'Customer', 'Amount', 'Due'],
         rows: pending.slice(0, 6).map(i => ({ ID: i.id, Customer: i.customer, Amount: i.amount, Due: i.dueDate })),
         actions: [{ label: 'View All Invoices', action: () => onViewChange('invoices') }],
@@ -520,25 +520,24 @@ function executeCommand(
 
     // ── QUERY: Pending Amount ──
     case 'query-pending-amount': {
-      const pendingInvs = invoices.filter(i => i.status === 'Pending' || i.status === 'Overdue');
+      const pendingInvs = invoices.filter(i => i.status === 'Unposted');
       const total = pendingInvs.reduce((s, i) => s + i.rawAmount, 0);
       const pendingBars: ChartBar[] = [
-        { label: 'Pending', value: invoices.filter(i => i.status === 'Pending').reduce((s, i) => s + i.rawAmount, 0), color: '#F59E0B' },
-        { label: 'Overdue', value: invoices.filter(i => i.status === 'Overdue').reduce((s, i) => s + i.rawAmount, 0), color: '#EF4444' },
-        { label: 'Paid', value: invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + i.rawAmount, 0), color: '#10B981' },
+        { label: 'Unposted', value: total, color: '#F59E0B' },
+        { label: 'Posted', value: invoices.filter(i => i.status === 'Posted').reduce((s, i) => s + i.rawAmount, 0), color: '#10B981' },
       ];
       return {
         type: 'stat', icon: DollarSign, color: '#F59E0B',
-        title: 'Total Pending Amount',
+        title: 'Total Unposted Amount',
         stat: `Rs. ${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-        subtitle: `Across ${pendingInvs.length} unpaid invoices (${invoices.filter(i => i.status === 'Overdue').length} overdue)`,
+        subtitle: `Across ${pendingInvs.length} unposted invoices`,
         chartBars: pendingBars,
       };
     }
 
     // ── QUERY: Revenue ──
     case 'query-revenue': {
-      const paid = invoices.filter(i => i.status === 'Paid');
+      const paid = invoices.filter(i => i.status === 'Posted');
       const total = paid.reduce((s, i) => s + i.rawAmount, 0);
       const now = new Date();
       const thisMonthPaid = paid.filter(i => { const d = new Date(i.issueDate); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
@@ -564,7 +563,7 @@ function executeCommand(
 
     // ── QUERY: Paid ──
     case 'query-paid': {
-      const paid = invoices.filter(i => i.status === 'Paid');
+      const paid = invoices.filter(i => i.status === 'Posted');
       return {
         type: 'data', icon: CheckCircle, color: '#10B981',
         title: `${paid.length} Paid Invoice${paid.length > 1 ? 's' : ''}`,
@@ -576,7 +575,7 @@ function executeCommand(
 
     // ── QUERY: Drafts ──
     case 'query-drafts': {
-      const drafts = invoices.filter(i => i.status === 'Draft');
+      const drafts = invoices.filter(i => i.status === 'Unposted');
       return {
         type: 'data', icon: FileText, color: '#64748B',
         title: `${drafts.length} Draft Invoice${drafts.length > 1 ? 's' : ''}`,
@@ -587,19 +586,17 @@ function executeCommand(
 
     // ── QUERY: Total Invoices ──
     case 'query-total-invoices': {
-      const byStatus = { Paid: 0, Pending: 0, Overdue: 0, Draft: 0 } as Record<string, number>;
+      const byStatus = { Posted: 0, Unposted: 0 } as Record<string, number>;
       invoices.forEach(i => { byStatus[i.status] = (byStatus[i.status] || 0) + 1; });
       const statusBars: ChartBar[] = [
-        { label: 'Paid', value: byStatus.Paid, color: '#10B981' },
-        { label: 'Pending', value: byStatus.Pending, color: '#F59E0B' },
-        { label: 'Overdue', value: byStatus.Overdue, color: '#EF4444' },
-        { label: 'Draft', value: byStatus.Draft, color: '#94A3B8' },
+        { label: 'Posted', value: byStatus.Posted || 0, color: '#10B981' },
+        { label: 'Unposted', value: byStatus.Unposted || 0, color: '#F59E0B' },
       ];
       return {
         type: 'stat', icon: BarChart3, color: '#2759CD',
         title: 'Invoice Overview',
         stat: `${invoices.length}`,
-        subtitle: `Paid: ${byStatus.Paid} • Pending: ${byStatus.Pending} • Overdue: ${byStatus.Overdue} • Draft: ${byStatus.Draft}`,
+        subtitle: `Posted: ${byStatus.Posted || 0} • Unposted: ${byStatus.Unposted || 0}`,
         chartBars: statusBars,
       };
     }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Download, Eye, Plus,
-  FileText, CheckCircle, Clock, AlertCircle, TrendingUp,
+  FileText, CheckCircle, Clock, TrendingUp,
   ArrowUpDown, Printer, Trash2, Edit3,
   ChevronLeft, ChevronRight, SlidersHorizontal, X,
   CreditCard, Package
@@ -14,6 +14,8 @@ import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import Card from '../../components/ui/Card';
 import type { InvoiceData, InvoiceItem } from '../../types';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { seedPrintTemplates } from '../../utils/settingsData';
+import { sampleCustomers } from '../../utils/customerData';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 export type { InvoiceStatus, Invoice } from './invoiceTypes';
@@ -22,10 +24,8 @@ import type { InvoiceStatus, Invoice } from './invoiceTypes';
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 const statusConfig: Record<InvoiceStatus, { bg: string; text: string; border: string; icon: React.ElementType }> = {
-  Paid: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle },
-  Pending: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', icon: Clock },
-  Overdue: { bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: AlertCircle },
-  Draft: { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1', icon: FileText },
+  Posted: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle },
+  Unposted: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', icon: Clock },
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ interface InvoiceListProps {
   onViewChange?: (view: 'dashboard' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'customers' | 'settings' | 'help') => void;
   invoiceItems: Invoice[];
   setInvoiceItems: React.Dispatch<React.SetStateAction<Invoice[]>>;
-  onPrintInvoice?: (inv: Invoice) => void;
+  onPrintInvoice?: (inv: Invoice, templateId?: string) => void;
   onEditInvoice?: (id: string) => void;
 }
 
@@ -45,19 +45,64 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
   const { brand } = useTheme();
 
   // ─── Stats Cards Data ─────────────────────────────────────────────────────────
+  const postedCount = invoiceItems.filter(i => i.status === 'Posted').length;
+  const unpostedCount = invoiceItems.filter(i => i.status === 'Unposted').length;
+  const postedSum = invoiceItems.filter(i => i.status === 'Posted').reduce((sum, i) => sum + (i.rawAmount || 0), 0);
+  const unpostedSum = invoiceItems.filter(i => i.status === 'Unposted').reduce((sum, i) => sum + (i.rawAmount || 0), 0);
+
   const stats = [
-    { label: 'Total Invoices', value: '248', sub: '+12 this month', icon: FileText, color: brand.primary, bg: brand.surface },
-    { label: 'Paid', value: '186', sub: '75% collection', icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
-    { label: 'Pending', value: '42', sub: 'Rs. 28,450 waiting', icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
-    { label: 'Total Revenue', value: 'Rs. 142,800', sub: '+8.2% vs last mo', icon: TrendingUp, color: brand.primary, bg: brand.surface },
+    { label: 'Total Invoices', value: String(invoiceItems.length), sub: 'Overall volume', icon: FileText, color: brand.primary, bg: brand.surface },
+    { label: 'Posted', value: String(postedCount), sub: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} volume`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
+    { label: 'Unposted', value: String(unpostedCount), sub: `Rs. ${unpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} waiting`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
+    { label: 'Total Revenue', value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: 'From posted invoices', icon: TrendingUp, color: brand.primary, bg: brand.surface },
   ];
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
+  const [customerFilter, setCustomerFilter] = useState<string>('All');
+  const [saleInvNoFilter, setSaleInvNoFilter] = useState<string>('');
   const [tempStatusFilter, setTempStatusFilter] = useState<InvoiceStatus | 'All'>('All');
   const [tempTypeFilter, setTempTypeFilter] = useState<string>('All');
+  const [tempCustomerFilter, setTempCustomerFilter] = useState<string>('All');
+  const [tempSaleInvNoFilter, setTempSaleInvNoFilter] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
   const [openAction, setOpenAction] = useState<string | null>(null);
+  const [activePrintRowId, setActivePrintRowId] = useState<string | null>(null);
+  const [showPreviewPrintDropdown, setShowPreviewPrintDropdown] = useState(false);
+  const [templates] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('print_templates');
+      const deletedIds = new Set(['pt-1', 'pt-2', 'pt-3', 'pt-4', 'pt-5', 'pt-6', 'pt-7', 'pt-8', 'pt-9', 'pt-10', 'pt-11', 'pt-12']);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const filtered = parsed.filter((t: any) => !deletedIds.has(t.template_id));
+        if (filtered.length < seedPrintTemplates.length) {
+          const storedIds = new Set(filtered.map((t: any) => t.template_id));
+          const missing = seedPrintTemplates.filter(t => !storedIds.has(t.template_id));
+          const merged = [...filtered, ...missing];
+          localStorage.setItem('print_templates', JSON.stringify(merged));
+          return merged;
+        }
+        return filtered;
+      }
+      return seedPrintTemplates;
+    } catch {
+      return seedPrintTemplates;
+    }
+  });
+
+  const getTemplatesForInvoice = (inv: Invoice) => {
+    let normType: string;
+    if (inv.type === 'Sale Return') normType = 'Sales Return';
+    else if (inv.type === 'Service' || inv.type === 'Service Invoice') normType = 'Service Invoice';
+    else normType = 'Sales Invoice'; // 'Sale Invoice' and anything else
+    return templates.filter(t => t.is_active && t.document_type === normType);
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('issueDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -78,18 +123,32 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
       if (openAction && !target.closest('.action-menu-container')) {
         setOpenAction(null);
       }
+      if (activePrintRowId && !target.closest('.print-dropdown-container')) {
+        setActivePrintRowId(null);
+      }
+      if (showPreviewPrintDropdown && !target.closest('.preview-print-dropdown-container')) {
+        setShowPreviewPrintDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openAction]);
+  }, [openAction, activePrintRowId, showPreviewPrintDropdown]);
 
   const handleResetFilters = () => {
     setStatusFilter('All');
     setTypeFilter('All');
+    setCustomerFilter('All');
+    setSaleInvNoFilter('');
     setTempStatusFilter('All');
     setTempTypeFilter('All');
+    setTempCustomerFilter('All');
+    setTempSaleInvNoFilter('');
+    setStartDate('');
+    setEndDate('');
+    setTempStartDate('');
+    setTempEndDate('');
     setSearch('');
     setCurrentPage(1);
     setShowFilterDrawer(false);
@@ -165,7 +224,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           roundOff: 0,
           receivedAmount: 0,
           bankAccount: '',
-          notes: `Please include the invoice number ${inv.id} in your wire transfer reference.`
+          notes: `Please include the invoice number ${inv.id} in your wire transfer reference.`,
+          salesPerson: '',
+          department: ''
         };
         setPreviewInvoice(fallback);
       }
@@ -174,7 +235,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
     }
   };
 
-  const typeOptions = ['All', ...Array.from(new Set(invoiceItems.map(i => i.type)))];
+  const typeOptions = ['All', 'Sale Invoice', 'Sale Return', 'Service Invoice', 'Digital Invoice'];
 
   const handleDelete = (id: string, name: string) => {
     setDeleteModal({ isOpen: true, id, name });
@@ -190,13 +251,40 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
     setShowSortPanel(false);
   };
 
+  const uniqueCustomers = (() => {
+    try {
+      const stored = localStorage.getItem('customers');
+      const list = stored ? JSON.parse(stored) : [];
+      const registryNames = list.map((c: any) => c.name);
+      const allNames = new Set([
+        ...registryNames,
+        ...sampleCustomers.map(c => c.name),
+        ...invoiceItems.map(inv => inv.customer)
+      ]);
+      return ['All', ...Array.from(allNames).sort()];
+    } catch {
+      const allNames = new Set([
+        ...sampleCustomers.map(c => c.name),
+        ...invoiceItems.map(inv => inv.customer)
+      ]);
+      return ['All', ...Array.from(allNames).sort()];
+    }
+  })();
+
   const filtered = invoiceItems
     .filter(inv => {
       const matchSearch = inv.id.toLowerCase().includes(search.toLowerCase()) ||
         inv.customer.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'All' || inv.status === statusFilter;
       const matchType = typeFilter === 'All' || inv.type === typeFilter;
-      return matchSearch && matchStatus && matchType;
+      const matchCustomer = customerFilter === 'All' || inv.customer === customerFilter;
+      const matchSaleInvNo = !saleInvNoFilter.trim() || inv.id.toLowerCase().includes(saleInvNoFilter.toLowerCase());
+      
+      let matchDate = true;
+      if (startDate) matchDate = matchDate && inv.issueDate >= startDate;
+      if (endDate) matchDate = matchDate && inv.issueDate <= endDate;
+      
+      return matchSearch && matchStatus && matchType && matchCustomer && matchSaleInvNo && matchDate;
     })
     .sort((a, b) => {
       let av: string | number = a[sortKey] as string | number;
@@ -208,7 +296,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
-  const statusTabs: (InvoiceStatus | 'All')[] = ['All', 'Paid', 'Pending', 'Overdue', 'Draft'];
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: 'id', label: 'Invoice ID' },
@@ -233,9 +320,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Invoice List</h1>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Sale List</h1>
           <p className="text-[12px] font-medium text-slate-400 mt-0.5">
-            {filtered.length} invoices found · Last updated just now
+            {filtered.length} sales found · Last updated just now
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -254,12 +341,14 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
             onClick={() => {
               setTempStatusFilter(statusFilter);
               setTempTypeFilter(typeFilter);
+              setTempStartDate(startDate);
+              setTempEndDate(endDate);
               setShowFilterDrawer(true);
             }}
             className="relative"
           >
             Filter
-            {(statusFilter !== 'All' || typeFilter !== 'All' || search !== '') && (
+            {(statusFilter !== 'All' || typeFilter !== 'All' || customerFilter !== 'All' || saleInvNoFilter !== '' || startDate !== '' || endDate !== '' || search !== '') && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
                 style={{ background: brand.accent || '#EF4444' }}>!</span>
             )}
@@ -313,10 +402,10 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Invoice Records</h3>
+            <h3 className="text-[11px] font-black tracking-wide">Sale Records</h3>
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
               style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filtered.length} invoices
+              {filtered.length} sales
             </span>
           </div>
 
@@ -369,34 +458,6 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           </div>
         </div>
 
-        {/* Status Filter Tabs */}
-        <div className="px-4 py-2 border-b flex items-center justify-between"
-          style={{ borderColor: brand.dark + '08', background: brand.surface + '40' }}>
-          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: brand.surface }}>
-            {statusTabs.map(tab => (
-              <button key={tab}
-                onClick={() => { setStatusFilter(tab); setCurrentPage(1); }}
-                className="relative px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors duration-200"
-                style={{ color: statusFilter === tab ? '#fff' : brand.dark + 'aa', zIndex: 1 }}
-              >
-                {statusFilter === tab && (
-                  <motion.div
-                    layoutId="activeTabPill"
-                    className="absolute inset-0 rounded-lg"
-                    style={{ background: brand.primary }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                    initial={false}
-                  />
-                )}
-                <span className="relative z-10">{tab}</span>
-              </button>
-            ))}
-          </div>
-          <p className="text-[10px] font-medium text-slate-400">
-            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-            {typeFilter !== 'All' && <span className="ml-1 font-bold" style={{ color: brand.primary }}>· {typeFilter}</span>}
-          </p>
-        </div>
 
         {/* Table */}
         <AnimatePresence mode="popLayout">
@@ -437,7 +498,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                 </thead>
                 <tbody>
                   {paginated.map((inv, i) => {
-                    const cfg = statusConfig[inv.status];
+                    const cfg = statusConfig[inv.status] || statusConfig['Unposted'];
                     const StatusIcon = cfg.icon;
                     return (
                       <motion.tr key={inv.id}
@@ -466,7 +527,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                         {/* Due Date */}
                         <td className="px-4 py-3">
                           <span className="text-[12px] font-normal"
-                            style={{ color: inv.status === 'Overdue' ? '#BE123C' : 'rgb(100 116 139)' }}>
+                             style={{ color: inv.status === 'Unposted' ? '#BE123C' : 'rgb(100 116 139)' }}>
                             {inv.dueDate}
                           </span>
                         </td>
@@ -501,10 +562,46 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                             <Button onClick={() => onEditInvoice?.(inv.id)}
                               variant="ghost" size="xs" icon={Edit3} title="Edit"
                               className="!px-1 text-blue-600 hover:bg-blue-50" />
-                            <Button onClick={() => onPrintInvoice?.(inv)}
-                              variant="ghost" size="xs" icon={Printer} title="Print"
-                              className="!px-1 text-blue-600 hover:bg-blue-50" />
-                            <Button onClick={() => onPrintInvoice?.(inv)}
+                            <div className="relative print-dropdown-container">
+                              <Button onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePrintRowId(activePrintRowId === inv.id ? null : inv.id);
+                              }}
+                                variant="ghost" size="xs" icon={Printer} title="Print Layout"
+                                className="!px-1 text-blue-600 hover:bg-blue-50" />
+                              <AnimatePresence>
+                                {activePrintRowId === inv.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                                    className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl border p-2 w-48 shadow-lg"
+                                    style={{ borderColor: '#E2E8F0' }}
+                                  >
+                                    {getTemplatesForInvoice(inv).map(t => (
+                                      <button
+                                        key={t.template_id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onPrintInvoice?.(inv, t.template_id);
+                                          setActivePrintRowId(null);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-brand-dark cursor-pointer border-none"
+                                      >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                        {t.template_name} ({t.paper_size})
+                                      </button>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                            <Button onClick={() => {
+                              const normType = inv.type === 'Sale Return' ? 'Sales Return' : 'Sales Invoice';
+                              const matchingTemplates = templates.filter(t => t.is_active && t.document_type === normType);
+                              const defaultTemplate = matchingTemplates.find(t => t.is_default) || matchingTemplates[0] || templates.find(t => t.is_active) || templates[0];
+                              onPrintInvoice?.(inv, defaultTemplate?.template_id);
+                            }}
                               variant="ghost" size="xs" icon={Download} title="Download PDF"
                               className="!px-1 text-blue-600 hover:bg-blue-50" />
                             <Button onClick={() => handleDelete(inv.id, inv.customer)}
@@ -582,8 +679,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                     <span className="text-xs font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 capitalize">{previewInvoice.type}</span>
                     {(() => {
                       const invoiceObj = invoiceItems.find(inv => inv.id === previewInvoice.invoiceNumber);
-                      const status = invoiceObj ? invoiceObj.status : 'Draft';
-                      const cfg = statusConfig[status] || statusConfig['Draft'];
+                      const status = invoiceObj ? invoiceObj.status : 'Unposted';
+                      const cfg = statusConfig[status] || statusConfig['Unposted'];
                       const StatusIcon = cfg.icon;
                       return (
                         <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold whitespace-nowrap"
@@ -782,34 +879,71 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                 >
                   Close Preview
                 </Button>
-                <Button
-                  onClick={() => {
-                    const subtotal = previewInvoice.items.reduce((sum: number, item: InvoiceItem) => sum + (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0), 0);
-                    const taxAmount = (subtotal * (previewInvoice.taxRate || 0)) / 100;
-                    const discountVal = previewInvoice.discountAmount || (subtotal * (previewInvoice.discountPercentage || 0)) / 100;
-                    const netPayable = subtotal + taxAmount - discountVal + (previewInvoice.shippingCharges || 0) + (previewInvoice.roundOff || 0);
+                <div className="relative preview-print-dropdown-container">
+                  <Button
+                    onClick={() => setShowPreviewPrintDropdown(!showPreviewPrintDropdown)}
+                    variant="primary"
+                    size="md"
+                    icon={Printer}
+                  >
+                    Print / PDF ▼
+                  </Button>
+                  <AnimatePresence>
+                    {showPreviewPrintDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                        className="absolute right-0 bottom-full mb-1 z-[200] bg-white rounded-xl border p-2 w-48 shadow-lg"
+                        style={{ borderColor: '#E2E8F0' }}
+                      >
+                        {getTemplatesForInvoice({
+                          id: previewInvoice.invoiceNumber,
+                          customer: previewInvoice.customerName,
+                          customerInitials: previewInvoice.customerName.slice(0, 2).toUpperCase(),
+                          customerColor: brand.primary,
+                          issueDate: previewInvoice.date,
+                          dueDate: previewInvoice.dueDate,
+                          amount: '',
+                          rawAmount: 0,
+                          status: 'Unposted',
+                          payment: 'Net 30',
+                          type: previewInvoice.type
+                        } as Invoice).map(t => (
+                          <button
+                            key={t.template_id}
+                            onClick={() => {
+                              const subtotal = previewInvoice.items.reduce((sum: number, item: InvoiceItem) => sum + (item.quantity * item.price) - item.discount + item.tax + (item.furtherTax || 0), 0);
+                              const taxAmount = (subtotal * (previewInvoice.taxRate || 0)) / 100;
+                              const discountVal = previewInvoice.discountAmount || (subtotal * (previewInvoice.discountPercentage || 0)) / 100;
+                              const netPayable = subtotal + taxAmount - discountVal + (previewInvoice.shippingCharges || 0) + (previewInvoice.roundOff || 0);
 
-                    const mapped: Invoice = {
-                      id: previewInvoice.invoiceNumber,
-                      customer: previewInvoice.customerName,
-                      customerInitials: previewInvoice.customerName.slice(0, 2).toUpperCase(),
-                      customerColor: brand.primary,
-                      issueDate: previewInvoice.date,
-                      dueDate: previewInvoice.dueDate,
-                      amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                      rawAmount: netPayable,
-                      status: 'Pending',
-                      payment: 'Net 30',
-                      type: previewInvoice.type
-                    };
-                    onPrintInvoice?.(mapped);
-                  }}
-                  variant="primary"
-                  size="md"
-                  icon={Printer}
-                >
-                  Print / PDF
-                </Button>
+                              const mapped: Invoice = {
+                                id: previewInvoice.invoiceNumber,
+                                customer: previewInvoice.customerName,
+                                customerInitials: previewInvoice.customerName.slice(0, 2).toUpperCase(),
+                                customerColor: brand.primary,
+                                issueDate: previewInvoice.date,
+                                dueDate: previewInvoice.dueDate,
+                                amount: `Rs. ${netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                                rawAmount: netPayable,
+                                status: 'Unposted',
+                                payment: 'Net 30',
+                                type: previewInvoice.type
+                              };
+                              onPrintInvoice?.(mapped, t.template_id);
+                              setShowPreviewPrintDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-[11px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-brand-dark cursor-pointer border-none"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            {t.template_name} ({t.paper_size})
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -824,29 +958,65 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
         onApply={() => {
           setStatusFilter(tempStatusFilter);
           setTypeFilter(tempTypeFilter);
+          setCustomerFilter(tempCustomerFilter);
+          setSaleInvNoFilter(tempSaleInvNoFilter);
+          setStartDate(tempStartDate);
+          setEndDate(tempEndDate);
           setCurrentPage(1);
           setShowFilterDrawer(false);
         }}
       >
         <div className="space-y-4">
           <Select
+            variant="compact"
+            label="Customer"
+            value={tempCustomerFilter}
+            onChange={(e) => setTempCustomerFilter(e.target.value)}
+            options={uniqueCustomers.map(c => ({ value: c, label: c === 'All' ? 'All Customers' : c }))}
+          />
+
+          <Input
+            variant="compact"
+            label="Sale Inv No"
+            placeholder="Search by invoice number..."
+            value={tempSaleInvNoFilter}
+            onChange={(e) => setTempSaleInvNoFilter(e.target.value)}
+          />
+
+          <Select
+            variant="compact"
             label="Status"
             value={tempStatusFilter}
             onChange={(e) => setTempStatusFilter(e.target.value as any)}
             options={[
               { value: 'All', label: 'All Statuses' },
-              { value: 'Paid', label: 'Paid' },
-              { value: 'Pending', label: 'Pending' },
-              { value: 'Overdue', label: 'Overdue' },
-              { value: 'Draft', label: 'Draft' },
+              { value: 'Posted', label: 'Posted' },
+              { value: 'Unposted', label: 'Unposted' },
             ]}
           />
 
           <Select
+            variant="compact"
             label="Invoice Type"
             value={tempTypeFilter}
             onChange={(e) => setTempTypeFilter(e.target.value)}
             options={typeOptions.map(t => ({ value: t, label: t === 'All' ? 'All Types' : t }))}
+          />
+
+          <Input
+            variant="compact"
+            type="date"
+            label="From Date"
+            value={tempStartDate}
+            onChange={(e) => setTempStartDate(e.target.value)}
+          />
+
+          <Input
+            variant="compact"
+            type="date"
+            label="To Date"
+            value={tempEndDate}
+            onChange={(e) => setTempEndDate(e.target.value)}
           />
         </div>
       </FilterDrawer>

@@ -13,7 +13,7 @@ import { TableHeader, SectionHeader } from '../../../components/ui/Typography';
 import Card from '../../../components/ui/Card';
 import { useTheme } from '../../../context/ThemeContext';
 import { seedCompanies, seedBranches, seedUsers, ROLES } from '../../../utils/settingsData';
-import type { UserRecord } from '../../../utils/settingsData';
+import type { UserRecord, Company, Branch } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 
 interface UserManagementModuleProps {
@@ -34,13 +34,44 @@ const emptyUser = (): Omit<UserRecord, 'id'> => ({
   branchIds: [],
 });
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ brand }) => {
+  const companies = useMemo<Company[]>(() => {
+    try {
+      const stored = localStorage.getItem('company_records');
+      return stored ? JSON.parse(stored) : seedCompanies;
+    } catch {
+      return seedCompanies;
+    }
+  }, []);
+
+  const branches = useMemo<Branch[]>(() => {
+    try {
+      const stored = localStorage.getItem('branch_records');
+      return stored ? JSON.parse(stored) : seedBranches;
+    } catch {
+      return seedBranches;
+    }
+  }, []);
+
   const [users, setUsers] = useState<UserRecord[]>(() => {
     try {
       const stored = localStorage.getItem('user_records');
-      return stored ? JSON.parse(stored) : seedUsers;
+      if (stored) {
+        const parsed: UserRecord[] = JSON.parse(stored);
+        const hasArsalan = parsed.some(u => u.id === 'u-arsalan');
+        if (!hasArsalan) {
+          const arsalanSeed = seedUsers.find(u => u.id === 'u-arsalan');
+          if (arsalanSeed) {
+            const merged = [arsalanSeed, ...parsed];
+            localStorage.setItem('user_records', JSON.stringify(merged));
+            return merged;
+          }
+        }
+        return parsed;
+      }
+      return seedUsers;
     } catch {
       return seedUsers;
     }
@@ -158,6 +189,11 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
       setError('Email / Username is required.');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      setError('Please enter a valid email address (e.g. user@domain.com).');
+      return;
+    }
     if (!form.roles || form.roles.length === 0) {
       setError('Please select at least one role.');
       return;
@@ -241,7 +277,7 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
     }
 
     // Filter branch selection to only keep branches belonging to currently selected companies
-    const activeBranches = seedBranches.filter(b => nextCompanies.includes(b.companyId)).map(b => b.id);
+    const activeBranches = branches.filter(b => nextCompanies.includes(b.companyId)).map(b => b.id);
     const nextBranches = form.branchIds.filter(id => activeBranches.includes(id));
 
     // Verify default company selection
@@ -276,7 +312,7 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
   };
 
   const handleSelectAllBranchesForCompany = (companyId: string, selectAll: boolean) => {
-    const companyBranches = seedBranches.filter(b => b.companyId === companyId).map(b => b.id);
+    const companyBranches = branches.filter(b => b.companyId === companyId).map(b => b.id);
     let nextBranches = [...form.branchIds];
 
     if (selectAll) {
@@ -360,7 +396,7 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
           </div>
         </div>
 
-        <ScrollArea maxHeight="220px" className="w-full overflow-x-auto">
+        <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[760px]">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="border-b border-[#E2E8F0]">
@@ -660,9 +696,9 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
             <SectionHeader title="Company & branch assignments" icon={Building2} />
             <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
               <div className="space-y-4 max-h-[240px] overflow-y-auto pr-1">
-                {seedCompanies.map(company => {
+                {companies.map(company => {
                   const isCompanyChecked = form.companyIds.includes(company.id);
-                  const companyBranches = seedBranches.filter(b => b.companyId === company.id);
+                  const companyBranches = branches.filter(b => b.companyId === company.id);
 
                   // Check if all branches of this company are selected
                   const selectedBranchesOfCompany = form.branchIds.filter(id =>
@@ -775,7 +811,7 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
               <button
                 key={opt.key}
                 onClick={() => setTempStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${
                   tempStatus === opt.key
                     ? 'bg-white shadow-xs border border-slate-200/40'
                     : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Eye, User, ShieldCheck, Hash } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Eye, User, ShieldCheck } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
-import { ComboBox } from '../../../components/ui/ComboBox';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
 import { FilterDrawer } from '../../../components/ui/FilterDrawer';
 import { Modal } from '../../../components/ui/Modal';
@@ -13,6 +12,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { seedSalespeople } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { SalesTargetsModal } from './SalesTargetsModal';
+import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
 
 export interface SalesPerson {
   id: string;
@@ -89,7 +89,36 @@ const emptySP = (): Omit<SalesPerson, 'id'> & { spId: string } => ({
 });
 
 export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) => {
-  const [people, setPeople] = useState<SalesPerson[]>(seedSalespeople);
+  const [people, setPeople] = useState<SalesPerson[]>(() => {
+    try {
+      const stored = localStorage.getItem('sales_persons');
+      if (stored) {
+        const parsed: SalesPerson[] = JSON.parse(stored);
+        const hasArsalan = parsed.some(p => p.id === 's-arsalan');
+        if (!hasArsalan) {
+          const arsalanSeed = seedSalespeople.find(p => p.id === 's-arsalan');
+          if (arsalanSeed) {
+            const merged = [arsalanSeed, ...parsed];
+            localStorage.setItem('sales_persons', JSON.stringify(merged));
+            return merged;
+          }
+        }
+        return parsed;
+      }
+      return seedSalespeople;
+    } catch {
+      return seedSalespeople;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('sales_persons', JSON.stringify(people));
+    } catch (e) {
+      console.error('Failed to save sales persons to localStorage', e);
+    }
+  }, [people]);
+
   const [search, setSearch] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -100,12 +129,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
   const [viewingTarget, setViewingTarget] = useState<SalesPerson | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
 
-  // Build options list for Salesperson ID combo box
-  const spIdOptions = people.map(p => ({
-    id: p.id,
-    name: p.id,
-    subtitle: p.name,
-  }));
+
 
   const filtered = people.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -116,7 +140,17 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
 
   const openAdd = () => {
     setEditing(null);
-    setForm(emptySP());
+    const activeCo = sessionStorage.getItem('active_company');
+    const activeBr = sessionStorage.getItem('active_branch');
+    const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+    const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+    
+    const generatedId = generateNextCode('salesperson', currentCoId, currentBrId);
+
+    setForm({
+      ...emptySP(),
+      spId: generatedId
+    });
     setShowForm(true);
   };
 
@@ -175,7 +209,17 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
         prev.map(p => (p.id === editing.id ? { ...editing, ...finalForm } : p))
       );
     } else {
-      setPeople(prev => [...prev, { id: `s${Date.now()}`, ...finalForm }]);
+      const activeCo = sessionStorage.getItem('active_company');
+      const activeBr = sessionStorage.getItem('active_branch');
+      const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
+      const currentBrId = activeBr ? JSON.parse(activeBr).id : 'br-1';
+      
+      const newId = form.spId || `s${Date.now()}`;
+      setPeople(prev => [...prev, { id: newId, ...finalForm }]);
+
+      if (form.spId) {
+        incrementNextCode('salesperson', currentCoId, currentBrId);
+      }
     }
     setShowForm(false);
   };
@@ -259,7 +303,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
           </div>
         </div>
 
-        <ScrollArea maxHeight="204px" className="w-full overflow-x-auto">
+        <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[860px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
@@ -392,14 +436,11 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
             <SectionHeader title="Basic Contact Information" icon={User} />
             <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
               <div className="grid grid-cols-2 gap-4">
-                <ComboBox
-                  label="Salesperson ID"
-                  value={form.spId}
-                  onChange={val => setForm({ ...form, spId: val })}
-                  options={spIdOptions}
-                  placeholder="Search Salesperson ID..."
+                <Input
+                  label="Salesperson Code"
                   variant="compact"
-                  icon={Hash}
+                  value={form.spId}
+                  readOnly
                 />
                 <Input
                   label="Salesperson Name *"
@@ -613,7 +654,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
               <button
                 key={opt.key}
                 onClick={() => setTempStatus(opt.key)}
-                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer ${tempStatus === opt.key
+                className={`py-1 rounded text-[11px] font-bold transition-all text-center cursor-pointer outline-none focus:outline-none ${tempStatus === opt.key
                     ? 'bg-white shadow-xs border border-slate-200/40'
                     : 'text-slate-500 hover:text-slate-800 bg-transparent border border-transparent'
                   }`}

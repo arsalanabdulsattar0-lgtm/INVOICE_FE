@@ -48,7 +48,7 @@ const initialValues: ProductSetupValue[] = [
   { id: 'v-5', typeId: 't-3', typeName: 'Brand', code: 'BRD-1001', name: 'Apple', active: true }
 ];
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand }) => {
   // --- State ---
@@ -103,9 +103,13 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
   // --- Derived Data ---
   const filteredTypes = useMemo(() => {
     return types.filter(t => {
-      if (t.companyId !== 'co1') return false;
       const q = searchType.toLowerCase();
-      return t.code.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.prefix.toLowerCase().includes(q);
+      const companyName = seedCompanies.find(c => c.id === t.companyId)?.name || '';
+      return (
+        companyName.toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        t.prefix.toLowerCase().includes(q)
+      );
     });
   }, [types, searchType]);
 
@@ -118,8 +122,9 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
   // --- CRUD Handlers for Types ---
   const openAddType = () => {
     setEditingType(null);
+    const activeCo = sessionStorage.getItem('active_company') || seedCompanies[0]?.id || '';
     setFormType({
-      companyId: seedCompanies[0]?.id || '',
+      companyId: activeCo,
       code: '',
       name: '',
       prefix: '',
@@ -145,10 +150,6 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
   };
 
   const handleSaveType = () => {
-    if (!formType.code.trim()) {
-      setTypeError('Code is required.');
-      return;
-    }
     if (!formType.name.trim()) {
       setTypeError('Name is required.');
       return;
@@ -162,15 +163,17 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
       return;
     }
 
+    const generatedCode = formType.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
     if (editingType) {
       // If setup type name is updated, we must also update all values referencing it
       const oldName = editingType.name;
-      setTypes(prev => prev.map(t => t.id === editingType.id ? { ...editingType, ...formType } : t));
+      setTypes(prev => prev.map(t => t.id === editingType.id ? { ...editingType, ...formType, code: generatedCode } : t));
       if (oldName !== formType.name) {
         setValues(prev => prev.map(v => v.typeId === editingType.id ? { ...v, typeName: formType.name } : v));
       }
     } else {
-      setTypes(prev => [...prev, { id: `t-${Date.now()}`, ...formType }]);
+      setTypes(prev => [...prev, { id: `t-${Date.now()}`, ...formType, code: generatedCode }]);
     }
     setShowTypeForm(false);
   };
@@ -298,11 +301,11 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
         </div>
 
         {/* Table Area */}
-        <ScrollArea maxHeight="233px">
+        <ScrollArea height="290px">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
-                {['Code', 'Name', 'Prefix', 'Serial Start', 'Active', 'Actions'].map((h) => (
+                {['Company', 'Name', 'Preview Code', 'Active', 'Actions'].map((h) => (
                   <TableHeader
                     key={h}
                     label={h}
@@ -316,7 +319,7 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
             <tbody>
               {paginatedTypes.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[12px] text-slate-400">
+                  <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-slate-400">
                     No setup types configured.
                   </td>
                 </tr>
@@ -329,10 +332,9 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
                     transition={{ delay: i * 0.03 }}
                     className="group border-b border-[#E2E8F0] transition-colors hover:bg-slate-50/60 last:border-0"
                   >
-                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{t.code}</td>
+                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{seedCompanies.find(c => c.id === t.companyId)?.name || 'Unknown Company'}</td>
                     <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{t.name}</td>
-                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-650 font-mono">{t.prefix}</td>
-                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{t.serialStart}</td>
+                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-650 font-mono">{t.prefix ? `${t.prefix}-${t.serialStart}` : ''}</td>
                     <td className="px-4 py-2.5">
                       {t.active ? (
                         <ActiveChip label="Active" size="md" />
@@ -443,26 +445,17 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
       >
         <div className="space-y-4">
           {typeError && (
-            <div className="p-3 text-[11px] font-bold text-red-650 bg-red-50 border border-red-100 rounded-xl">
+            <div className="p-3 text-[11px] font-bold text-red-655 bg-red-50 border border-red-100 rounded-xl">
               {typeError}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Input
-                label="Company"
-                variant="compact"
-                value="Acme Corporation"
-                readOnly
-              />
-            </div>
             <Input
-              label="Code *"
+              label="Company *"
               variant="compact"
-              placeholder="e.g. PROD_CAT"
-              value={formType.code}
-              onChange={e => setFormType({ ...formType, code: e.target.value })}
+              value={seedCompanies.find(c => c.id === formType.companyId)?.name || 'Unknown Company'}
+              readOnly
             />
             <Input
               label="Name *"
@@ -485,6 +478,12 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
               placeholder="100"
               value={String(formType.serialStart)}
               onChange={e => setFormType({ ...formType, serialStart: parseInt(e.target.value) || 0 })}
+            />
+            <Input
+              label="Preview Code"
+              variant="compact"
+              value={formType.prefix ? `${formType.prefix}-${formType.serialStart}` : ''}
+              readOnly
             />
             <div className="flex items-center pt-5">
               <Toggle
@@ -511,7 +510,6 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
         isOpen={activeValueType !== null}
         onClose={() => setActiveValueType(null)}
         setupType={activeValueType}
-        allSetupTypes={types}
         values={values}
         onSave={handleSaveDrawerValue}
         onDelete={handleDeleteDrawerValue}

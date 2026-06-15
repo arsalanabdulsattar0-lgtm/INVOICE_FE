@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
+export type InvoiceStatus = 'Posted' | 'Unposted';
 
 export interface Invoice {
   id: string;
@@ -12,6 +12,8 @@ export interface Invoice {
   status: InvoiceStatus;
   payment: string;
   type: string;
+  companyId?: string;
+  branchId?: string;
 }
 
 export interface InvoiceItem {
@@ -49,4 +51,6 @@ export interface InvoiceData {
   receivedAmount: number;
   bankAccount: string;
   notes: string;
+  salesPerson: string;
+  department: string;
 }

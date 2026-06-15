@@ -161,7 +161,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
         {mounted && createPortal(
           <AnimatePresence>
-            {isOpen && query.length >= 3 && (
+            {isOpen && (
               <motion.div
                 ref={dropdownRef}
                 layout={false}

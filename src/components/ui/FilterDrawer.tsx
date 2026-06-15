@@ -71,8 +71,8 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
 
             {/* Drawer Footer */}
             {(onReset || onApply) && (
-              <div className="p-3 border-t border-[#E2E8F0] flex justify-end items-center gap-2 bg-slate-50/50 flex-shrink-0">
-                {onReset && (
+              <div className="p-3 border-t border-[#E2E8F0] flex justify-between items-center gap-2 bg-slate-50/50 flex-shrink-0">
+                {onReset ? (
                   <Button
                     onClick={onReset}
                     variant="white"
@@ -81,6 +81,8 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   >
                     {resetLabel}
                   </Button>
+                ) : (
+                  <div />
                 )}
                 {onApply && (
                   <Button
