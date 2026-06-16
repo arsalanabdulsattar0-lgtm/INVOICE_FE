@@ -787,7 +787,9 @@ const CustomerManagement: React.FC = () => {
                               checked={filteredCustomers.length > 0 && selectedCustomerIds.length === filteredCustomers.length}
                               onChange={handleSelectAll}
                               className="rounded border-slate-300 text-blue-650 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
-                                          {([
+                            />
+                          </th>
+                          {([
                             { label: 'Customer Details', key: 'name', width: 'w-[22%]' },
                             { label: 'Phone Number', key: 'email', width: 'w-[13%]' },
                             { label: 'City', key: null, width: 'w-[11%]' },

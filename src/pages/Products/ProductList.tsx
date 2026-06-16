@@ -701,7 +701,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                               checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
                               onChange={handleSelectAll}
                               className="rounded border-slate-300 text-blue-600 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
-                                            {([
+                            />
+                          </th>
+                          {([
                             { label: 'Product Details', key: 'name', width: 'w-[43%]' },
                             { label: 'Category', key: 'category_id', width: 'w-[13%]' },
                             { label: 'In Stock', key: 'qty', width: 'w-[10%]' },
@@ -947,15 +949,29 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                   <SectionHeader title="Product Information" icon={Box} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input variant="compact" label="Category" readOnly value={getCategoryName(viewingProduct.category_id)} />
-                      <Input variant="compact" label="Brand" readOnly value={getBrandName(viewingProduct.brand_id)} />
-                      <Input variant="compact" label="Model" readOnly value={ProductModel.find(m => m.id === viewingProduct.model_id)?.name || 'Generic'} />
-                      <Input variant="compact" label="Size" readOnly value={ProductSize.find(s => s.id === viewingProduct.size_id)?.name || 'Standard'} />
-                      <Input variant="compact" label="Unit Of Measure" readOnly value={getUOMName(viewingProduct.uom_id)} />
-                      <Input variant="compact" label="Weight (kg)" readOnly value={viewingProduct.weight ? String(viewingProduct.weight) : 'N/A'} />
-                      <div className="col-span-2">
-                        <Input variant="compact" label="Description" readOnly value={viewingProduct.description || 'N/A'} />
-                      </div>
+                      {docSettings.fields['Category'] && (
+                        <Input variant="compact" label="Category" readOnly value={getCategoryName(viewingProduct.category_id)} />
+                      )}
+                      {docSettings.fields['Brand'] && (
+                        <Input variant="compact" label="Brand" readOnly value={getBrandName(viewingProduct.brand_id)} />
+                      )}
+                      {docSettings.fields['Model'] && (
+                        <Input variant="compact" label="Model" readOnly value={ProductModel.find(m => m.id === viewingProduct.model_id)?.name || 'Generic'} />
+                      )}
+                      {docSettings.fields['Size'] && (
+                        <Input variant="compact" label="Size" readOnly value={ProductSize.find(s => s.id === viewingProduct.size_id)?.name || 'Standard'} />
+                      )}
+                      {docSettings.fields['Unit Of Measure'] && (
+                        <Input variant="compact" label="Unit Of Measure" readOnly value={getUOMName(viewingProduct.uom_id)} />
+                      )}
+                      {docSettings.fields['Weight (kg)'] && (
+                        <Input variant="compact" label="Weight (kg)" readOnly value={viewingProduct.weight ? String(viewingProduct.weight) : 'N/A'} />
+                      )}
+                      {docSettings.fields['Description'] && (
+                        <div className="col-span-2">
+                          <Input variant="compact" label="Description" readOnly value={viewingProduct.description || 'N/A'} />
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </div>
@@ -965,10 +981,18 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                   <SectionHeader title="Pricing & Inventory" icon={CreditCard} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input variant="compact" label="Sale Price (Rs.)" readOnly value={viewingProduct.sale_price.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-                      <Input variant="compact" label="Cost Price (Rs.)" readOnly value={viewingProduct.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-                      <Input variant="compact" label="Stocks (qty)" readOnly value={`${viewingProduct.opening_qty} units`} />
-                      <Input variant="compact" label="Low Stock Level" readOnly value={`${viewingProduct.low_stock_level} units`} />
+                      {docSettings.fields['Sale Price'] && (
+                        <Input variant="compact" label="Sale Price (Rs.)" readOnly value={viewingProduct.sale_price.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      )}
+                      {docSettings.fields['Cost Price'] && (
+                        <Input variant="compact" label="Cost Price (Rs.)" readOnly value={viewingProduct.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
+                      )}
+                      {docSettings.fields['Stocks (qty)'] && (
+                        <Input variant="compact" label="Stocks (qty)" readOnly value={`${viewingProduct.opening_qty} units`} />
+                      )}
+                      {docSettings.fields['Low Stock Level'] && (
+                        <Input variant="compact" label="Low Stock Level" readOnly value={`${viewingProduct.low_stock_level} units`} />
+                      )}
                       <Input variant="compact" label="Status" readOnly value={viewingProduct.is_active ? 'Active' : 'Inactive'} />
                     </div>
                   </Card>
@@ -979,9 +1003,15 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                   <SectionHeader title="Tax Compliance & Codes" icon={ShieldCheck} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-3 gap-4">
-                      <Input variant="compact" label="GST Rate (%)" readOnly value={`${viewingProduct.gst_rate}%`} />
-                      <Input variant="compact" label="Non-Filer Rate (%)" readOnly value={`${viewingProduct.non_filer_gst_rate}%`} />
-                      <Input variant="compact" label="HS Code" readOnly value={viewingProduct.hs_code || 'N/A'} />
+                      {docSettings.fields['GST Rate'] && (
+                        <Input variant="compact" label="GST Rate (%)" readOnly value={`${viewingProduct.gst_rate}%`} />
+                      )}
+                      {docSettings.fields['Non-Filer Rate'] && (
+                        <Input variant="compact" label="Non-Filer Rate (%)" readOnly value={`${viewingProduct.non_filer_gst_rate}%`} />
+                      )}
+                      {docSettings.fields['HS Code'] && (
+                        <Input variant="compact" label="HS Code" readOnly value={viewingProduct.hs_code || 'N/A'} />
+                      )}
                     </div>
                   </Card>
                 </div>
