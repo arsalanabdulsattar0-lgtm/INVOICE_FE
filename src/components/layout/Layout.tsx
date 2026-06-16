@@ -38,9 +38,10 @@ const Layout: React.FC<Props> = ({
   const { brand } = useTheme();
 
   React.useEffect(() => {
-    (window as any).isSidebarCollapsed = isCollapsed;
-    window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { isCollapsed } }));
-  }, [isCollapsed]);
+    const reportedCollapsed = activeView === 'dashboard' ? isCollapsed : true;
+    (window as any).isSidebarCollapsed = reportedCollapsed;
+    window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { isCollapsed: reportedCollapsed } }));
+  }, [isCollapsed, activeView]);
 
   return (
     <div

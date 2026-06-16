@@ -16,7 +16,9 @@ const DOC_TYPES = [
   'Sale Invoice',
   'Sale Return',
   'Service Invoice',
-  'Digital Invoice'
+  'Digital Invoice',
+  'Customer',
+  'Inventory'
 ];
 
 const DEFAULT_FIELDS: Record<string, string[]> = {
@@ -24,6 +26,8 @@ const DEFAULT_FIELDS: Record<string, string[]> = {
   'Service Invoice': ['Customer', 'Issue Date', 'Invoice ID', 'Reference', 'Customer Address', 'Due Date', 'Invoice Type', 'Department', 'Sales Person'],
   'Digital Invoice': ['Customer', 'Issue Date', 'Invoice ID', 'Reference', 'Customer Address', 'Due Date', 'Invoice Type', 'Department', 'Sales Person'],
   'Sale Return': ['Customer', 'Issue Date', 'Return Invoice No.', 'Reference Invoice', 'Customer Address', 'Due Date', 'Return Reason', 'Department', 'Sales Person'],
+  'Customer': ['Email Address', 'Phone Number', 'Mobile Number', 'Website Link', 'Billing Address', 'Walk-in Customer', 'Tax Filer', 'Credit Limit', 'Payment Terms', 'Default Discount', 'NTN Code', 'STRN Registry', 'CNIC Number', 'WHT Category', 'Total Balance', 'Salesperson'],
+  'Inventory': ['Category', 'Brand', 'Model', 'Size', 'Unit Of Measure', 'Weight (kg)', 'Description', 'Sale Price', 'Cost Price', 'Stocks (qty)', 'Low Stock Level', 'GST Rate', 'Non-Filer Rate', 'HS Code', 'Serial Prefix']
 };
 
 const DEFAULT_FOOTER: Record<string, string[]> = {
@@ -31,6 +35,8 @@ const DEFAULT_FOOTER: Record<string, string[]> = {
   'Service Invoice': ['Notes & Special Terms', 'Document Attachments', 'Discount (%)', 'Shipping Charges', 'Round Off'],
   'Digital Invoice': ['Notes & Special Terms', 'Document Attachments', 'Discount (%)', 'Shipping Charges', 'Round Off'],
   'Sale Return': ['Notes & Special Terms', 'Document Attachments', 'Discount (%)', 'Shipping Charges', 'Round Off'],
+  'Customer': [],
+  'Inventory': []
 };
 
 const DEFAULT_COLUMNS: Record<string, string[]> = {
@@ -38,6 +44,8 @@ const DEFAULT_COLUMNS: Record<string, string[]> = {
   'Service Invoice': ['Product Code', 'Description', 'Unit', 'Details', 'Qty', 'Price', 'Discount', 'Tax', 'Further Tax', 'Total'],
   'Digital Invoice': ['Product Code', 'Description', 'Unit', 'Details', 'Qty', 'Price', 'Discount', 'Tax', 'Further Tax', 'Total'],
   'Sale Return': ['Product Code', 'Description', 'Unit', 'Details', 'Returned Qty', 'Price', 'Discount', 'Tax', 'Further Tax', 'Total'],
+  'Customer': ['Customer Details', 'Phone Number', 'City', 'Credit Limit (Rs.)', 'Total Balance (Rs.)', 'Tax Status', 'Status'],
+  'Inventory': ['Product Details', 'Category', 'In Stock', 'Price (Rs.)', 'Status', 'Last Updated']
 };
 
 const FIELD_DESCRIPTIONS: Record<string, string> = {
@@ -58,7 +66,40 @@ const FIELD_DESCRIPTIONS: Record<string, string> = {
   'Return Reason': 'Show reason description field in header',
   'Customer ID': 'Show customer selector in header',
   'Department': 'Show department field in header',
-  'Sales Person': 'Show sales person field in header'
+  'Sales Person': 'Show sales person field in header',
+  // New Customer Fields
+  'Email Address': 'Customer email address input field',
+  'Phone Number': 'Customer landline phone number',
+  'Mobile Number': 'Customer cell phone number',
+  'Website Link': 'Customer company website URL',
+  'Billing Address': 'Billing street, city, state and country',
+  'Walk-in Customer': 'Allow walk-in retail customer setting',
+  'Tax Filer': 'Filer/Non-Filer tax registration toggle',
+  'Credit Limit': 'Maximum allowable credit balance',
+  'Payment Terms': 'Default credit limit payment grace days',
+  'Default Discount': 'Standard discount percentage for customer',
+  'NTN Code': 'National Tax Number input field',
+  'STRN Registry': 'Sales Tax Registration Number input field',
+  'CNIC Number': 'National Identity Card number input field',
+  'WHT Category': 'Withholding Tax category classification',
+  'Total Balance': 'Customer opening or total balance',
+  'Salesperson': 'Assigned sales representative link',
+  // New Inventory Fields
+  'Category': 'Product group category picker',
+  'Brand': 'Product manufacturer brand picker',
+  'Model': 'Product hardware model designation',
+  'Size': 'Product size / dimensions definition',
+  'Unit Of Measure': 'Unit of measurement selection',
+  'Weight (kg)': 'Product physical weight in kilograms',
+  'Description': 'Product description/summary details',
+  'Sale Price': 'Product standard selling retail price',
+  'Cost Price': 'Product manufacturer cost price',
+  'Stocks (qty)': 'Product standard opening stock quantity',
+  'Low Stock Level': 'Low stock warning alert threshold level',
+  'GST Rate': 'Standard GST tax rate percentage',
+  'Non-Filer Rate': 'Tax rate percentage for non-filer clients',
+  'HS Code': 'Harmonized System shipping code classification',
+  'Serial Prefix': 'Auto-generated serial code prefix designation'
 };
 
 const COLUMN_DESCRIPTIONS: Record<string, string> = {
@@ -72,7 +113,20 @@ const COLUMN_DESCRIPTIONS: Record<string, string> = {
   'Discount': 'Show line-item discount input column',
   'Tax': 'Show Sales Tax percentage column',
   'Further Tax': 'Show Further Tax option column',
-  'Total': 'Show computed line-item total price column'
+  'Total': 'Show computed line-item total price column',
+  // Customer Columns
+  'Customer Details': 'Show Code & Name columns in client list',
+  'Phone Number': 'Show client Email & Phone columns in list',
+  'City': 'Show client city/province column',
+  'Credit Limit (Rs.)': 'Show credit limit value column',
+  'Total Balance (Rs.)': 'Show total balance value column',
+  'Tax Status': 'Show filer/non-filer flag column',
+  'Status': 'Show active/inactive state column',
+  // Inventory Columns
+  'Product Details': 'Show Code & Title details in product list',
+  'In Stock': 'Show stock quantity levels column',
+  'Price (Rs.)': 'Show selling price column',
+  'Last Updated': 'Show last change/creation date column'
 };
 
 export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({ brand }) => {

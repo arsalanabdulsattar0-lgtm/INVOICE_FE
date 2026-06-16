@@ -25,14 +25,39 @@ import type {
   PrintTemplateSection,
   PrintTemplateField,
   PrintTemplateCustomField,
-  PrintTemplateColumn
+  PrintTemplateColumn,
+  FormulaToken
 } from '../../../utils/settingsData';
+import { FORMULA_FIELD_OPTIONS } from '../../../utils/settingsData';
 import {
   loadTemplatesFromApi,
   saveTemplatesToApi,
   saveSingleTemplateLayout
 } from '../../../utils/templateApi';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
+
+const dummyContext = {
+  row: {
+    quantity: 5,
+    price: 1500,
+    discount: 250,
+    tax: 625,
+    furtherTax: 0
+  },
+  totals: {
+    subtotal: 7500,
+    tax_amount: 1125,
+    discount_amount: 500,
+    shipping_charges: 150,
+    other_charges: 0,
+    round_off: 0,
+    grand_total: 8275,
+    paid_amount: 5000,
+    balance_due: 3275,
+    total_qty: 12,
+    total_items: 3
+  }
+};
 
 interface PrintTemplatesModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
@@ -646,7 +671,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
       const pctDeltaX = (deltaX / rect.width) * 100;
       
       let newWidth = Math.round(resizingElement.startWidthPercent + pctDeltaX);
-      let newHeight = Math.round(resizingElement.startHeightPx + deltaY);
+      let newHeight = Math.round(resizingElement.startHeightPx + (deltaY / previewScale));
       
       newWidth = Math.max(1, Math.min(100, newWidth));
       newHeight = Math.max(10, Math.min(2000, newHeight));
@@ -695,17 +720,27 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
     setEditingLabelText('');
   };
 
-  // Modals for adding Custom Fields and Custom Columns
+  // Modals for adding Formula Fields
   const [showCustomFieldModal, setShowCustomFieldModal] = useState(false);
-  const [customFieldForm, setCustomFieldForm] = useState({
-    field_name: '',
-    field_type: 'text' as 'text' | 'number' | 'date' | 'currency' | 'multiline' | 'boolean' | 'dropdown' | 'checkbox' | 'radio',
-    default_value: ''
-  });
-  const [createAsSystemField, setCreateAsSystemField] = useState(false);
+  const [formulaFieldName, setFormulaFieldName] = useState('');
+  const [formulaPlacement, setFormulaPlacement] = useState<'totals' | 'column'>('totals');
 
-  const [showCustomColumnModal, setShowCustomColumnModal] = useState(false);
-  const [customColumnName, setCustomColumnName] = useState('');
+  // Formula builder state
+  const [formulaTokens, setFormulaTokens] = useState<FormulaToken[]>([]);
+  const [formulaAddType, setFormulaAddType] = useState<'field' | 'operator' | 'constant'>('field');
+  const [formulaSelectedField, setFormulaSelectedField] = useState(FORMULA_FIELD_OPTIONS[0]?.key || '');
+  const [formulaSelectedOp, setFormulaSelectedOp] = useState<'+' | '-' | '*' | '/'>('-');
+  const [formulaConstant, setFormulaConstant] = useState('');
+
+  const resetFormulaModal = () => {
+    setFormulaFieldName('');
+    setFormulaPlacement('totals');
+    setFormulaTokens([]);
+    setFormulaConstant('');
+    setFormulaAddType('field');
+    const firstValid = FORMULA_FIELD_OPTIONS.find(f => f.section === 'Totals' || f.section === 'Summary')?.key || '';
+    setFormulaSelectedField(firstValid);
+  };
 
   // ─── Computed Data ──────────────────────────────────────────────────────────
   const activeTemplate = useMemo(() => {
@@ -734,11 +769,13 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
     return isLandscape ? 297 / 210 : 210 / 297;
   }, [activeTemplate]);
 
+  const targetWidth = activeTemplate?.paper_size === 'Thermal' ? 380 : 794;
+  const targetHeight = targetWidth / aspectRatio;
+
   useEffect(() => {
-    const targetWidth = activeTemplate?.paper_size === 'Thermal' ? 380 : 794;
     const scale = containerWidth > 0 ? Math.min(1.0, containerWidth / targetWidth) : 1;
     setPreviewScale(scale);
-  }, [containerWidth, activeTemplate?.paper_size]);
+  }, [containerWidth, targetWidth]);
 
   const activeSections = useMemo(() => {
     if (!currentTemplateId) return [];
@@ -1484,43 +1521,44 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
     setDraggedSectionId(null);
   };
 
-  // ─── Custom Fields Builder ──────────────────────────────────────────────────
+  // ─── Formula Field Builder ──────────────────────────────────────────────────
   const handleAddCustomField = () => {
-    if (!customFieldForm.field_name.trim()) return;
+    if (!formulaFieldName.trim()) return;
+    if (formulaTokens.length === 0) return;
 
-    if (isAdminRole && createAsSystemField) {
-      const newField: PrintTemplateField = {
-        field_id: `fld-${currentTemplateId}-${Date.now()}`,
+    if (formulaPlacement === 'column') {
+      // Add as a table column
+      const newCol: PrintTemplateColumn = {
+        column_id: `col-formula-${currentTemplateId}-${Date.now()}`,
         template_id: currentTemplateId || '',
-        section_name: 'Customer Information',
-        field_name: customFieldForm.field_name,
-        field_type: (customFieldForm.field_type === 'multiline' ? 'multiline' : 
-                      ['number', 'date', 'currency'].includes(customFieldForm.field_type) ? customFieldForm.field_type : 'text') as any,
-        display_order: activeFields.length + 1,
+        column_name: formulaFieldName,
+        display_order: activeColumns.length + 1,
         is_visible: false,
-        row_position: 10,
-        column_position: 1
+        width: '12%',
+        is_custom: true,
+        formula_tokens: formulaTokens
       };
-      setAllFields(prev => [...prev, newField]);
+      setAllColumns(prev => [...prev, newCol]);
     } else {
+      // Add as a custom field in Totals / Summary footer
       const newField: PrintTemplateCustomField = {
-        custom_field_id: `cf-${currentTemplateId}-${Date.now()}`,
+        custom_field_id: `cf-formula-${currentTemplateId}-${Date.now()}`,
         template_id: currentTemplateId || '',
-        field_name: customFieldForm.field_name,
-        field_type: customFieldForm.field_type,
-        default_value: customFieldForm.default_value,
+        field_name: formulaFieldName,
+        field_type: 'formula',
+        default_value: '',
         display_order: activeCustomFields.length + 1,
         is_visible: false,
-        section_name: 'Customer Information',
+        section_name: 'Totals',
         row_position: 10,
-        column_position: 1
+        column_position: 1,
+        formula_tokens: formulaTokens
       };
       setAllCustomFields(prev => [...prev, newField]);
     }
 
     setShowCustomFieldModal(false);
-    setCreateAsSystemField(false);
-    setCustomFieldForm({ field_name: '', field_type: 'text', default_value: '' });
+    resetFormulaModal();
   };
 
   const handleRemoveCustomField = (cfId: string) => {
@@ -1528,23 +1566,6 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   };
 
   // ─── Custom Column Builder ──────────────────────────────────────────────────
-  const handleAddCustomColumn = () => {
-    if (!customColumnName.trim()) return;
-
-    const newCol: PrintTemplateColumn = {
-      column_id: `col-${currentTemplateId}-${Date.now()}`,
-      template_id: currentTemplateId || '',
-      column_name: customColumnName,
-      display_order: activeColumns.length + 1,
-      is_visible: true,
-      width: '10%',
-      is_custom: true
-    };
-
-    setAllColumns(prev => [...prev, newCol]);
-    setShowCustomColumnModal(false);
-    setCustomColumnName('');
-  };
 
   const handleRemoveCustomColumn = (colId: string) => {
     setAllColumns(prev => prev.filter(c => c.column_id !== colId));
@@ -1766,6 +1787,45 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                   else if (col.column_name === 'Discount') val = '0.00';
                   else if (col.column_name === 'Tax') val = '1,352.00';
                   else if (col.column_name === 'Amount') val = '9,802.00';
+                  else if (col.is_custom && col.formula_tokens && col.formula_tokens.length > 0) {
+                    // Evaluate formula using dummy row context
+                    try {
+                      const fieldMap: Record<string, number> = {
+                        'quantity': dummyContext.row.quantity,
+                        'price': dummyContext.row.price,
+                        'rate': dummyContext.row.price,
+                        'line_total': dummyContext.row.quantity * dummyContext.row.price,
+                        'discount': dummyContext.row.discount,
+                        'tax': dummyContext.row.tax,
+                        'further_tax': dummyContext.row.furtherTax,
+                        'subtotal': dummyContext.totals.subtotal,
+                        'tax_amount': dummyContext.totals.tax_amount,
+                        'discount_amount': dummyContext.totals.discount_amount,
+                        'shipping_charges': dummyContext.totals.shipping_charges,
+                        'other_charges': dummyContext.totals.other_charges,
+                        'round_off': dummyContext.totals.round_off,
+                        'grand_total': dummyContext.totals.grand_total,
+                        'paid_amount': dummyContext.totals.paid_amount,
+                        'balance_due': dummyContext.totals.balance_due,
+                        'total_qty': dummyContext.totals.total_qty,
+                        'total_items': dummyContext.totals.total_items
+                      };
+                      let result = 0;
+                      let pendingOp = '+';
+                      for (const tok of col.formula_tokens) {
+                        let num = 0;
+                        if (tok.type === 'field') num = fieldMap[tok.fieldKey as string] ?? 0;
+                        else if (tok.type === 'constant') num = parseFloat(String(tok.constant ?? '0')) || 0;
+                        else if (tok.type === 'operator') { pendingOp = tok.operator ?? '+'; continue; }
+                        if (pendingOp === '+') result += num;
+                        else if (pendingOp === '-') result -= num;
+                        else if (pendingOp === '*') result *= num;
+                        else if (pendingOp === '/') result = num !== 0 ? result / num : 0;
+                        else if (pendingOp === '%') result = result * num / 100;
+                      }
+                      val = result.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    } catch { val = '0.00'; }
+                  }
                   return (
                     <td key={col.column_id} className="py-1 px-1.5" style={{ textAlign: col.alignment || 'left' }}>
                       {val}
@@ -1883,6 +1943,58 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
             <span className="font-extrabold" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>
               {item.field_name === 'Balance Due' || item.field_name === 'Grand Total' || item.field_name === 'Subtotal' ? '8,450.00' : '0.00'}
             </span>
+          </div>
+        </div>
+      );
+    }
+
+    // For formula custom fields, evaluate and show a sample result
+    if (item.isCustom && item.field_type === 'formula' && item.formula_tokens && item.formula_tokens.length > 0) {
+      let formulaSample = '0.00';
+      try {
+        const fieldMap: Record<string, number> = {
+          'quantity': dummyContext.row.quantity,
+          'price': dummyContext.row.price,
+          'rate': dummyContext.row.price,
+          'line_total': dummyContext.row.quantity * dummyContext.row.price,
+          'discount': dummyContext.row.discount,
+          'tax': dummyContext.row.tax,
+          'subtotal': dummyContext.totals.subtotal,
+          'tax_amount': dummyContext.totals.tax_amount,
+          'discount_amount': dummyContext.totals.discount_amount,
+          'shipping_charges': dummyContext.totals.shipping_charges,
+          'other_charges': dummyContext.totals.other_charges,
+          'round_off': dummyContext.totals.round_off,
+          'grand_total': dummyContext.totals.grand_total,
+          'paid_amount': dummyContext.totals.paid_amount,
+          'balance_due': dummyContext.totals.balance_due,
+          'total_qty': dummyContext.totals.total_qty,
+          'total_items': dummyContext.totals.total_items
+        };
+        let result = 0;
+        let pendingOp = '+';
+        for (const tok of item.formula_tokens) {
+          let num = 0;
+          if (tok.type === 'field') num = fieldMap[tok.fieldKey] ?? 0;
+          else if (tok.type === 'constant') num = parseFloat(tok.constant ?? '0') || 0;
+          else if (tok.type === 'operator') { pendingOp = tok.operator ?? '+'; continue; }
+          if (pendingOp === '+') result += num;
+          else if (pendingOp === '-') result -= num;
+          else if (pendingOp === '*') result *= num;
+          else if (pendingOp === '/') result = num !== 0 ? result / num : 0;
+          else if (pendingOp === '%') result = result * num / 100;
+        }
+        formulaSample = result.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } catch { formulaSample = '0.00'; }
+
+      return (
+        <div className="grid grid-cols-12 w-full items-center gap-x-2" onDoubleClick={e => handleDoubleClick(e, itemId, label)}>
+          <div className="col-span-7 text-left">
+            <span className="text-slate-400 font-bold" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>{label}:</span>
+          </div>
+          <div className="col-span-2 text-center text-slate-400 font-bold" style={{ color: labelColor || undefined }}>Rs.</div>
+          <div className="col-span-3 text-right">
+            <span className="font-extrabold" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{formulaSample}</span>
           </div>
         </div>
       );
@@ -2115,9 +2227,9 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
         </div>
 
         {/* 3-Panel Designer Grid Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100vh-220px)] min-h-[600px] lg:min-h-0 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           {/* 1. Left Panel: Section Builder */}
-          <div className="lg:col-span-2 h-[400px] lg:h-full border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
+          <div className="lg:col-span-6 h-[350px] border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-slate-400" />
@@ -2175,6 +2287,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                             style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
                             onClick={(e) => {
                               e.stopPropagation();
+                              setFormulaPlacement('totals');
                               setShowCustomFieldModal(true);
                             }}
                           >
@@ -2351,7 +2464,10 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                   variant="white"
                                   size="xs"
                                   icon={Plus}
-                                  onClick={() => setShowCustomColumnModal(true)}
+                                  onClick={() => {
+                                    setFormulaPlacement('column');
+                                    setShowCustomFieldModal(true);
+                                  }}
                                 >
                                   Add Column
                                 </Button>
@@ -2418,7 +2534,10 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                     variant="white"
                                     size="xs"
                                     icon={Plus}
-                                    onClick={() => setShowCustomFieldModal(true)}
+                                    onClick={() => {
+                                      setFormulaPlacement('totals');
+                                      setShowCustomFieldModal(true);
+                                    }}
                                   >
                                     Add Field
                                   </Button>
@@ -2519,718 +2638,8 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
             </ScrollArea>
           </div>
 
-          {/* 2. Center Panel: Live print-like Preview Canvas */}
-          <div className="lg:col-span-8 h-[500px] lg:h-full border border-[#E2E8F0] bg-slate-100 rounded-xl p-4 flex flex-col justify-between overflow-hidden relative">
-            <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-slate-500 px-1 border-b pb-1 select-none">
-              <span>Live Print Preview</span>
-              <span>100% Visual Consistency</span>
-            </div>
-            {/* Conditional Layout Engine */}
-            {activeTemplate.layout_mode === 'free' ? (
-              <div className="flex-grow flex items-center justify-center bg-slate-200 p-4 overflow-auto custom-scrollbar rounded-lg">
-                <div
-                  ref={canvasRef}
-                  className="bg-white shadow-lg border border-slate-350 relative transition-all"
-                  style={{
-                    width: '100%',
-                    aspectRatio: aspectRatio,
-                    maxHeight: '100%',
-                    maxWidth: '100%',
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (!draggedElement || !canvasRef.current) return;
-                    const rect = canvasRef.current.getBoundingClientRect();
-                    const dropX = Math.round(Math.max(0, Math.min(90, ((e.clientX - rect.left) / rect.width) * 100)));
-                    const dropY = Math.round(Math.max(0, Math.min(90, ((e.clientY - rect.top) / rect.height) * 100)));
-                    if (draggedElement.type === 'default') {
-                      updateFieldProperty(draggedElement.id, { is_visible: true, position_x: dropX, position_y: dropY });
-                    } else {
-                      updateCustomFieldProperty(draggedElement.id, { is_visible: true, position_x: dropX, position_y: dropY });
-                    }
-                    setDraggedElement(null);
-                  }}
-                >
-                    {activeFields
-                      .filter(f => f.is_visible)
-                      .map(f => {
-                        const isSelected = selectedFieldId === f.field_id;
-                        const isEditingLabel = editingLabelId === f.field_id;
-                        
-                        let elementContent = null;
-                        
-                        if (f.field_name === 'Company Logo') {
-                          elementContent = activeTemplate.logo_url ? (
-                            <img
-                              src={activeTemplate.logo_url}
-                              alt="Logo"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain'
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full border border-dashed rounded flex items-center justify-center bg-slate-50 text-[8px] text-slate-400">
-                              Upload Logo
-                            </div>
-                          );
-                        } else if (f.field_name === 'Item Table') {
-                          const visibleCols = activeColumns.filter(c => c.is_visible);
-                          elementContent = (
-                            <div className="border rounded bg-white overflow-hidden w-full h-full text-[8px] flex flex-col justify-between">
-                              <table className="w-full text-left border-collapse">
-                                <thead>
-                                  <tr className="bg-slate-50 border-b text-[7px] font-bold text-slate-500">
-                                    {visibleCols.map(col => (
-                                      <th
-                                        key={col.column_id}
-                                        draggable
-                                        onDragStart={(e) => {
-                                          e.stopPropagation();
-                                          handleColumnDragStart(e, col.column_id);
-                                        }}
-                                        onDragOver={handleColumnDragOver}
-                                        onDrop={(e) => {
-                                          e.stopPropagation();
-                                          handleColumnDrop(e, col.column_id);
-                                        }}
-                                        className="py-1 px-1.5 font-black text-slate-700 cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors"
-                                        style={{ width: col.width, textAlign: col.alignment || 'left' }}
-                                      >
-                                        {col.custom_label || col.column_name}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr className="border-b text-slate-600 text-[7px]">
-                                    {visibleCols.map(col => {
-                                      let val = '-';
-                                      if (col.column_name === 'Product Code') val = 'BC-001';
-                                      else if (col.column_name === 'Product Name') val = 'Sample Product';
-                                      else if (col.column_name === 'Description') val = 'Deliverables';
-                                      else if (col.column_name === 'Quantity') val = '1.00';
-                                      else if (col.column_name === 'Rate') val = '8,450.00';
-                                      else if (col.column_name === 'Amount') val = '8,450.00';
-                                      return (
-                                        <td key={col.column_id} className="py-1 px-1.5" style={{ textAlign: col.alignment || 'left' }}>
-                                          {val}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          );
-                        } else if (f.field_name === 'QR Code') {
-                          elementContent = (
-                            <div className="w-10 h-10 border p-0.5 rounded bg-white flex items-center justify-center">
-                              <svg className="w-full h-full text-slate-800" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-2 2h2v2-2v-2zm2 2h3v3h-3v-3zm-2 2h2v2-2v-2zm4-4h2v4h-2v-4zm0 6h2v1h-2v-1z" />
-                              </svg>
-                            </div>
-                          );
-                        } else if (f.field_name === 'Barcode') {
-                          elementContent = (
-                            <svg className="h-6 w-full text-slate-800" viewBox="0 0 100 20" preserveAspectRatio="none">
-                              <rect width="100" height="20" fill="white"/>
-                              <rect x="5" y="2" width="2" height="16" fill="currentColor"/>
-                              <rect x="10" y="2" width="4" height="16" fill="currentColor"/>
-                              <rect x="16" y="2" width="1" height="16" fill="currentColor"/>
-                              <rect x="20" y="2" width="3" height="16" fill="currentColor"/>
-                              <rect x="25" y="2" width="5" height="16" fill="currentColor"/>
-                              <rect x="32" y="2" width="2" height="16" fill="currentColor"/>
-                              <rect x="36" y="2" width="1" height="16" fill="currentColor"/>
-                              <rect x="40" y="2" width="4" height="16" fill="currentColor"/>
-                              <rect x="48" y="2" width="2" height="16" fill="currentColor"/>
-                              <rect x="52" y="2" width="3" height="16" fill="currentColor"/>
-                              <rect x="58" y="2" width="5" height="16" fill="currentColor"/>
-                            </svg>
-                          );
-                        } else if (f.field_name === 'FBR Logo') {
-                          elementContent = (
-                            <div className="flex items-center gap-1 bg-emerald-50/70 border border-emerald-200 rounded px-1.5 py-0.5 text-[8px] font-bold text-emerald-800">
-                              <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                <path d="M2 12h20" />
-                              </svg>
-                              <div className="flex flex-col text-left leading-[1.1]">
-                                <span>FBR</span>
-                                <span className="text-[5px] text-emerald-500 font-medium font-sans">Pakistan</span>
-                              </div>
-                            </div>
-                          );
-                        } else if (f.field_name === 'Company Stamp') {
-                          elementContent = (
-                            <div className="w-18 h-9 border border-dashed border-slate-355 rounded-full flex flex-col items-center justify-center opacity-65 select-none bg-slate-50/50">
-                              <span className="text-[5px] font-bold text-slate-455">Company Stamp</span>
-                              <span className="text-[4px] text-slate-355">Seal Here</span>
-                            </div>
-                          );
-                        } else if (f.field_name === 'Signature') {
-                          elementContent = (
-                            <div className="w-full text-center">
-                              <div className="border-b border-slate-350 w-full h-3" />
-                              {isEditingLabel ? (
-                                <input
-                                  type="text"
-                                  value={editingLabelText}
-                                  onChange={e => setEditingLabelText(e.target.value)}
-                                  onBlur={handleSaveInlineLabel}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') handleSaveInlineLabel();
-                                  }}
-                                  className="w-full text-[9px] border p-0.5 rounded outline-none mt-0.5 text-center"
-                                  autoFocus
-                                  onClick={e => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span 
-                                  className="text-[7px] text-slate-400 block mt-0.5 cursor-pointer hover:bg-slate-50 rounded px-1"
-                                  onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || 'Seller Signature')}
-                                >
-                                  {f.custom_label || 'Seller Signature'}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        } else if (['Subtotal', 'Grand Total', 'Balance Due', 'Tax Amount', 'Discount Amount', 'Shipping Charges', 'Round Off', 'Received Amount'].includes(f.field_name)) {
-                          const isSpaceBetween = !f.alignment || f.alignment === 'left';
-                          elementContent = (
-                            <div className="flex w-full items-center" style={{ justifyContent: isSpaceBetween ? 'space-between' : f.alignment === 'center' ? 'center' : 'flex-end', gap: '8px' }}>
-                              {isEditingLabel ? (
-                                <input
-                                  type="text"
-                                  value={editingLabelText}
-                                  onChange={e => setEditingLabelText(e.target.value)}
-                                  onBlur={handleSaveInlineLabel}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') handleSaveInlineLabel();
-                                  }}
-                                  className="w-[60%] text-[9px] border p-0.5 rounded outline-none"
-                                  autoFocus
-                                  onClick={e => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span 
-                                  className="text-slate-400 font-bold mr-1 cursor-pointer hover:bg-slate-50 rounded px-1"
-                                  onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || f.field_name)}
-                                  style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}
-                                >
-                                  {f.custom_label || f.field_name}:
-                                </span>
-                              )}
-                              <span className="font-extrabold" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{f.field_name === 'Balance Due' || f.field_name === 'Grand Total' || f.field_name === 'Subtotal' ? '8,450.00' : '0.00'}</span>
-                            </div>
-                          );
-                        } else {
-                          const sampleVal = 
-                            f.field_name === 'Company Name' ? 'Antigravity Studio' :
-                            f.field_name === 'Company Address' ? '452 Innovation Blvd, San Francisco, CA' :
-                            f.field_name === 'Phone' ? '+1 (555) 012-3456' :
-                            f.field_name === 'Email' ? 'contact@antigravity.studio' :
-                            f.field_name === 'Website' ? 'www.antigravity.studio' :
-                            f.field_name === 'NTN' ? '1234567-8' :
-                            f.field_name === 'STRN' || f.field_name === 'STN' || f.field_name === 'STN / STRN' ? '03-00-1234-567-89' :
-                            f.field_name === 'Customer Name' ? 'BlueRitt Technologies' :
-                            f.field_name === 'Customer Address' ? 'House 42, Street 5, Karachi, PK' :
-                            f.field_name === 'Mobile' ? '0300-1234567' :
-                            f.field_name === 'Customer NTN' ? '9876543-2' :
-                            f.field_name === 'Customer STRN' ? '03-09-9999-001-22' :
-                            f.field_name === 'Customer CNIC' ? '42201-1234567-1' :
-                            f.field_name === 'Customer Code' ? 'CUST-9928' :
-                            f.field_name === 'Customer Email' ? 'billing@blueritt.com' :
-                            f.field_name === 'Invoice Number' ? 'SI-000248' :
-                            f.field_name === 'Date' || f.field_name === 'Invoice Date' ? '2026-06-11' :
-                            f.field_name === 'Due Date' ? '2026-07-11' :
-                            f.field_name === 'Sales Person' ? 'Ahmed Raza' :
-                            f.field_name === 'Reference Number' ? 'REF-992' :
-                            f.field_name === 'Warehouse' ? 'Lahore Central' :
-                            f.field_name === 'Payment Terms' ? 'Net 30' :
-                            f.field_name === 'FBR Invoice Number' ? 'FBR-INV-1092837' :
-                            f.field_name === 'Prepared By' ? 'Aman Khan' :
-                            f.field_name === 'Received By' ? 'Manager' :
-                            f.field_name === 'Remarks' ? 'Remarks details go here.' :
-                            f.field_name === 'Terms & Conditions' ? 'Standard terms apply.' : 
-                            f.field_name === 'Notes' ? 'Goods once sold are non-refundable.' : 'Sample Value';
-                          
-                          elementContent = (
-                            <div className="w-full flex" style={{ justifyContent: f.alignment === 'center' ? 'center' : f.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
-                              {isEditingLabel ? (
-                                <input
-                                  type="text"
-                                  value={editingLabelText}
-                                  onChange={e => setEditingLabelText(e.target.value)}
-                                  onBlur={handleSaveInlineLabel}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') handleSaveInlineLabel();
-                                  }}
-                                  className="w-full text-[9px] border p-0.5 rounded outline-none"
-                                  autoFocus
-                                  onClick={e => e.stopPropagation()}
-                                />
-                              ) : (
-                                <div className="inline-flex items-center flex-wrap" onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || f.field_name)}>
-                                  <strong className="text-slate-400 mr-1" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{f.custom_label || f.field_name}: </strong>
-                                  <span className="text-slate-700" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{sampleVal}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={f.field_id}
-                            style={{
-                              position: 'absolute',
-                              left: `${f.position_x ?? 5}%`,
-                              top: `${f.position_y ?? 5}%`,
-                              width: f.width_percent ? `${f.width_percent}%` : 'auto',
-                              height: f.height_px ? `${f.height_px}px` : 'auto',
-                              fontSize: f.font_size ? `${f.font_size}px` : '10px',
-                              fontWeight: f.font_weight === 'bold' || f.is_bold ? 'bold' : f.font_weight === 'semibold' ? '600' : 'normal',
-                              color: f.color || '#1e293b',
-                              background: isSelected ? `${brand.primary}10` : (f.background || 'transparent'),
-                              border: f.border || 'none',
-                              padding: f.padding || '2px',
-                              marginTop: f.margin_top ? `${f.margin_top}px` : undefined,
-                              marginBottom: f.margin_bottom ? `${f.margin_bottom}px` : undefined,
-                              textAlign: f.alignment || 'left',
-                              cursor: 'move',
-                              zIndex: isSelected ? 50 : 10,
-                              outline: isSelected ? `2px dashed ${brand.primary}` : '1px dashed transparent',
-                              display: 'flex',
-                              flexDirection: 'row',
-                              justifyContent: f.alignment === 'center' ? 'center' : f.alignment === 'right' ? 'flex-end' : 'flex-start',
-                              ...parseCustomCss(f.custom_css)
-                            }}
-                            className="hover:outline-blue-300 rounded group select-none relative"
-                            onMouseDown={(e) => handleMouseDown(e, f.field_id, 'default', f.position_x ?? 5, f.position_y ?? 5)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedFieldId(f.field_id);
-                              setSelectedColumnId(null);
-                              setSelectedCustomFieldId(null);
-                            }}
-                          >
-                            {elementContent}
-                            {isSelected && (
-                              <div
-                                className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize z-50 rounded-tl border-t border-l"
-                                style={{
-                                  backgroundColor: brand.primary,
-                                  borderColor: 'white'
-                                }}
-                                onMouseDown={(e) => handleResizeMouseDown(e, f.field_id, 'default', f.width_percent ?? 50, f.height_px, e.currentTarget.parentElement)}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-
-                    {/* Render Custom Fields in Free Layout */}
-                    {activeCustomFields
-                      .filter(cf => cf.is_visible)
-                      .map(cf => {
-                        const isSelected = selectedCustomFieldId === cf.custom_field_id;
-                        const isEditingLabel = editingLabelId === cf.custom_field_id;
-
-                        return (
-                          <div
-                            key={cf.custom_field_id}
-                            style={{
-                              position: 'absolute',
-                              left: `${cf.position_x ?? 10}%`,
-                              top: `${cf.position_y ?? 60}%`,
-                              width: cf.width_percent ? `${cf.width_percent}%` : 'auto',
-                              height: cf.height_px ? `${cf.height_px}px` : 'auto',
-                              fontSize: cf.font_size ? `${cf.font_size}px` : '10px',
-                              fontWeight: cf.font_weight === 'bold' || cf.is_bold ? 'bold' : cf.font_weight === 'semibold' ? '600' : 'normal',
-                              color: cf.color || '#1e293b',
-                              background: isSelected ? `${brand.primary}10` : (cf.background || 'transparent'),
-                              border: cf.border || 'none',
-                              padding: cf.padding || '2px',
-                              marginTop: cf.margin_top ? `${cf.margin_top}px` : undefined,
-                              marginBottom: cf.margin_bottom ? `${cf.margin_bottom}px` : undefined,
-                              textAlign: cf.alignment || 'left',
-                              cursor: 'move',
-                              zIndex: isSelected ? 50 : 10,
-                              outline: isSelected ? `2px dashed ${brand.primary}` : '1px dashed transparent',
-                              display: 'flex',
-                              flexDirection: 'row',
-                              justifyContent: cf.alignment === 'center' ? 'center' : cf.alignment === 'right' ? 'flex-end' : 'flex-start',
-                              ...parseCustomCss(cf.custom_css)
-                            }}
-                            className="hover:outline-blue-300 rounded group select-none relative"
-                            onMouseDown={(e) => handleMouseDown(e, cf.custom_field_id, 'custom', cf.position_x ?? 10, cf.position_y ?? 60)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCustomFieldId(cf.custom_field_id);
-                              setSelectedFieldId(null);
-                              setSelectedColumnId(null);
-                            }}
-                          >
-                            <div className="w-full flex" style={{ justifyContent: cf.alignment === 'center' ? 'center' : cf.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
-                              {isEditingLabel ? (
-                                  <input
-                                    type="text"
-                                    value={editingLabelText}
-                                    onChange={e => setEditingLabelText(e.target.value)}
-                                    onBlur={handleSaveInlineLabel}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') handleSaveInlineLabel();
-                                    }}
-                                    className="w-full text-[9px] border p-0.5 rounded outline-none"
-                                    autoFocus
-                                    onClick={e => e.stopPropagation()}
-                                  />
-                                ) : (
-                                  <div className="inline-flex items-center flex-wrap" onDoubleClick={(e) => handleDoubleClick(e, cf.custom_field_id, cf.custom_label || cf.field_name)}>
-                                    <strong className="text-slate-400 mr-1" style={{ color: cf.color || undefined, fontWeight: cf.is_bold ? 'bold' : 'normal' }}>{cf.custom_label || cf.field_name}: </strong>
-                                    <span className="text-slate-700" style={{ color: cf.color || undefined, fontWeight: cf.is_bold ? 'bold' : 'normal' }}>{getSampleValue(cf.field_name)}</span>
-                                  </div>
-                                )}
-                            </div>
-                              {isSelected && (
-                                <div
-                                  className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize z-50 rounded-tl border-t border-l"
-                                  style={{
-                                    backgroundColor: brand.primary,
-                                    borderColor: 'white'
-                                  }}
-                                  onMouseDown={(e) => handleResizeMouseDown(e, cf.custom_field_id, 'custom', cf.width_percent ?? 50, cf.height_px, e.currentTarget.parentElement)}
-                                />
-                              )}
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              ) : (
-                <div
-                  ref={containerRefCallback}
-                  className="flex-grow bg-slate-100 overflow-y-auto overflow-x-hidden relative p-4 flex flex-col items-center custom-scrollbar"
-                >
-                  <div
-                    ref={innerContentRefCallback}
-                    style={{
-                      width: activeTemplate?.paper_size === 'Thermal' ? '380px' : '794px',
-                      transform: `scale(${previewScale})`,
-                      transformOrigin: 'top center',
-                      marginBottom: `${(previewScale - 1) * contentHeight}px`,
-                      flexShrink: 0,
-                    }}
-                    className="bg-white border border-slate-350 rounded-lg p-6 shadow-md transition-all duration-150"
-                  >
-                    {activeTemplate?.paper_size === 'Thermal' ? (
-                    <div className="flex flex-col gap-4 text-[9px]">
-                      {activeSections.filter(sec => sec.is_visible).map((sec) => {
-                        if (sec.section_name === 'Attachments') {
-                          return (
-                            <div key={sec.section_id} className="space-y-1 py-1 border-b">
-                              <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
-                              <div className="flex gap-2 text-[8px] text-blue-500">
-                                <span className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
-                                  <FileText className="w-2.5 h-2.5 text-slate-400" />
-                                  delivery_proof.pdf
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        const dynamicFields = renderSectionFields(sec.section_name);
-                        if (!dynamicFields) return null;
-
-                        return (
-                          <div key={sec.section_id} className="w-full"
-                               onDragOver={e => e.preventDefault()}
-                               onDrop={() => { if (draggedElement) handleSectionDropField(sec.section_name); }}
-                          >
-                            <span className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider">{sec.section_name}</span>
-                            {dynamicFields}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    // BEAUTIFUL A4/LETTER SOLID LAYOUT MATCHING USER'S IMAGE
-                    <div className="space-y-6 flex flex-col justify-start">
-                      <div>
-                        {/* 1. Header (Company details & centered Title) */}
-                        {activeSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
-                          <div className="w-full flex justify-between items-start border-b pb-4 mb-2"
-                               onDragOver={e => e.preventDefault()}
-                               onDrop={() => { if (draggedElement) handleSectionDropField('Company Information'); }}
-                          >
-                            <div className="flex-grow">
-                              {renderSectionFields('Company Information')}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Centered Document Title */}
-                        <div className="w-full text-center my-3">
-                          <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
-                            {activeTemplate?.document_type || 'Sale Tax Invoice'}
-                          </h1>
-                        </div>
-
-                        {/* 2. Side-by-Side Information Boxes (Invoice & Customer details) */}
-                        <div className="grid grid-cols-2 gap-4 mb-4 items-stretch">
-                          {activeSections.find(s => s.section_name === 'Invoice Information' && s.is_visible) ? (
-                            <div className="flex flex-col space-y-1.5 h-full justify-between"
-                                 onDragOver={e => e.preventDefault()}
-                                 onDrop={() => { if (draggedElement) handleSectionDropField('Invoice Information'); }}
-                            >
-                              {(() => {
-                                const secFields = activeFields.filter(f => f.section_name === 'Invoice Information');
-                                const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Invoice Information');
-                                const combined = [
-                                  ...secFields.map(f => ({ ...f, isCustom: false as const })),
-                                  ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
-                                ].sort((a, b) => a.display_order - b.display_order);
-
-                                return combined.map(item => {
-                                  const sampleVal = 
-                                    item.field_name === 'Invoice Number' ? 'SI-000248' :
-                                    item.field_name === 'Date' || item.field_name === 'Invoice Date' ? '2026-06-11' :
-                                    item.field_name === 'Due Date' ? '2026-07-11' :
-                                    item.field_name === 'Sales Person' ? 'Ahmed Raza' :
-                                    item.field_name === 'Reference Number' ? 'REF-992' :
-                                    item.field_name === 'Warehouse' ? 'Lahore Central' :
-                                    item.field_name === 'Payment Terms' ? 'Net 30' :
-                                    item.field_name === 'FBR Invoice Number' ? 'FBR-INV-1092837' : 'Sample';
-
-                                  const isSelected = selectedFieldId === (item.isCustom ? item.custom_field_id : item.field_id);
-                                  const isEditingLabel = editingLabelId === (item.isCustom ? item.custom_field_id : item.field_id);
-
-                                  const labelColor = item.label_color || item.color;
-                                  const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
-                                  const valueColor = item.value_color || item.color;
-                                  const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
-
-                                  const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
-                                                    item.border === 'bottom-slate' ? '1px solid #475569' :
-                                                    item.border === 'bottom-black' ? '1px solid #000000' :
-                                                    item.border === 'none' ? 'none' :
-                                                    item.border || '1px solid #cbd5e1';
-
-                                  const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
-                                    borderBottom: item.border === 'none' ? 'none' : borderVal,
-                                    borderTop: 'none',
-                                    borderLeft: 'none',
-                                    borderRight: 'none'
-                                  } : {
-                                    border: isSelected ? '1px solid rgb(59, 130, 246)' : borderVal
-                                  };
-
-                                  return (
-                                    <div 
-                                      key={item.isCustom ? item.custom_field_id : item.field_id} 
-                                      className={`rounded px-3 py-1.5 flex justify-between items-center cursor-pointer text-[9px] ${isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
-                                      style={{ 
-                                        ...borderStyles,
-                                        backgroundColor: item.background || '#ffffff',
-                                        fontSize: item.font_size ? `${item.font_size}px` : undefined,
-                                        padding: item.padding || undefined,
-                                        marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
-                                        opacity: item.is_visible ? 1 : 0.45,
-                                        border: item.is_visible ? borderStyles.border : '1px dashed #cbd5e1',
-                                      }}
-                                      onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
-                                    >
-                                      {isEditingLabel ? (
-                                        <input
-                                          type="text"
-                                          value={editingLabelText}
-                                          onChange={e => setEditingLabelText(e.target.value)}
-                                          onBlur={handleSaveInlineLabel}
-                                          onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineLabel(); }}
-                                          className="w-full text-[9px] border p-0.5 rounded outline-none"
-                                          autoFocus
-                                          onClick={e => e.stopPropagation()}
-                                        />
-                                      ) : (
-                                        <strong 
-                                          className="text-slate-500 mr-2 cursor-pointer hover:bg-slate-50 rounded px-1"
-                                          onDoubleClick={(e) => handleDoubleClick(e, item.isCustom ? item.custom_field_id : item.field_id, item.custom_label || item.field_name)}
-                                          style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}
-                                        >
-                                          {item.custom_label || item.field_name}:
-                                        </strong>
-                                      )}
-                                      <span className="text-slate-850" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{sampleVal}</span>
-                                    </div>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          ) : <div />}
-
-                          {activeSections.find(s => s.section_name === 'Customer Information' && s.is_visible) ? (
-                            <div 
-                              className="rounded p-3 flex flex-col justify-start text-[9px]"
-                              style={{ 
-                                border: '1px solid #cbd5e1', 
-                                backgroundColor: '#ffffff', 
-                                color: '#1e293b',
-                                minHeight: '100%' 
-                              }}
-                              onDragOver={e => e.preventDefault()}
-                              onDrop={() => { if (draggedElement) handleSectionDropField('Customer Information'); }}
-                            >
-                              <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left text-[9px]">
-                                Customer Details
-                              </div>
-                              <div className="space-y-1.5">
-                                {(() => {
-                                  const secFields = activeFields.filter(f => f.section_name === 'Customer Information');
-                                  const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Customer Information');
-                                  const combined = [
-                                    ...secFields.map(f => ({ ...f, isCustom: false as const })),
-                                    ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
-                                  ].sort((a, b) => a.display_order - b.display_order);
-
-                                  return combined.map(item => {
-                                    const sampleVal = 
-                                      item.field_name === 'Customer Name' ? 'BlueRitt Technologies' :
-                                      item.field_name === 'Customer Address' ? 'House 42, Street 5, Karachi, PK' :
-                                      item.field_name === 'Mobile' ? '0300-1234567' :
-                                      item.field_name === 'Customer NTN' ? '9876543-2' :
-                                      item.field_name === 'Customer STRN' ? '03-09-9999-001-22' :
-                                      item.field_name === 'Customer CNIC' ? '42201-1234567-1' :
-                                      item.field_name === 'Customer Code' ? 'CUST-9928' :
-                                      item.field_name === 'Customer Email' ? 'billing@blueritt.com' : 'Sample';
-
-                                    const isSelected = selectedFieldId === (item.isCustom ? item.custom_field_id : item.field_id);
-                                    const isEditingLabel = editingLabelId === (item.isCustom ? item.custom_field_id : item.field_id);
-
-                                    const labelColor = item.label_color || item.color;
-                                    const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
-                                    const valueColor = item.value_color || item.color;
-                                    const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
-
-                                    const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
-                                                      item.border === 'bottom-slate' ? '1px solid #475569' :
-                                                      item.border === 'bottom-black' ? '1px solid #000000' :
-                                                      item.border === 'none' ? 'none' :
-                                                      item.border || '1px solid #f1f5f9';
-
-                                    const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
-                                      borderBottom: item.border === 'none' ? 'none' : borderVal,
-                                      borderTop: 'none',
-                                      borderLeft: 'none',
-                                      borderRight: 'none'
-                                    } : {
-                                      borderBottom: borderVal
-                                    };
-
-                                    return (
-                                      <div 
-                                        key={item.isCustom ? item.custom_field_id : item.field_id} 
-                                        className={`flex justify-between items-start pb-1.5 last:border-0 last:pb-0 cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
-                                        style={{
-                                          ...borderStyles,
-                                          fontSize: item.font_size ? `${item.font_size}px` : undefined,
-                                          padding: item.padding || undefined,
-                                          marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
-                                          opacity: item.is_visible ? 1 : 0.45,
-                                          borderBottom: item.is_visible ? borderStyles.borderBottom : '1px dashed #cbd5e1',
-                                        }}
-                                        onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
-                                      >
-                                        {isEditingLabel ? (
-                                          <input
-                                            type="text"
-                                            value={editingLabelText}
-                                            onChange={e => setEditingLabelText(e.target.value)}
-                                            onBlur={handleSaveInlineLabel}
-                                            onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineLabel(); }}
-                                            className="w-[60%] text-[8px] border p-0.5 rounded outline-none"
-                                            autoFocus
-                                            onClick={e => e.stopPropagation()}
-                                          />
-                                        ) : (
-                                          <strong 
-                                            className="text-slate-500 mr-2 shrink-0 cursor-pointer hover:bg-slate-50 rounded px-1"
-                                            onDoubleClick={(e) => handleDoubleClick(e, item.isCustom ? item.custom_field_id : item.field_id, item.custom_label || item.field_name)}
-                                            style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}
-                                          >
-                                            {item.custom_label || item.field_name}:
-                                          </strong>
-                                        )}
-                                        <span className="text-slate-800 text-right break-words max-w-[65%]" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{sampleVal}</span>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-                          ) : <div />}
-                        </div>
-
-                        {/* 3. Product Table */}
-                        {activeSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
-                          <div className="w-full my-4"
-                               onDragOver={e => e.preventDefault()}
-                               onDrop={() => { if (draggedElement) handleSectionDropField('Product Table'); }}
-                          >
-                            {renderSectionFields('Product Table')}
-                          </div>
-                        )}
-
-                        {/* Attachments if any */}
-                        <div className="space-y-1 py-1 border-b w-full">
-                          <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
-                          <div className="flex gap-2 text-[8px] text-blue-500">
-                            <span className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
-                              <FileText className="w-2.5 h-2.5 text-slate-400" />
-                              delivery_proof.pdf
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 4. Footer Section (Side-by-Side Note & Totals Box) */}
-                      <div className="grid grid-cols-12 gap-6 items-end w-full pt-4 border-t">
-                        {/* Left: Notes, Remarks, Signatures */}
-                        <div className="col-span-7 space-y-4"
-                             onDragOver={e => e.preventDefault()}
-                             onDrop={() => { if (draggedElement) handleSectionDropField('Footer'); }}
-                        >
-                          <div className="space-y-3">
-                            {renderSectionFields('Footer')}
-                          </div>
-                        </div>
-
-                        {/* Right: Bordered Totals Box */}
-                        {activeSections.find(s => s.section_name === 'Totals' && s.is_visible) && (
-                          <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[9px]"
-                               onDragOver={e => e.preventDefault()}
-                               onDrop={() => { if (draggedElement) handleSectionDropField('Totals'); }}
-                          >
-                            <div className="font-bold border-b pb-1 mb-2 text-slate-700 uppercase tracking-wider text-right">Summary</div>
-                            <div className="space-y-1.5 flex flex-col items-end w-full">
-                              {renderSectionFields('Totals')}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  </div>
-                </div>
-              )}
-          </div>
-
           {/* 3. Right Panel: Properties & Advanced Options */}
-          <div className="lg:col-span-2 h-[400px] lg:h-full border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
+          <div className="lg:col-span-6 h-[350px] border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
             <ScrollArea maxHeight="100%">
               <div className="space-y-4">
                 {/* Advanced Options Section */}
@@ -3846,30 +3255,22 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                       />
                     </div>
 
-                    <Input
-                      label="Default Value"
-                      variant="compact"
-                      value={selectedCustomField.default_value || ''}
-                      onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { default_value: e.target.value })}
-                    />
-
-                    <Select
-                      label="Field Type"
-                      variant="compact"
-                      value={selectedCustomField.field_type}
-                      onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { field_type: e.target.value as any })}
-                      options={[
-                        { value: 'text', label: 'Text' },
-                        { value: 'number', label: 'Number' },
-                        { value: 'date', label: 'Date' },
-                        { value: 'currency', label: 'Currency' },
-                        { value: 'multiline', label: 'Multiline Text' },
-                        { value: 'boolean', label: 'Boolean (Yes/No)' },
-                        { value: 'dropdown', label: 'Dropdown Selection' },
-                        { value: 'checkbox', label: 'Checkbox Option' },
-                        { value: 'radio', label: 'Radio Option' }
-                      ]}
-                    />
+                    {selectedCustomField.field_type === 'formula' && selectedCustomField.formula_tokens && (
+                      <div className="space-y-1">
+                        <span className="text-[11.5px] text-slate-600 font-semibold block">Formula</span>
+                        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10.5px] font-mono flex flex-wrap gap-1 leading-normal">
+                          {selectedCustomField.formula_tokens.map((tok, i) => (
+                            <span key={i} className={`rounded px-1 py-0.5 font-bold ${
+                              tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
+                              tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
+                                                       'bg-green-100 text-green-700'
+                            }`}>
+                              {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-slate-650 font-bold">Field Visibility</span>
@@ -4282,6 +3683,23 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                       ]}
                     />
 
+                    {selectedColumn.is_custom && selectedColumn.formula_tokens && (
+                      <div className="space-y-1">
+                        <span className="text-[11.5px] text-slate-600 font-semibold block">Formula</span>
+                        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10.5px] font-mono flex flex-wrap gap-1 leading-normal">
+                          {selectedColumn.formula_tokens.map((tok, i) => (
+                            <span key={i} className={`rounded px-1 py-0.5 font-bold ${
+                              tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
+                              tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
+                                                       'bg-green-100 text-green-700'
+                            }`}>
+                              {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-slate-650 font-bold">Column Visibility</span>
                       <Toggle
@@ -4317,17 +3735,767 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
               </div>
             </ScrollArea>
           </div>
+          {/* 2. Center Panel: Live print-like Preview Canvas */}
+          <div className="col-span-12 h-[650px] border border-[#E2E8F0] bg-slate-100 rounded-xl p-4 flex flex-col justify-between overflow-hidden relative">
+            <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-slate-500 px-1 border-b pb-1 select-none">
+              <span>Live Print Preview</span>
+              <span>100% Visual Consistency</span>
+            </div>
+            {/* Conditional Layout Engine */}
+            {activeTemplate.layout_mode === 'free' ? (
+              <div
+                ref={containerRefCallback}
+                className="flex-grow bg-slate-100 overflow-y-auto overflow-x-hidden relative p-4 flex flex-col items-center custom-scrollbar rounded-lg"
+              >
+                <div
+                  ref={canvasRef}
+                  className="bg-white shadow-lg border border-slate-350 relative transition-all"
+                  style={{
+                    width: `${targetWidth}px`,
+                    height: `${targetHeight}px`,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top center',
+                    marginBottom: `${(previewScale - 1) * targetHeight}px`,
+                    flexShrink: 0,
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!draggedElement || !canvasRef.current) return;
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const dropX = Math.round(Math.max(0, Math.min(90, ((e.clientX - rect.left) / rect.width) * 100)));
+                    const dropY = Math.round(Math.max(0, Math.min(90, ((e.clientY - rect.top) / rect.height) * 100)));
+                    if (draggedElement.type === 'default') {
+                      updateFieldProperty(draggedElement.id, { is_visible: true, position_x: dropX, position_y: dropY });
+                    } else {
+                      updateCustomFieldProperty(draggedElement.id, { is_visible: true, position_x: dropX, position_y: dropY });
+                    }
+                    setDraggedElement(null);
+                  }}
+                >
+                    {activeFields
+                      .filter(f => f.is_visible)
+                      .map(f => {
+                        const isSelected = selectedFieldId === f.field_id;
+                        const isEditingLabel = editingLabelId === f.field_id;
+                        
+                        let elementContent = null;
+                        
+                        if (f.field_name === 'Company Logo') {
+                          elementContent = activeTemplate.logo_url ? (
+                            <img
+                              src={activeTemplate.logo_url}
+                              alt="Logo"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full border border-dashed rounded flex items-center justify-center bg-slate-50 text-[8px] text-slate-400">
+                              Upload Logo
+                            </div>
+                          );
+                        } else if (f.field_name === 'Item Table') {
+                          const visibleCols = activeColumns.filter(c => c.is_visible);
+                          elementContent = (
+                            <div className="border rounded bg-white overflow-hidden w-full h-full text-[8px] flex flex-col justify-between">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b text-[7px] font-bold text-slate-500">
+                                    {visibleCols.map(col => (
+                                      <th
+                                        key={col.column_id}
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          handleColumnDragStart(e, col.column_id);
+                                        }}
+                                        onDragOver={handleColumnDragOver}
+                                        onDrop={(e) => {
+                                          e.stopPropagation();
+                                          handleColumnDrop(e, col.column_id);
+                                        }}
+                                        className="py-1 px-1.5 font-black text-slate-700 cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors"
+                                        style={{ width: col.width, textAlign: col.alignment || 'left' }}
+                                      >
+                                        {col.custom_label || col.column_name}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-b text-slate-600 text-[7px]">
+                                    {visibleCols.map(col => {
+                                      let val = '-';
+                                      if (col.column_name === 'Sr No') val = '1';
+                                      else if (col.column_name === 'Product Code') val = 'BC-001';
+                                      else if (col.column_name === 'Product Name') val = 'Sample Product';
+                                      else if (col.column_name === 'Description') val = 'Deliverables';
+                                      else if (col.column_name === 'Quantity' || col.column_name === 'Qty') val = '1.00';
+                                      else if (col.column_name === 'Rate' || col.column_name === 'Unit Price') val = '8,450.00';
+                                      else if (col.column_name === 'Discount') val = '0.00';
+                                      else if (col.column_name === 'Tax') val = '1,352.00';
+                                      else if (col.column_name === 'Amount') val = '9,802.00';
+                                      else if (col.is_custom && col.formula_tokens && col.formula_tokens.length > 0) {
+                                        try {
+                                          const fieldMap: Record<string, number> = {
+                                            'quantity': dummyContext.row.quantity,
+                                            'price': dummyContext.row.price,
+                                            'rate': dummyContext.row.price,
+                                            'line_total': dummyContext.row.quantity * dummyContext.row.price,
+                                            'discount': dummyContext.row.discount,
+                                            'tax': dummyContext.row.tax,
+                                            'further_tax': dummyContext.row.furtherTax,
+                                            'subtotal': dummyContext.totals.subtotal,
+                                            'tax_amount': dummyContext.totals.tax_amount,
+                                            'discount_amount': dummyContext.totals.discount_amount,
+                                            'grand_total': dummyContext.totals.grand_total,
+                                            'paid_amount': dummyContext.totals.paid_amount,
+                                            'balance_due': dummyContext.totals.balance_due,
+                                          };
+                                          let result = 0;
+                                          let pendingOp = '+';
+                                          for (const tok of col.formula_tokens) {
+                                            let num = 0;
+                                            if (tok.type === 'field') num = fieldMap[tok.fieldKey as string] ?? 0;
+                                            else if (tok.type === 'constant') num = parseFloat(String(tok.constant ?? '0')) || 0;
+                                            else if (tok.type === 'operator') { pendingOp = tok.operator ?? '+'; continue; }
+                                            if (pendingOp === '+') result += num;
+                                            else if (pendingOp === '-') result -= num;
+                                            else if (pendingOp === '*') result *= num;
+                                            else if (pendingOp === '/') result = num !== 0 ? result / num : 0;
+                                          }
+                                          val = result.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                        } catch { val = '0.00'; }
+                                      }
+                                      return (
+                                        <td key={col.column_id} className="py-1 px-1.5" style={{ textAlign: col.alignment || 'left' }}>
+                                          {val}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        } else if (f.field_name === 'QR Code') {
+                          elementContent = (
+                            <div className="w-10 h-10 border p-0.5 rounded bg-white flex items-center justify-center">
+                              <svg className="w-full h-full text-slate-800" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-2 2h2v2-2v-2zm2 2h3v3h-3v-3zm-2 2h2v2-2v-2zm4-4h2v4h-2v-4zm0 6h2v1h-2v-1z" />
+                              </svg>
+                            </div>
+                          );
+                        } else if (f.field_name === 'Barcode') {
+                          elementContent = (
+                            <svg className="h-6 w-full text-slate-800" viewBox="0 0 100 20" preserveAspectRatio="none">
+                              <rect width="100" height="20" fill="white"/>
+                              <rect x="5" y="2" width="2" height="16" fill="currentColor"/>
+                              <rect x="10" y="2" width="4" height="16" fill="currentColor"/>
+                              <rect x="16" y="2" width="1" height="16" fill="currentColor"/>
+                              <rect x="20" y="2" width="3" height="16" fill="currentColor"/>
+                              <rect x="25" y="2" width="5" height="16" fill="currentColor"/>
+                              <rect x="32" y="2" width="2" height="16" fill="currentColor"/>
+                              <rect x="36" y="2" width="1" height="16" fill="currentColor"/>
+                              <rect x="40" y="2" width="4" height="16" fill="currentColor"/>
+                              <rect x="48" y="2" width="2" height="16" fill="currentColor"/>
+                              <rect x="52" y="2" width="3" height="16" fill="currentColor"/>
+                              <rect x="58" y="2" width="5" height="16" fill="currentColor"/>
+                            </svg>
+                          );
+                        } else if (f.field_name === 'FBR Logo') {
+                          elementContent = (
+                            <div className="flex items-center gap-1 bg-emerald-50/70 border border-emerald-200 rounded px-1.5 py-0.5 text-[8px] font-bold text-emerald-800">
+                              <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                <path d="M2 12h20" />
+                              </svg>
+                              <div className="flex flex-col text-left leading-[1.1]">
+                                <span>FBR</span>
+                                <span className="text-[5px] text-emerald-500 font-medium font-sans">Pakistan</span>
+                              </div>
+                            </div>
+                          );
+                        } else if (f.field_name === 'Company Stamp') {
+                          elementContent = (
+                            <div className="w-18 h-9 border border-dashed border-slate-355 rounded-full flex flex-col items-center justify-center opacity-65 select-none bg-slate-50/50">
+                              <span className="text-[5px] font-bold text-slate-455">Company Stamp</span>
+                              <span className="text-[4px] text-slate-355">Seal Here</span>
+                            </div>
+                          );
+                        } else if (f.field_name === 'Signature') {
+                          elementContent = (
+                            <div className="w-full text-center">
+                              <div className="border-b border-slate-350 w-full h-3" />
+                              {isEditingLabel ? (
+                                <input
+                                  type="text"
+                                  value={editingLabelText}
+                                  onChange={e => setEditingLabelText(e.target.value)}
+                                  onBlur={handleSaveInlineLabel}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleSaveInlineLabel();
+                                  }}
+                                  className="w-full text-[9px] border p-0.5 rounded outline-none mt-0.5 text-center"
+                                  autoFocus
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span 
+                                  className="text-[7px] text-slate-400 block mt-0.5 cursor-pointer hover:bg-slate-50 rounded px-1"
+                                  onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || 'Seller Signature')}
+                                >
+                                  {f.custom_label || 'Seller Signature'}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        } else if (['Subtotal', 'Grand Total', 'Balance Due', 'Tax Amount', 'Discount Amount', 'Shipping Charges', 'Round Off', 'Received Amount'].includes(f.field_name)) {
+                          const isSpaceBetween = !f.alignment || f.alignment === 'left';
+                          elementContent = (
+                            <div className="flex w-full items-center" style={{ justifyContent: isSpaceBetween ? 'space-between' : f.alignment === 'center' ? 'center' : 'flex-end', gap: '8px' }}>
+                              {isEditingLabel ? (
+                                <input
+                                  type="text"
+                                  value={editingLabelText}
+                                  onChange={e => setEditingLabelText(e.target.value)}
+                                  onBlur={handleSaveInlineLabel}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleSaveInlineLabel();
+                                  }}
+                                  className="w-[60%] text-[9px] border p-0.5 rounded outline-none"
+                                  autoFocus
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span 
+                                  className="text-slate-400 font-bold mr-1 cursor-pointer hover:bg-slate-50 rounded px-1"
+                                  onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || f.field_name)}
+                                  style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}
+                                >
+                                  {f.custom_label || f.field_name}:
+                                </span>
+                              )}
+                              <span className="font-extrabold" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{f.field_name === 'Balance Due' || f.field_name === 'Grand Total' || f.field_name === 'Subtotal' ? '8,450.00' : '0.00'}</span>
+                            </div>
+                          );
+                        } else {
+                          const sampleVal = 
+                            f.field_name === 'Company Name' ? 'Antigravity Studio' :
+                            f.field_name === 'Company Address' ? '452 Innovation Blvd, San Francisco, CA' :
+                            f.field_name === 'Phone' ? '+1 (555) 012-3456' :
+                            f.field_name === 'Email' ? 'contact@antigravity.studio' :
+                            f.field_name === 'Website' ? 'www.antigravity.studio' :
+                            f.field_name === 'NTN' ? '1234567-8' :
+                            f.field_name === 'STRN' || f.field_name === 'STN' || f.field_name === 'STN / STRN' ? '03-00-1234-567-89' :
+                            f.field_name === 'Customer Name' ? 'BlueRitt Technologies' :
+                            f.field_name === 'Customer Address' ? 'House 42, Street 5, Karachi, PK' :
+                            f.field_name === 'Mobile' ? '0300-1234567' :
+                            f.field_name === 'Customer NTN' ? '9876543-2' :
+                            f.field_name === 'Customer STRN' ? '03-09-9999-001-22' :
+                            f.field_name === 'Customer CNIC' ? '42201-1234567-1' :
+                            f.field_name === 'Customer Code' ? 'CUST-9928' :
+                            f.field_name === 'Customer Email' ? 'billing@blueritt.com' :
+                            f.field_name === 'Invoice Number' ? 'SI-000248' :
+                            f.field_name === 'Date' || f.field_name === 'Invoice Date' ? '2026-06-11' :
+                            f.field_name === 'Due Date' ? '2026-07-11' :
+                            f.field_name === 'Sales Person' ? 'Ahmed Raza' :
+                            f.field_name === 'Reference Number' ? 'REF-992' :
+                            f.field_name === 'Warehouse' ? 'Lahore Central' :
+                            f.field_name === 'Payment Terms' ? 'Net 30' :
+                            f.field_name === 'FBR Invoice Number' ? 'FBR-INV-1092837' :
+                            f.field_name === 'Prepared By' ? 'Aman Khan' :
+                            f.field_name === 'Received By' ? 'Manager' :
+                            f.field_name === 'Remarks' ? 'Remarks details go here.' :
+                            f.field_name === 'Terms & Conditions' ? 'Standard terms apply.' : 
+                            f.field_name === 'Notes' ? 'Goods once sold are non-refundable.' : 'Sample Value';
+                          
+                          elementContent = (
+                            <div className="w-full flex" style={{ justifyContent: f.alignment === 'center' ? 'center' : f.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
+                              {isEditingLabel ? (
+                                <input
+                                  type="text"
+                                  value={editingLabelText}
+                                  onChange={e => setEditingLabelText(e.target.value)}
+                                  onBlur={handleSaveInlineLabel}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleSaveInlineLabel();
+                                  }}
+                                  className="w-full text-[9px] border p-0.5 rounded outline-none"
+                                  autoFocus
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              ) : (
+                                <div className="inline-flex items-center flex-wrap" onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || f.field_name)}>
+                                  <strong className="text-slate-400 mr-1" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{f.custom_label || f.field_name}: </strong>
+                                  <span className="text-slate-700" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{sampleVal}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={f.field_id}
+                            style={{
+                              position: 'absolute',
+                              left: `${f.position_x ?? 5}%`,
+                              top: `${f.position_y ?? 5}%`,
+                              width: f.width_percent ? `${f.width_percent}%` : 'auto',
+                              height: f.height_px ? `${f.height_px}px` : 'auto',
+                              fontSize: f.font_size ? `${f.font_size}px` : '10px',
+                              fontWeight: f.font_weight === 'bold' || f.is_bold ? 'bold' : f.font_weight === 'semibold' ? '600' : 'normal',
+                              color: f.color || '#1e293b',
+                              background: isSelected ? `${brand.primary}10` : (f.background || 'transparent'),
+                              border: f.border || 'none',
+                              padding: f.padding || '2px',
+                              marginTop: f.margin_top ? `${f.margin_top}px` : undefined,
+                              marginBottom: f.margin_bottom ? `${f.margin_bottom}px` : undefined,
+                              textAlign: f.alignment || 'left',
+                              cursor: 'move',
+                              zIndex: isSelected ? 50 : 10,
+                              outline: isSelected ? `2px dashed ${brand.primary}` : '1px dashed transparent',
+                              display: 'flex',
+                              flexDirection: 'row',
+                              justifyContent: f.alignment === 'center' ? 'center' : f.alignment === 'right' ? 'flex-end' : 'flex-start',
+                              ...parseCustomCss(f.custom_css)
+                            }}
+                            className="hover:outline-blue-300 rounded group select-none relative"
+                            onMouseDown={(e) => handleMouseDown(e, f.field_id, 'default', f.position_x ?? 5, f.position_y ?? 5)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFieldId(f.field_id);
+                              setSelectedColumnId(null);
+                              setSelectedCustomFieldId(null);
+                            }}
+                          >
+                            {elementContent}
+                            {isSelected && (
+                              <div
+                                className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize z-50 rounded-tl border-t border-l"
+                                style={{
+                                  backgroundColor: brand.primary,
+                                  borderColor: 'white'
+                                }}
+                                onMouseDown={(e) => handleResizeMouseDown(e, f.field_id, 'default', f.width_percent ?? 50, f.height_px, e.currentTarget.parentElement)}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+
+                    {/* Render Custom Fields in Free Layout */}
+                    {activeCustomFields
+                      .filter(cf => cf.is_visible)
+                      .map(cf => {
+                        const isSelected = selectedCustomFieldId === cf.custom_field_id;
+                        const isEditingLabel = editingLabelId === cf.custom_field_id;
+
+                        return (
+                          <div
+                            key={cf.custom_field_id}
+                            style={{
+                              position: 'absolute',
+                              left: `${cf.position_x ?? 10}%`,
+                              top: `${cf.position_y ?? 60}%`,
+                              width: cf.width_percent ? `${cf.width_percent}%` : 'auto',
+                              height: cf.height_px ? `${cf.height_px}px` : 'auto',
+                              fontSize: cf.font_size ? `${cf.font_size}px` : '10px',
+                              fontWeight: cf.font_weight === 'bold' || cf.is_bold ? 'bold' : cf.font_weight === 'semibold' ? '600' : 'normal',
+                              color: cf.color || '#1e293b',
+                              background: isSelected ? `${brand.primary}10` : (cf.background || 'transparent'),
+                              border: cf.border || 'none',
+                              padding: cf.padding || '2px',
+                              marginTop: cf.margin_top ? `${cf.margin_top}px` : undefined,
+                              marginBottom: cf.margin_bottom ? `${cf.margin_bottom}px` : undefined,
+                              textAlign: cf.alignment || 'left',
+                              cursor: 'move',
+                              zIndex: isSelected ? 50 : 10,
+                              outline: isSelected ? `2px dashed ${brand.primary}` : '1px dashed transparent',
+                              display: 'flex',
+                              flexDirection: 'row',
+                              justifyContent: cf.alignment === 'center' ? 'center' : cf.alignment === 'right' ? 'flex-end' : 'flex-start',
+                              ...parseCustomCss(cf.custom_css)
+                            }}
+                            className="hover:outline-blue-300 rounded group select-none relative"
+                            onMouseDown={(e) => handleMouseDown(e, cf.custom_field_id, 'custom', cf.position_x ?? 10, cf.position_y ?? 60)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCustomFieldId(cf.custom_field_id);
+                              setSelectedFieldId(null);
+                              setSelectedColumnId(null);
+                            }}
+                          >
+                            <div className="w-full flex" style={{ justifyContent: cf.alignment === 'center' ? 'center' : cf.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
+                              {isEditingLabel ? (
+                                  <input
+                                    type="text"
+                                    value={editingLabelText}
+                                    onChange={e => setEditingLabelText(e.target.value)}
+                                    onBlur={handleSaveInlineLabel}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') handleSaveInlineLabel();
+                                    }}
+                                    className="w-full text-[9px] border p-0.5 rounded outline-none"
+                                    autoFocus
+                                    onClick={e => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <div className="inline-flex items-center flex-wrap" onDoubleClick={(e) => handleDoubleClick(e, cf.custom_field_id, cf.custom_label || cf.field_name)}>
+                                    <strong className="text-slate-400 mr-1" style={{ color: cf.color || undefined, fontWeight: cf.is_bold ? 'bold' : 'normal' }}>{cf.custom_label || cf.field_name}: </strong>
+                                    <span className="text-slate-700" style={{ color: cf.color || undefined, fontWeight: cf.is_bold ? 'bold' : 'normal' }}>{getSampleValue(cf.field_name)}</span>
+                                  </div>
+                                )}
+                            </div>
+                              {isSelected && (
+                                <div
+                                  className="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize z-50 rounded-tl border-t border-l"
+                                  style={{
+                                    backgroundColor: brand.primary,
+                                    borderColor: 'white'
+                                  }}
+                                  onMouseDown={(e) => handleResizeMouseDown(e, cf.custom_field_id, 'custom', cf.width_percent ?? 50, cf.height_px, e.currentTarget.parentElement)}
+                                />
+                              )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  ref={containerRefCallback}
+                  className="flex-grow bg-slate-100 overflow-y-auto overflow-x-hidden relative p-4 flex flex-col items-center custom-scrollbar"
+                >
+                  <div
+                    ref={innerContentRefCallback}
+                    style={{
+                      width: activeTemplate?.paper_size === 'Thermal' ? '380px' : '794px',
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: 'top center',
+                      marginBottom: `${(previewScale - 1) * contentHeight}px`,
+                      flexShrink: 0,
+                    }}
+                    className="bg-white border border-slate-350 rounded-lg p-6 shadow-md transition-all duration-150"
+                  >
+                    {activeTemplate?.paper_size === 'Thermal' ? (
+                    <div className="flex flex-col gap-4 text-[9px]">
+                      {activeSections.filter(sec => sec.is_visible).map((sec) => {
+                        if (sec.section_name === 'Attachments') {
+                          return (
+                            <div key={sec.section_id} className="space-y-1 py-1 border-b">
+                              <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
+                              <div className="flex gap-2 text-[8px] text-blue-500">
+                                <span className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
+                                  <FileText className="w-2.5 h-2.5 text-slate-400" />
+                                  delivery_proof.pdf
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        const dynamicFields = renderSectionFields(sec.section_name);
+                        if (!dynamicFields) return null;
+
+                        return (
+                          <div key={sec.section_id} className="w-full"
+                               onDragOver={e => e.preventDefault()}
+                               onDrop={() => { if (draggedElement) handleSectionDropField(sec.section_name); }}
+                          >
+                            <span className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider">{sec.section_name}</span>
+                            {dynamicFields}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // BEAUTIFUL A4/LETTER SOLID LAYOUT MATCHING USER'S IMAGE
+                    <div className="space-y-6 flex flex-col justify-start">
+                      <div>
+                        {/* 1. Header (Company details & centered Title) */}
+                        {activeSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
+                          <div className="w-full flex justify-between items-start border-b pb-4 mb-2"
+                               onDragOver={e => e.preventDefault()}
+                               onDrop={() => { if (draggedElement) handleSectionDropField('Company Information'); }}
+                          >
+                            <div className="flex-grow">
+                              {renderSectionFields('Company Information')}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Centered Document Title */}
+                        <div className="w-full text-center my-3">
+                          <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
+                            {activeTemplate?.document_type || 'Sale Tax Invoice'}
+                          </h1>
+                        </div>
+
+                        {/* 2. Side-by-Side Information Boxes (Invoice & Customer details) */}
+                        <div className="grid grid-cols-2 gap-4 mb-4 items-stretch">
+                          {activeSections.find(s => s.section_name === 'Invoice Information' && s.is_visible) ? (
+                            <div className="flex flex-col space-y-1.5 h-full justify-between"
+                                 onDragOver={e => e.preventDefault()}
+                                 onDrop={() => { if (draggedElement) handleSectionDropField('Invoice Information'); }}
+                            >
+                              {(() => {
+                                const secFields = activeFields.filter(f => f.section_name === 'Invoice Information');
+                                const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Invoice Information');
+                                const combined = [
+                                  ...secFields.map(f => ({ ...f, isCustom: false as const })),
+                                  ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
+                                ].sort((a, b) => a.display_order - b.display_order);
+
+                                return combined.map(item => {
+                                  const sampleVal = 
+                                    item.field_name === 'Invoice Number' ? 'SI-000248' :
+                                    item.field_name === 'Date' || item.field_name === 'Invoice Date' ? '2026-06-11' :
+                                    item.field_name === 'Due Date' ? '2026-07-11' :
+                                    item.field_name === 'Sales Person' ? 'Ahmed Raza' :
+                                    item.field_name === 'Reference Number' ? 'REF-992' :
+                                    item.field_name === 'Warehouse' ? 'Lahore Central' :
+                                    item.field_name === 'Payment Terms' ? 'Net 30' :
+                                    item.field_name === 'FBR Invoice Number' ? 'FBR-INV-1092837' : 'Sample';
+
+                                  const isSelected = selectedFieldId === (item.isCustom ? item.custom_field_id : item.field_id);
+                                  const isEditingLabel = editingLabelId === (item.isCustom ? item.custom_field_id : item.field_id);
+
+                                  const labelColor = item.label_color || item.color;
+                                  const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
+                                  const valueColor = item.value_color || item.color;
+                                  const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
+
+                                  const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
+                                                    item.border === 'bottom-slate' ? '1px solid #475569' :
+                                                    item.border === 'bottom-black' ? '1px solid #000000' :
+                                                    item.border === 'none' ? 'none' :
+                                                    item.border || '1px solid #cbd5e1';
+
+                                  const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
+                                    borderBottom: item.border === 'none' ? 'none' : borderVal,
+                                    borderTop: 'none',
+                                    borderLeft: 'none',
+                                    borderRight: 'none'
+                                  } : {
+                                    border: isSelected ? '1px solid rgb(59, 130, 246)' : borderVal
+                                  };
+
+                                  return (
+                                    <div 
+                                      key={item.isCustom ? item.custom_field_id : item.field_id} 
+                                      className={`rounded px-3 py-1.5 flex justify-between items-center cursor-pointer text-[9px] ${isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+                                      style={{ 
+                                        ...borderStyles,
+                                        backgroundColor: item.background || '#ffffff',
+                                        fontSize: item.font_size ? `${item.font_size}px` : undefined,
+                                        padding: item.padding || undefined,
+                                        marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
+                                        opacity: item.is_visible ? 1 : 0.45,
+                                        border: item.is_visible ? borderStyles.border : '1px dashed #cbd5e1',
+                                      }}
+                                      onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
+                                    >
+                                      {isEditingLabel ? (
+                                        <input
+                                          type="text"
+                                          value={editingLabelText}
+                                          onChange={e => setEditingLabelText(e.target.value)}
+                                          onBlur={handleSaveInlineLabel}
+                                          onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineLabel(); }}
+                                          className="w-full text-[9px] border p-0.5 rounded outline-none"
+                                          autoFocus
+                                          onClick={e => e.stopPropagation()}
+                                        />
+                                      ) : (
+                                        <strong 
+                                          className="text-slate-500 mr-2 cursor-pointer hover:bg-slate-50 rounded px-1"
+                                          onDoubleClick={(e) => handleDoubleClick(e, item.isCustom ? item.custom_field_id : item.field_id, item.custom_label || item.field_name)}
+                                          style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}
+                                        >
+                                          {item.custom_label || item.field_name}:
+                                        </strong>
+                                      )}
+                                      <span className="text-slate-850" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{sampleVal}</span>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          ) : <div />}
+
+                          {activeSections.find(s => s.section_name === 'Customer Information' && s.is_visible) ? (
+                            <div 
+                              className="rounded p-3 flex flex-col justify-start text-[9px]"
+                              style={{ 
+                                border: '1px solid #cbd5e1', 
+                                backgroundColor: '#ffffff', 
+                                color: '#1e293b',
+                                minHeight: '100%' 
+                              }}
+                              onDragOver={e => e.preventDefault()}
+                              onDrop={() => { if (draggedElement) handleSectionDropField('Customer Information'); }}
+                            >
+                              <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left text-[9px]">
+                                Customer Details
+                              </div>
+                              <div className="space-y-1.5">
+                                {(() => {
+                                  const secFields = activeFields.filter(f => f.section_name === 'Customer Information');
+                                  const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Customer Information');
+                                  const combined = [
+                                    ...secFields.map(f => ({ ...f, isCustom: false as const })),
+                                    ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
+                                  ].sort((a, b) => a.display_order - b.display_order);
+
+                                  return combined.map(item => {
+                                    const sampleVal = 
+                                      item.field_name === 'Customer Name' ? 'BlueRitt Technologies' :
+                                      item.field_name === 'Customer Address' ? 'House 42, Street 5, Karachi, PK' :
+                                      item.field_name === 'Mobile' ? '0300-1234567' :
+                                      item.field_name === 'Customer NTN' ? '9876543-2' :
+                                      item.field_name === 'Customer STRN' ? '03-09-9999-001-22' :
+                                      item.field_name === 'Customer CNIC' ? '42201-1234567-1' :
+                                      item.field_name === 'Customer Code' ? 'CUST-9928' :
+                                      item.field_name === 'Customer Email' ? 'billing@blueritt.com' : 'Sample';
+
+                                    const isSelected = selectedFieldId === (item.isCustom ? item.custom_field_id : item.field_id);
+                                    const isEditingLabel = editingLabelId === (item.isCustom ? item.custom_field_id : item.field_id);
+
+                                    const labelColor = item.label_color || item.color;
+                                    const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
+                                    const valueColor = item.value_color || item.color;
+                                    const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
+
+                                    const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
+                                                      item.border === 'bottom-slate' ? '1px solid #475569' :
+                                                      item.border === 'bottom-black' ? '1px solid #000000' :
+                                                      item.border === 'none' ? 'none' :
+                                                      item.border || '1px solid #f1f5f9';
+
+                                    const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
+                                      borderBottom: item.border === 'none' ? 'none' : borderVal,
+                                      borderTop: 'none',
+                                      borderLeft: 'none',
+                                      borderRight: 'none'
+                                    } : {
+                                      borderBottom: borderVal
+                                    };
+
+                                    return (
+                                      <div 
+                                        key={item.isCustom ? item.custom_field_id : item.field_id} 
+                                        className={`flex justify-between items-start pb-1.5 last:border-0 last:pb-0 cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
+                                        style={{
+                                          ...borderStyles,
+                                          fontSize: item.font_size ? `${item.font_size}px` : undefined,
+                                          padding: item.padding || undefined,
+                                          marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
+                                          opacity: item.is_visible ? 1 : 0.45,
+                                          borderBottom: item.is_visible ? borderStyles.borderBottom : '1px dashed #cbd5e1',
+                                        }}
+                                        onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
+                                      >
+                                        {isEditingLabel ? (
+                                          <input
+                                            type="text"
+                                            value={editingLabelText}
+                                            onChange={e => setEditingLabelText(e.target.value)}
+                                            onBlur={handleSaveInlineLabel}
+                                            onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineLabel(); }}
+                                            className="w-[60%] text-[8px] border p-0.5 rounded outline-none"
+                                            autoFocus
+                                            onClick={e => e.stopPropagation()}
+                                          />
+                                        ) : (
+                                          <strong 
+                                            className="text-slate-500 mr-2 shrink-0 cursor-pointer hover:bg-slate-50 rounded px-1"
+                                            onDoubleClick={(e) => handleDoubleClick(e, item.isCustom ? item.custom_field_id : item.field_id, item.custom_label || item.field_name)}
+                                            style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}
+                                          >
+                                            {item.custom_label || item.field_name}:
+                                          </strong>
+                                        )}
+                                        <span className="text-slate-800 text-right break-words max-w-[65%]" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{sampleVal}</span>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
+                          ) : <div />}
+                        </div>
+
+                        {/* 3. Product Table */}
+                        {activeSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
+                          <div className="w-full my-4"
+                               onDragOver={e => e.preventDefault()}
+                               onDrop={() => { if (draggedElement) handleSectionDropField('Product Table'); }}
+                          >
+                            {renderSectionFields('Product Table')}
+                          </div>
+                        )}
+
+                        {/* Attachments if any */}
+                        <div className="space-y-1 py-1 border-b w-full">
+                          <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
+                          <div className="flex gap-2 text-[8px] text-blue-500">
+                            <span className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
+                              <FileText className="w-2.5 h-2.5 text-slate-400" />
+                              delivery_proof.pdf
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 4. Footer Section (Side-by-Side Note & Totals Box) */}
+                      <div className="grid grid-cols-12 gap-6 items-end w-full pt-4 border-t">
+                        {/* Left: Notes, Remarks, Signatures */}
+                        <div className="col-span-7 space-y-4"
+                             onDragOver={e => e.preventDefault()}
+                             onDrop={() => { if (draggedElement) handleSectionDropField('Footer'); }}
+                        >
+                          <div className="space-y-3">
+                            {renderSectionFields('Footer')}
+                          </div>
+                        </div>
+
+                        {/* Right: Bordered Totals Box */}
+                        {activeSections.find(s => s.section_name === 'Totals' && s.is_visible) && (
+                          <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[9px]"
+                               onDragOver={e => e.preventDefault()}
+                               onDrop={() => { if (draggedElement) handleSectionDropField('Totals'); }}
+                          >
+                            <div className="font-bold border-b pb-1 mb-2 text-slate-700 uppercase tracking-wider text-right">Summary</div>
+                            <div className="space-y-1.5 flex flex-col items-end w-full">
+                              {renderSectionFields('Totals')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  </div>
+                </div>
+              )}
+          </div>
+
         </div>
 
-        {/* Add Custom Field Modal popup dialog */}
+        {/* ── Add Formula Field Modal ── */}
         <Modal
           isOpen={showCustomFieldModal}
-          onClose={() => setShowCustomFieldModal(false)}
-          title="Add Custom Field"
+          onClose={() => { setShowCustomFieldModal(false); resetFormulaModal(); }}
+          title="🧮 Add Formula Field"
           size="sm"
           footer={
             <>
-              <Button variant="white" size="sm" onClick={() => setShowCustomFieldModal(false)}>
+              <Button variant="white" size="sm" onClick={() => { setShowCustomFieldModal(false); resetFormulaModal(); }}>
                 Cancel
               </Button>
               <Button
@@ -4337,90 +4505,179 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                 onClick={handleAddCustomField}
                 style={{ backgroundColor: brand.primary }}
               >
-                Add Field
+                Add Formula Field
               </Button>
             </>
           }
         >
           <div className="space-y-3">
-            {isAdminRole && (
-              <div className="flex items-center justify-between border border-slate-100 bg-slate-50/50 p-2 rounded-lg">
-                <span className="text-[11px] font-bold text-slate-700">Create as System Field</span>
-                <Toggle
-                  checked={createAsSystemField}
-                  onChange={val => setCreateAsSystemField(val)}
-                />
-              </div>
-            )}
+
+            {/* Field Name */}
             <Input
               label="Field Label *"
               variant="compact"
-              placeholder="e.g. Delivery Time, PO Number"
-              value={customFieldForm.field_name}
-              onChange={e => setCustomFieldForm({ ...customFieldForm, field_name: e.target.value })}
+              placeholder="e.g. Net Payable, Profit, Balance"
+              value={formulaFieldName}
+              onChange={e => setFormulaFieldName(e.target.value)}
             />
-            <Select
-              label="Field Type"
-              variant="compact"
-              value={customFieldForm.field_type}
-              onChange={e => setCustomFieldForm({ ...customFieldForm, field_type: e.target.value as any })}
-              options={[
-                { value: 'text', label: 'Text' },
-                { value: 'number', label: 'Number' },
-                { value: 'date', label: 'Date' },
-                { value: 'currency', label: 'Currency' },
-                { value: 'multiline', label: 'Multiline Text' },
-                { value: 'boolean', label: 'Boolean (Yes/No)' },
-                { value: 'dropdown', label: 'Dropdown Selection' },
-                { value: 'checkbox', label: 'Checkbox Option' },
-                { value: 'radio', label: 'Radio Option' }
-              ]}
-            />
-            {!createAsSystemField && (
-              <Input
-                label="Default Value"
-                variant="compact"
-                placeholder="e.g. Net 30, Urgent"
-                value={customFieldForm.default_value}
-                onChange={e => setCustomFieldForm({ ...customFieldForm, default_value: e.target.value })}
-              />
-            )}
+
+            {/* Placement */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary, #64748b)', display: 'block', marginBottom: 6 }}>
+                Add To
+              </label>
+              <div className="flex gap-2">
+                {(['totals', 'column'] as const).map(p => (
+                  <button key={p} type="button"
+                    onClick={() => {
+                      setFormulaPlacement(p);
+                      const firstValid = FORMULA_FIELD_OPTIONS.find(f => {
+                        if (p === 'totals') return f.section === 'Totals' || f.section === 'Summary';
+                        return f.section === 'Column';
+                      })?.key || '';
+                      setFormulaSelectedField(firstValid);
+                    }}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      formulaPlacement === p
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {p === 'totals' ? '📋 Summary / Footer' : '📊 Table Column'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Formula Builder */}
+            <div className="space-y-2">
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary, #64748b)', display: 'block', marginBottom: 2 }}>
+                Formula
+              </label>
+
+              {/* Live preview */}
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-mono min-h-[34px] flex flex-wrap items-center gap-1">
+                {formulaTokens.length === 0 && <span className="text-slate-400 italic">Build your formula below…</span>}
+                {formulaTokens.map((tok, i) => (
+                  <span key={i} className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-semibold ${
+                    tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
+                    tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
+                                             'bg-green-100 text-green-700'
+                  }`}>
+                    {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
+                    <button type="button" onClick={() => setFormulaTokens(prev => prev.filter((_, j) => j !== i))}
+                      className="ml-0.5 text-slate-400 hover:text-red-500 font-bold leading-none">×</button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Tab row */}
+              <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[11px] font-semibold w-fit">
+                {(['field', 'operator', 'constant'] as const).map(t => (
+                  <button key={t} type="button"
+                    onClick={() => setFormulaAddType(t)}
+                    className={`px-3 py-1 transition-colors ${
+                      formulaAddType === t ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
+                    }`}>
+                    {t === 'field' ? '📊 Field' : t === 'operator' ? '➕ Operator' : '🔢 Number'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Field picker */}
+              {formulaAddType === 'field' && (
+                <div className="flex gap-2">
+                  <select
+                    className="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    value={formulaSelectedField}
+                    onChange={e => setFormulaSelectedField(e.target.value)}
+                  >
+                    {['Totals', 'Summary', 'Column']
+                      .filter(sec => {
+                        if (formulaPlacement === 'totals') {
+                          return sec === 'Totals' || sec === 'Summary';
+                        } else {
+                          return sec === 'Column';
+                        }
+                      })
+                      .map(section => (
+                        <optgroup key={section} label={section}>
+                          {FORMULA_FIELD_OPTIONS.filter(f => f.section === section).map(f => (
+                            <option key={f.key} value={f.key}>{f.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                  </select>
+                  <button type="button"
+                    onClick={() => {
+                      const opt = FORMULA_FIELD_OPTIONS.find(f => f.key === formulaSelectedField);
+                      if (opt) setFormulaTokens(prev => [...prev, { type: 'field', fieldKey: opt.key, fieldLabel: opt.label }]);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 whitespace-nowrap"
+                  >Add</button>
+                </div>
+              )}
+
+              {/* Operator picker */}
+              {formulaAddType === 'operator' && (
+                <div className="flex gap-2 items-center">
+                  <div className="flex gap-1">
+                    {(['+', '-', '*', '/'] as const).map(op => (
+                      <button key={op} type="button"
+                        onClick={() => setFormulaSelectedOp(op)}
+                        className={`w-9 h-9 rounded-lg text-base font-bold border transition-colors ${
+                          formulaSelectedOp === op
+                            ? 'bg-amber-500 text-white border-amber-500'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50'
+                        }`}>
+                        {op}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button"
+                    onClick={() => setFormulaTokens(prev => [...prev, { type: 'operator', operator: formulaSelectedOp }])}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 whitespace-nowrap"
+                  >Add Operator</button>
+                </div>
+              )}
+
+              {/* Constant picker */}
+              {formulaAddType === 'constant' && (
+                <div className="flex gap-2">
+                  <input type="number" placeholder="Enter number"
+                    className="w-32 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                    value={formulaConstant}
+                    onChange={e => setFormulaConstant(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const n = parseFloat(formulaConstant);
+                        if (!isNaN(n)) setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
+                        setFormulaConstant('');
+                      }
+                    }}
+                  />
+                  <button type="button"
+                    onClick={() => {
+                      const n = parseFloat(formulaConstant);
+                      if (!isNaN(n)) setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
+                      setFormulaConstant('');
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 whitespace-nowrap"
+                  >Add</button>
+                </div>
+              )}
+
+              {formulaTokens.length > 0 && (
+                <button type="button" onClick={() => setFormulaTokens([])}
+                  className="text-[10px] text-red-400 hover:text-red-600 font-medium">
+                  Clear formula
+                </button>
+              )}
+              <p className="text-[10px] text-slate-400 italic">e.g. Subtotal − Discount + Tax = Net Payable</p>
+            </div>
           </div>
         </Modal>
 
-        {/* Add Custom Column Modal popup dialog */}
-        <Modal
-          isOpen={showCustomColumnModal}
-          onClose={() => setShowCustomColumnModal(false)}
-          title="Add Custom Column"
-          size="sm"
-          footer={
-            <>
-              <Button variant="white" size="sm" onClick={() => setShowCustomColumnModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Plus}
-                onClick={handleAddCustomColumn}
-                style={{ backgroundColor: brand.primary }}
-              >
-                Add Column
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-3">
-            <Input
-              label="Column Name *"
-              variant="compact"
-              placeholder="e.g. Brand, Expiry Date, Size"
-              value={customColumnName}
-              onChange={e => setCustomColumnName(e.target.value)}
-            />
-          </div>
-        </Modal>
       </div>
     );
   }

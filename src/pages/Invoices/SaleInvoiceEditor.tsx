@@ -180,11 +180,10 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [selectedTemplateForPdf, setSelectedTemplateForPdf] = useState<string | null>(null);
 
-  const [templates] = useState<any[]>(() => {
+  const [templates, setTemplates] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem('print_templates');
       let parsed = stored ? JSON.parse(stored) : seedPrintTemplates;
@@ -197,7 +196,29 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
         localStorage.setItem('print_templates', JSON.stringify(parsed));
       }
       
-      const deletedIds = new Set(['pt-1', 'pt-2', 'pt-3', 'pt-4', 'pt-5', 'pt-6', 'pt-7', 'pt-8', 'pt-9', 'pt-10', 'pt-11', 'pt-12']);
+      // Migrate srt-1 from Thermal to A4 if stored previously
+      let migrated = false;
+      parsed = parsed.map((t: any) => {
+        if (t.template_id === 'srt-1' && t.paper_size === 'Thermal') {
+          migrated = true;
+          return {
+            ...t,
+            paper_size: 'A4',
+            orientation: 'Portrait',
+            logo_size: 80,
+            qr_enabled: false,
+            barcode_enabled: false,
+            signature_enabled: true,
+            terms_enabled: true
+          };
+        }
+        return t;
+      });
+      if (migrated) {
+        localStorage.setItem('print_templates', JSON.stringify(parsed));
+      }
+
+      const deletedIds = new Set(['pt-1', 'pt-2', 'pt-3', 'pt-4', 'pt-5', 'pt-6', 'pt-7', 'pt-8', 'pt-9', 'pt-10', 'pt-11', 'pt-12', 'si-2', 'srt-2', 'srt-3', 'srt-4']);
       return parsed.filter((t: any) => !deletedIds.has(t.template_id));
     } catch {
       return seedPrintTemplates;
@@ -207,15 +228,16 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
+      const target = e.target as HTMLElement;
+      if (!target.closest('.split-button-dropdown') && !target.closest('.split-button-trigger')) {
+        setActiveDropdown(null);
       }
     };
-    if (showDropdown) {
+    if (activeDropdown !== null) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDropdown]);
+  }, [activeDropdown]);
 
 
   const handleDownloadExcelForFormat = (formatKey: 'retail' | 'wologo' | 'delivery' | 'tax') => {
@@ -473,6 +495,18 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
     : (templates.find(t => t.is_default) || templates[0]);
   const isThermal = activePdfT?.paper_size === 'Thermal';
 
+  const validateInvoiceForExport = () => {
+    if (!selectedCustomerId) {
+      setAlertModal({ isOpen: true, message: 'Please select a Customer before printing or exporting.' });
+      return false;
+    }
+    if (!data.items || data.items.length === 0) {
+      setAlertModal({ isOpen: true, message: 'Please add at least one product before printing or exporting.' });
+      return false;
+    }
+    return true;
+  };
+
   return (<>
     <style dangerouslySetInnerHTML={{
       __html: `
@@ -555,92 +589,112 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
               Save
             </Button>
 
-            {/* Active Default Format Dropdown Button */}
-            {activeT && (
-              <div className="relative flex items-center bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedCustomerId) {
-                      setAlertModal({ isOpen: true, message: 'Please select a Customer before printing or exporting.' });
-                      return;
-                    }
-                    if (!data.items || data.items.length === 0) {
-                      setAlertModal({ isOpen: true, message: 'Please add at least one product before printing or exporting.' });
-                      return;
-                    }
-                    if (onPrint) {
-                      onPrint(getMappedInvoice(), activeT.template_id);
-                    } else {
-                      window.print();
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-none bg-transparent rounded-l-lg cursor-pointer h-9"
-                >
-                  <Printer className="w-3.5 h-3.5 text-slate-500" />
-                  Print
-                </button>
-                <div className="w-[1px] h-4 bg-slate-200" />
-                <button
-                  type="button"
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="px-2 py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-none bg-transparent rounded-r-lg cursor-pointer flex items-center justify-center h-9"
-                >
-                  <ChevronDown className="w-3 h-3" />
-                </button>
+            {/* Multi-Split Print & Export Buttons */}
+            {(() => {
+              const isReturn = data.type === 'Sale Return';
+              const splitButtonsConfig = [
+                { id: 'default', label: 'Print', templateId: activeT?.template_id || (isReturn ? 'srt-1' : 'si-1'), formatKey: activeFormat, isAvailable: !!activeT },
+                { id: 'retail', label: 'Retail Print', templateId: isReturn ? 'srt-1' : 'si-1', formatKey: 'retail', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-1' : 'si-1'))?.is_active },
+                { id: 'delivery', label: 'Delivery', templateId: isReturn ? 'srt-3' : 'si-3', formatKey: 'delivery', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-3' : 'si-3'))?.is_active },
+                { id: 'tax', label: 'Tax Invoice', templateId: isReturn ? 'srt-4' : 'si-4', formatKey: 'tax', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-4' : 'si-4'))?.is_active }
+              ];
 
-                <AnimatePresence>
-                  {showDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                      className="absolute right-0 top-10 z-30 bg-white rounded-lg border p-1 w-32 shadow-md"
-                      style={{ borderColor: '#E2E8F0' }}
+              return splitButtonsConfig
+                .filter(btn => btn.isAvailable)
+                .map(btn => (
+                  <div key={btn.id} className="relative flex items-center bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!validateInvoiceForExport()) return;
+
+                        // Update default template in settings/state
+                        const updated = templates.map(t => ({
+                          ...t,
+                          is_default: t.template_id === btn.templateId
+                        }));
+                        setTemplates(updated);
+                        localStorage.setItem('print_templates', JSON.stringify(updated));
+
+                        setTimeout(() => {
+                          if (onPrint) {
+                            onPrint(getMappedInvoice(), btn.templateId);
+                          } else {
+                            window.print();
+                          }
+                        }, 50);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-none bg-transparent rounded-l-lg cursor-pointer h-9"
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDropdown(false);
-                          if (!selectedCustomerId) {
-                            setAlertModal({ isOpen: true, message: 'Please select a Customer before printing or exporting.' });
-                            return;
-                          }
-                          if (!data.items || data.items.length === 0) {
-                            setAlertModal({ isOpen: true, message: 'Please add at least one product before printing or exporting.' });
-                            return;
-                          }
-                          setSelectedTemplateForPdf(activeT.template_id);
-                        }}
-                        className="w-full text-left px-2 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        PDF Document
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDropdown(false);
-                          if (!selectedCustomerId) {
-                            setAlertModal({ isOpen: true, message: 'Please select a Customer before printing or exporting.' });
-                            return;
-                          }
-                          if (!data.items || data.items.length === 0) {
-                            setAlertModal({ isOpen: true, message: 'Please add at least one product before printing or exporting.' });
-                            return;
-                          }
-                          handleDownloadExcelForFormat(activeFormat);
-                        }}
-                        className="w-full text-left px-2 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        Excel (CSV)
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+                      <Printer className="w-3.5 h-3.5 text-slate-500" />
+                      {btn.label}
+                    </button>
+                    <div className="w-[1px] h-4 bg-slate-200" />
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdown(activeDropdown === btn.id ? null : btn.id)}
+                      className="px-2 py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-none bg-transparent rounded-r-lg cursor-pointer flex items-center justify-center h-9 split-button-trigger"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+
+                    <AnimatePresence>
+                      {activeDropdown === btn.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                          className="absolute right-0 top-10 z-30 bg-white rounded-lg border p-1 w-32 shadow-md split-button-dropdown"
+                          style={{ borderColor: '#E2E8F0' }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveDropdown(null);
+                              if (!validateInvoiceForExport()) return;
+
+                              // Update default template
+                              const updated = templates.map(t => ({
+                                ...t,
+                                is_default: t.template_id === btn.templateId
+                              }));
+                              setTemplates(updated);
+                              localStorage.setItem('print_templates', JSON.stringify(updated));
+
+                              setSelectedTemplateForPdf(btn.templateId);
+                            }}
+                            className="w-full text-left px-2 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                            PDF Document
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveDropdown(null);
+                              if (!validateInvoiceForExport()) return;
+
+                              // Update default template
+                              const updated = templates.map(t => ({
+                                ...t,
+                                is_default: t.template_id === btn.templateId
+                              }));
+                              setTemplates(updated);
+                              localStorage.setItem('print_templates', JSON.stringify(updated));
+
+                              handleDownloadExcelForFormat(btn.formatKey as any);
+                            }}
+                            className="w-full text-left px-2 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Excel (CSV)
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ));
+            })()}
 
             <Button
               variant="white"
@@ -959,6 +1013,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                                       description: prod.name,
                                       price: parsedPrice
                                     });
+                                    setLastAddedId(null);
                                   }
                                 }}
                               />
@@ -1088,37 +1143,37 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   {data.items.length > 0 && (
                     <tfoot className="sticky bottom-0 z-10 bg-white border-t border-[#E2E8F0] shadow-none" style={{ boxShadow: 'none' }}>
                       <tr>
-                        <td className="px-3 py-3 text-[10px] text-black text-center">Σ</td>
+                        <td className="px-3 py-3 text-[10px] text-black text-center font-bold">Σ</td>
                         {summaryColSpan > 0 && (
-                          <td colSpan={summaryColSpan} className="px-4 py-3 text-[10px] text-black tracking-widest text-right pr-10">Total Summary</td>
+                          <td colSpan={summaryColSpan} className="px-4 py-3 text-[10px] text-black tracking-widest text-right pr-10 font-bold">Total Summary</td>
                         )}
                         {docSettings.columns['Qty'] && (
-                          <td className="px-2 py-3 text-center text-[12px] text-slate-700">
+                          <td className="px-2 py-3 text-center text-[12px] text-black font-bold">
                             {data.items.reduce((sum, i) => sum + i.quantity, 0)}
                           </td>
                         )}
                         {docSettings.columns['Price'] && (
-                          <td className="px-2 py-3 text-right text-[12px] text-slate-700">
+                          <td className="px-2 py-3 text-right text-[12px] text-black font-bold">
                             {/* Price total removed as requested */}
                           </td>
                         )}
                         {docSettings.columns['Discount'] && (
-                          <td className="px-2 py-3 text-center text-[12px] text-slate-700">
+                          <td className="px-2 py-3 text-center text-[12px] text-black font-bold">
                             {fmt(data.items.reduce((sum, i) => sum + i.discount, 0))}
                           </td>
                         )}
                         {docSettings.columns['Tax'] && (
-                          <td className="px-2 py-3 text-center text-[12px] text-slate-700">
+                          <td className="px-2 py-3 text-center text-[12px] text-black font-bold">
                             {fmt(data.items.reduce((sum, i) => sum + i.tax, 0))}
                           </td>
                         )}
                         {docSettings.columns['Further Tax'] && (
-                          <td className="px-2 py-3 text-center text-[12px] text-slate-700">
+                          <td className="px-2 py-3 text-center text-[12px] text-black font-bold">
                             {fmt(data.items.reduce((sum, i) => sum + i.furtherTax, 0))}
                           </td>
                         )}
                         {docSettings.columns['Total'] && (
-                          <td className="px-4 py-3 text-left text-[12px] text-slate-700">
+                          <td className="px-4 py-3 text-left text-[12px] text-black font-bold">
                             {fmt(subtotal)}
                           </td>
                         )}

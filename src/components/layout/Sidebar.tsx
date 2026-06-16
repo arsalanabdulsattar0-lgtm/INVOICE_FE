@@ -51,6 +51,9 @@ const Sidebar: React.FC<Props> = ({
   const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
   const [selectedBranchId, setSelectedBranchId] = React.useState('');
   const [setAsDefault, setSetAsDefault] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const isCurrentlyCollapsed = activeView === 'dashboard' ? isCollapsed : !isHovered;
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -87,8 +90,12 @@ const Sidebar: React.FC<Props> = ({
 
   const handleMenuClick = (item: any) => {
     if (item.isParent) {
-      if (isCollapsed) {
-        onToggleSidebar();
+      if (isCurrentlyCollapsed) {
+        if (activeView === 'dashboard') {
+          onToggleSidebar();
+        } else {
+          setIsHovered(true);
+        }
         setSalesExpanded(true);
       } else {
         setSalesExpanded(!salesExpanded);
@@ -105,8 +112,18 @@ const Sidebar: React.FC<Props> = ({
 
   return (
     <motion.aside
+      onMouseEnter={() => {
+        if (activeView !== 'dashboard') {
+          setIsHovered(true);
+        }
+      }}
+      onMouseLeave={() => {
+        if (activeView !== 'dashboard') {
+          setIsHovered(false);
+        }
+      }}
       initial={false}
-      animate={{ width: isCollapsed ? 48 : 240 }}
+      animate={{ width: isCurrentlyCollapsed ? 44 : 200 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
       className="h-screen flex flex-col sticky top-0 flex-shrink-0 overflow-hidden z-50 transition-colors duration-300"
       style={{
@@ -115,9 +132,9 @@ const Sidebar: React.FC<Props> = ({
       }}
     >
       {/* Logo / Toggle */}
-      <div className={`py-6 flex items-center ${isCollapsed ? 'justify-center' : 'px-5 gap-2'}`}>
+      <div className={`py-6 flex items-center ${isCurrentlyCollapsed ? 'justify-center' : 'px-5 gap-2'}`}>
         <button
-          onClick={onToggleSidebar}
+          onClick={activeView === 'dashboard' ? onToggleSidebar : undefined}
           className="group/logo relative shrink-0 overflow-hidden transition-all hover:opacity-90 cursor-pointer"
           style={{
             width: 32,
@@ -141,7 +158,7 @@ const Sidebar: React.FC<Props> = ({
           </div>
         </button>
 
-        {!isCollapsed && (
+        {!isCurrentlyCollapsed && (
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -154,7 +171,7 @@ const Sidebar: React.FC<Props> = ({
       </div>
 
       {/* Nav Items */}
-      <nav className={`flex-grow ${isCollapsed ? 'px-1.5' : 'px-2.5'} space-y-1.5 py-4 overflow-y-auto custom-scrollbar`}>
+      <nav className={`flex-grow ${isCurrentlyCollapsed ? 'px-1.5' : 'px-2.5'} space-y-1.5 py-4 overflow-y-auto custom-scrollbar`}>
         {menuItems.map((item) => {
           if (item.isParent) {
             const isParentActive =
@@ -167,14 +184,14 @@ const Sidebar: React.FC<Props> = ({
               <div key={item.id} className="space-y-1">
                 <button
                   onClick={() => handleMenuClick(item)}
-                  className={`w-full flex items-center justify-between ${isCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
+                  className={`w-full flex items-center justify-between ${isCurrentlyCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
                   style={{
-                    backgroundColor: isActive && isCollapsed ? brand.primary : 'transparent',
-                    color: isActive && isCollapsed ? '#FFFFFF' : '#000000',
+                    backgroundColor: isActive && isCurrentlyCollapsed ? brand.primary : 'transparent',
+                    color: isActive && isCurrentlyCollapsed ? '#FFFFFF' : '#000000',
                   }}
-                  title={isCollapsed ? item.label : ''}
+                  title={isCurrentlyCollapsed ? item.label : ''}
                 >
-                  {isActive && isCollapsed && (
+                  {isActive && isCurrentlyCollapsed && (
                     <div
                       className="absolute inset-0 rounded-xl z-0"
                       style={{
@@ -182,7 +199,7 @@ const Sidebar: React.FC<Props> = ({
                       }}
                     />
                   )}
-                  {isActive && !isCollapsed && (
+                  {isActive && !isCurrentlyCollapsed && (
                     <div
                       className="absolute inset-0 rounded-xl z-0"
                       style={{
@@ -192,14 +209,14 @@ const Sidebar: React.FC<Props> = ({
                   )}
                   <div className="flex items-center gap-2 relative z-10">
                     <item.icon
-                      className={`${isCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'}`}
-                      style={{ color: isCollapsed && isActive ? '#FFFFFF' : (isActive ? brand.primary : '#000000') }}
+                      className={`${isCurrentlyCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'}`}
+                      style={{ color: isCurrentlyCollapsed && isActive ? '#FFFFFF' : (isActive ? brand.primary : '#000000') }}
                     />
-                    {!isCollapsed && (
+                    {!isCurrentlyCollapsed && (
                       <span className="truncate font-semibold" style={{ color: isActive ? brand.primary : '#000000' }}>{item.label}</span>
                     )}
                   </div>
-                  {!isCollapsed && (
+                  {!isCurrentlyCollapsed && (
                     <ChevronDown
                       className="w-3.5 h-3.5 transition-transform duration-200 relative z-10"
                       style={{
@@ -210,7 +227,7 @@ const Sidebar: React.FC<Props> = ({
                   )}
                 </button>
 
-                {!isCollapsed && (
+                {!isCurrentlyCollapsed && (
                   <motion.div
                     initial={false}
                     animate={{ height: salesExpanded ? 'auto' : 0, opacity: salesExpanded ? 1 : 0 }}
@@ -262,14 +279,14 @@ const Sidebar: React.FC<Props> = ({
             <button
               key={item.id}
               onClick={() => handleMenuClick(item)}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
+              className={`w-full flex items-center ${isCurrentlyCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
               style={{
                 backgroundColor: isActive ? brand.primary : 'transparent',
                 color: isActive ? '#FFFFFF' : '#000000',
               }}
-              title={isCollapsed ? item.label : ''}
+              title={isCurrentlyCollapsed ? item.label : ''}
             >
-              {isActive && !isCollapsed && (
+              {isActive && !isCurrentlyCollapsed && (
                 <motion.div
                   layoutId="active-pill"
                   className="absolute inset-0 rounded-xl z-0"
@@ -280,10 +297,10 @@ const Sidebar: React.FC<Props> = ({
                 />
               )}
               <item.icon
-                className={`${isCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'} relative z-10`}
+                className={`${isCurrentlyCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'} relative z-10`}
                 style={{ color: isActive ? '#FFFFFF' : '#000000' }}
               />
-              {!isCollapsed && (
+              {!isCurrentlyCollapsed && (
                 <span className="relative z-10 truncate" style={{ color: isActive ? '#FFFFFF' : '#000000' }}>{item.label}</span>
               )}
             </button>
@@ -293,7 +310,7 @@ const Sidebar: React.FC<Props> = ({
 
       {/* Bottom Items */}
       <div
-        className={`py-4 space-y-1.5 ${isCollapsed ? 'px-1.5' : 'px-2.5'}`}
+        className={`py-4 space-y-1.5 ${isCurrentlyCollapsed ? 'px-1.5' : 'px-2.5'}`}
         style={{ borderTop: `1px solid ${brand.border}` }}
       >
         {bottomItems.map((item) => {
@@ -302,14 +319,14 @@ const Sidebar: React.FC<Props> = ({
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
+              className={`w-full flex items-center ${isCurrentlyCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold transition-all relative cursor-pointer`}
               style={{
                 backgroundColor: isActive ? brand.primary : 'transparent',
                 color: isActive ? '#FFFFFF' : '#000000',
               }}
-              title={isCollapsed ? item.label : ''}
+              title={isCurrentlyCollapsed ? item.label : ''}
             >
-              {isActive && !isCollapsed && (
+              {isActive && !isCurrentlyCollapsed && (
                 <motion.div
                   layoutId="active-pill"
                   className="absolute inset-0 rounded-xl z-0"
@@ -320,25 +337,25 @@ const Sidebar: React.FC<Props> = ({
                 />
               )}
               <item.icon
-                className={`${isCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'} relative z-10`}
+                className={`${isCurrentlyCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'} relative z-10`}
                 style={{ color: isActive ? '#FFFFFF' : '#000000' }}
               />
-              {!isCollapsed && <span className="relative z-10 truncate" style={{ color: isActive ? '#FFFFFF' : '#000000' }}>{item.label}</span>}
+              {!isCurrentlyCollapsed && <span className="relative z-10 truncate" style={{ color: isActive ? '#FFFFFF' : '#000000' }}>{item.label}</span>}
             </button>
           );
         })}
 
         <button
           onClick={onLogout}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold text-red-500 hover:bg-red-50 transition-all cursor-pointer`}
+          className={`w-full flex items-center ${isCurrentlyCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-xl text-[12px] font-semibold text-red-500 hover:bg-red-50 transition-all cursor-pointer`}
         >
-          <LogOut className={`${isCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'}`} />
-          {!isCollapsed && <span>Logout</span>}
+          <LogOut className={`${isCurrentlyCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'}`} />
+          {!isCurrentlyCollapsed && <span>Logout</span>}
         </button>
 
         {/* PROFILE CARD */}
         <div className="mt-4 pt-4 relative" style={{ borderTop: `1px solid ${brand.border}` }}>
-          {isCollapsed ? (
+          {isCurrentlyCollapsed ? (
             <button
               onClick={() => {
                 if (currentCompany && currentBranch) {
@@ -358,11 +375,11 @@ const Sidebar: React.FC<Props> = ({
                 <img
                   src={currentCompany.logo}
                   alt={currentCompany.name}
-                  className="w-8 h-8 rounded-xl object-contain border border-slate-100 bg-white shadow-lg shrink-0"
+                  className="w-7 h-7 rounded-xl object-contain border border-slate-100 bg-white shadow-lg shrink-0"
                 />
               ) : (
                 <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-lg shrink-0"
+                  className="w-7 h-7 rounded-xl flex items-center justify-center text-white font-bold text-[10px] shadow-lg shrink-0"
                   style={{
                     background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})`,
                   }}
@@ -372,7 +389,7 @@ const Sidebar: React.FC<Props> = ({
               )}
             </button>
           ) : (
-            <div className="w-full bg-slate-50/60 border border-slate-100/50 rounded-2xl p-3 shadow-sm hover:shadow-md hover:border-slate-200/50 transition-all animate-fade-in">
+            <div className="w-full bg-slate-50/60 border border-slate-100/50 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-200/50 transition-all animate-fade-in">
               {/* Top Row: Avatar, Name & Role */}
               <button
                 onClick={() => {
@@ -387,17 +404,17 @@ const Sidebar: React.FC<Props> = ({
                   }
                   setShowPopover(!showPopover);
                 }}
-                className="flex items-center gap-3 w-full text-left cursor-pointer group"
+                className="flex items-center gap-2 w-full text-left cursor-pointer group"
               >
                 {currentCompany?.logo ? (
                   <img
                     src={currentCompany.logo}
                     alt={currentCompany.name}
-                    className="w-10 h-10 rounded-xl object-contain border border-slate-100 bg-white shadow-md shrink-0 transition-transform group-hover:scale-105"
+                    className="w-7 h-7 rounded-xl object-contain border border-slate-100 bg-white shadow-md shrink-0 transition-transform group-hover:scale-105"
                   />
                 ) : (
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-md shrink-0 transition-transform group-hover:scale-105"
+                    className="w-7 h-7 rounded-xl flex items-center justify-center text-white font-extrabold text-[10px] shadow-md shrink-0 transition-transform group-hover:scale-105"
                     style={{
                       background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})`,
                     }}
@@ -406,13 +423,13 @@ const Sidebar: React.FC<Props> = ({
                   </div>
                 )}
                 <div className="text-left select-none min-w-0 flex-grow">
-                  <p className="text-[13px] font-bold leading-tight text-slate-800 truncate" style={{ color: brand.textPrimary }}>{userName}</p>
-                  <p className="text-[9.5px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider truncate">{userRole}</p>
+                  <p className="text-[12px] font-bold leading-tight text-slate-800 truncate" style={{ color: brand.textPrimary }}>{userName}</p>
+                  <p className="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider truncate">{userRole}</p>
                 </div>
               </button>
 
               {/* Separator / Divider */}
-              <div className="h-[1px] bg-slate-100 my-2.5" />
+              <div className="h-[1px] bg-slate-100 my-2" />
 
               {/* Bottom Row: Company & Branch Context selection */}
               <button
@@ -430,8 +447,8 @@ const Sidebar: React.FC<Props> = ({
                 }}
                 className="w-full text-left cursor-pointer group select-none"
               >
-                <p className="text-[12px] font-bold text-slate-700 leading-tight truncate group-hover:text-blue-600 transition-colors">{currentCompany?.name || 'Select Company'}</p>
-                <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate">{currentBranch?.name || 'Select Branch'}</p>
+                <p className="text-[11px] font-bold text-slate-700 leading-tight truncate group-hover:text-blue-600 transition-colors">{currentCompany?.name || 'Select Company'}</p>
+                <p className="text-[9.5px] font-semibold text-slate-400 mt-0.5 truncate">{currentBranch?.name || 'Select Branch'}</p>
               </button>
             </div>
           )}
@@ -449,7 +466,7 @@ const Sidebar: React.FC<Props> = ({
               <div
                 className="fixed z-50 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 flex flex-col space-y-4"
                 style={{
-                  left: isCollapsed ? '58px' : '250px',
+                  left: isCurrentlyCollapsed ? '54px' : '210px',
                   bottom: '20px'
                 }}
               >
@@ -459,11 +476,11 @@ const Sidebar: React.FC<Props> = ({
                     <img
                       src={currentCompany.logo}
                       alt={currentCompany.name}
-                      className="w-10 h-10 rounded-xl object-contain border border-slate-100 bg-white shadow-md shrink-0"
+                      className="w-7 h-7 rounded-xl object-contain border border-slate-100 bg-white shadow-md shrink-0"
                     />
                   ) : (
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0"
+                      className="w-7 h-7 rounded-xl flex items-center justify-center text-white font-bold text-[10px] shadow-md shrink-0"
                       style={{
                         background: `linear-gradient(135deg, ${brand.primary}, ${brand.accent})`,
                       }}

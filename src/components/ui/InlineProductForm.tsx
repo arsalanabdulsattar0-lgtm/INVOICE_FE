@@ -80,6 +80,42 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
     }
   }, [isOpen]);
 
+  const docSettings = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('document_view_settings');
+      const allSettings = stored ? JSON.parse(stored) : {};
+      const settingsForType = allSettings['Inventory'] || {};
+      
+      const defaultFields = {
+        'Category': true,
+        'Brand': true,
+        'Model': true,
+        'Size': true,
+        'Unit Of Measure': true,
+        'Weight (kg)': true,
+        'Description': true,
+        'Sale Price': true,
+        'Cost Price': true,
+        'Stocks (qty)': true,
+        'Low Stock Level': true,
+        'GST Rate': true,
+        'Non-Filer Rate': true,
+        'HS Code': true,
+        'Serial Prefix': true
+      };
+      
+      return { ...defaultFields, ...settingsForType.fields };
+    } catch (e) {
+      console.error('Failed to parse document view settings', e);
+      return {
+        'Category': true, 'Brand': true, 'Model': true, 'Size': true, 'Unit Of Measure': true,
+        'Weight (kg)': true, 'Description': true, 'Sale Price': true, 'Cost Price': true,
+        'Stocks (qty)': true, 'Low Stock Level': true, 'GST Rate': true, 'Non-Filer Rate': true,
+        'HS Code': true, 'Serial Prefix': true
+      };
+    }
+  }, [isOpen]);
+
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     code: '',

@@ -111,6 +111,19 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const advanceFocus = () => {
+    setTimeout(() => {
+      const tr = containerRef.current?.closest('tr');
+      if (tr) {
+        const inputs = Array.from(tr.querySelectorAll('input'));
+        const myIndex = inputs.indexOf(inputRef.current!);
+        if (myIndex !== -1 && myIndex + 1 < inputs.length) {
+          inputs[myIndex + 1].focus();
+        }
+      }
+    }, 50);
+  };
+
   return (
     <div className="w-full flex flex-col gap-1" ref={containerRef}>
       {label && (
@@ -150,6 +163,20 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
               if (onQueryChange) onQueryChange(val);
               if (!isOpen) setIsOpen(true);
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Tab') {
+                if (isOpen && filtered.length > 0) {
+                  e.preventDefault();
+                  const opt = filtered[0];
+                  onChange(opt.id);
+                  setIsOpen(false);
+                  setQuery("");
+                  advanceFocus();
+                }
+              } else if (e.key === 'Escape') {
+                setIsOpen(false);
+              }
+            }}
           />
 
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 flex items-center">
@@ -186,6 +213,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                           onChange(opt.id);
                           setIsOpen(false);
                           setQuery("");
+                          advanceFocus();
                         }}
                         className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all hover:bg-slate-50 ${value === opt.id ? 'combobox-option-selected' : ''}`}
                       >

@@ -55,6 +55,62 @@ export interface Customer {
 const CustomerManagement: React.FC = () => {
   const { brand } = useTheme();
 
+  const docSettings = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('document_view_settings');
+      const allSettings = stored ? JSON.parse(stored) : {};
+      const settingsForType = allSettings['Customer'] || {};
+      
+      const defaultFields = {
+        'Email Address': true,
+        'Phone Number': true,
+        'Mobile Number': true,
+        'Website Link': true,
+        'Billing Address': true,
+        'Walk-in Customer': true,
+        'Tax Filer': true,
+        'Credit Limit': true,
+        'Payment Terms': true,
+        'Default Discount': true,
+        'NTN Code': true,
+        'STRN Registry': true,
+        'CNIC Number': true,
+        'WHT Category': true,
+        'Total Balance': true,
+        'Salesperson': true
+      };
+      
+      const defaultColumns = {
+        'Customer Details': true,
+        'Phone Number': true,
+        'City': true,
+        'Credit Limit (Rs.)': true,
+        'Total Balance (Rs.)': true,
+        'Tax Status': true,
+        'Status': true
+      };
+      
+      return {
+        fields: { ...defaultFields, ...settingsForType.fields },
+        columns: { ...defaultColumns, ...settingsForType.columns }
+      };
+    } catch (e) {
+      console.error('Failed to parse document view settings', e);
+      return {
+        fields: {
+          'Email Address': true, 'Phone Number': true, 'Mobile Number': true, 'Website Link': true,
+          'Billing Address': true, 'Walk-in Customer': true, 'Tax Filer': true, 'Credit Limit': true,
+          'Payment Terms': true, 'Default Discount': true, 'NTN Code': true, 'STRN Registry': true,
+          'CNIC Number': true, 'WHT Category': true, 'Total Balance': true, 'Salesperson': true
+        },
+        columns: {
+          'Customer Details': true, 'Phone Number': true, 'City': true, 'Credit Limit (Rs.)': true,
+          'Total Balance (Rs.)': true, 'Tax Status': true, 'Status': true
+        }
+      };
+    }
+  }, []);
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesPersonsList] = useState<any[]>(() => {
     try {
@@ -731,9 +787,7 @@ const CustomerManagement: React.FC = () => {
                               checked={filteredCustomers.length > 0 && selectedCustomerIds.length === filteredCustomers.length}
                               onChange={handleSelectAll}
                               className="rounded border-slate-300 text-blue-650 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
-                            />
-                          </th>
-                          {([
+                                          {([
                             { label: 'Customer Details', key: 'name', width: 'w-[22%]' },
                             { label: 'Phone Number', key: 'email', width: 'w-[13%]' },
                             { label: 'City', key: null, width: 'w-[11%]' },
@@ -742,16 +796,18 @@ const CustomerManagement: React.FC = () => {
                             { label: 'Tax Status', key: null, width: 'w-[17%]' },
                             { label: 'Status', key: 'status', width: 'w-[15%]' },
                             { label: 'Actions', key: null, width: 'w-20' },
-                          ] as { label: string; key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' | null; width: string }[]).map((h) => (
+                          ] as { label: string; key: 'name' | 'email' | 'credit_limit' | 'opening_balance' | 'status' | null; width: string }[])
+                          .filter(h => h.label === 'Actions' || docSettings.columns[h.label])
+                          .map((h) => (
                             <TableHeader
                               key={h.label}
-                              label={h.label}
                               sortKey={h.key || undefined}
                               activeSortKey={sortKey}
                               sortDir={sortDir}
                               onSort={(key) => handleSort(key)}
                               width={h.width}
                               borderLeft={false}
+                              label={h.label}
                             />
                           ))}
                         </tr>
@@ -779,56 +835,70 @@ const CustomerManagement: React.FC = () => {
                               </td>
 
                               {/* Customer Details (Name + ID) */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-14 h-7 rounded-lg flex items-center justify-center bg-slate-100 border border-slate-200 text-black text-[10px] font-mono font-medium flex-shrink-0">
-                                    {cust.customer_id || `C-${cust.id.slice(0, 4).toUpperCase()}`}
+                              {docSettings.columns['Customer Details'] && (
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-14 h-7 rounded-lg flex items-center justify-center bg-slate-100 border border-slate-200 text-black text-[10px] font-mono font-medium flex-shrink-0">
+                                      {cust.customer_id || `C-${cust.id.slice(0, 4).toUpperCase()}`}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <h4 className="text-[12px] font-normal truncate max-w-[180px]" style={{ color: brand.dark }}>{cust.name}</h4>
+                                      <p className="text-[10px] font-normal text-slate-400 mt-0.5">{cust.email}</p>
+                                    </div>
                                   </div>
-                                  <div className="min-w-0">
-                                    <h4 className="text-[12px] font-normal truncate max-w-[180px]" style={{ color: brand.dark }}>{cust.name}</h4>
-                                    <p className="text-[10px] font-normal text-slate-400 mt-0.5">{cust.email}</p>
-                                  </div>
-                                </div>
-                              </td>
+                                </td>
+                              )}
 
                               {/* Contact Info (Phone) */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-black">
-                                <span className="whitespace-nowrap">
-                                  {cust.phone || cust.mobile || 'N/A'}
-                                </span>
-                              </td>
+                              {docSettings.columns['Phone Number'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-black">
+                                  <span className="whitespace-nowrap">
+                                    {cust.phone || cust.mobile || 'N/A'}
+                                  </span>
+                                </td>
+                              )}
 
                               {/* City */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-black">
-                                {cust.city || 'N/A'}
-                              </td>
+                              {docSettings.columns['City'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-black">
+                                  {cust.city || 'N/A'}
+                                </td>
+                              )}
 
                               {/* Credit Limit */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-black">
-                                {cust.credit_limit ? cust.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
-                              </td>
+                              {docSettings.columns['Credit Limit (Rs.)'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-black">
+                                  {cust.credit_limit ? cust.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                              )}
 
                               {/* Total Balance */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-black"
-                                style={{ color: cust.opening_balance > 0 ? '#BE123C' : '#000000' }}>
-                                {cust.opening_balance ? cust.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
-                              </td>
+                              {docSettings.columns['Total Balance (Rs.)'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-black"
+                                  style={{ color: cust.opening_balance > 0 ? '#BE123C' : '#000000' }}>
+                                  {cust.opening_balance ? cust.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </td>
+                              )}
 
                               {/* Tax Status */}
-                              <td className="px-4 py-3">
-                                {cust.is_filer
-                                  ? <FilerChip label="Filer" size="md" />
-                                  : <NonFilerChip label="Non-Filer" size="md" />
-                                }
-                              </td>
+                              {docSettings.columns['Tax Status'] && (
+                                <td className="px-4 py-3">
+                                  {cust.is_filer
+                                    ? <FilerChip label="Filer" size="md" />
+                                    : <NonFilerChip label="Non-Filer" size="md" />
+                                  }
+                                </td>
+                              )}
 
                               {/* Status */}
-                              <td className="px-4 py-3">
-                                {cust.is_active
-                                  ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(cust.id)} />
-                                  : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(cust.id)} />
-                                }
-                              </td>
+                              {docSettings.columns['Status'] && (
+                                <td className="px-4 py-3">
+                                  {cust.is_active
+                                    ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(cust.id)} />
+                                    : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(cust.id)} />
+                                  }
+                                </td>
+                              )}
 
                               {/* Actions */}
                               <td className="px-1 py-3 w-16 whitespace-nowrap">
@@ -850,7 +920,7 @@ const CustomerManagement: React.FC = () => {
 
                         {paginatedCustomers.length === 0 && (
                           <tr>
-                            <td colSpan={9} className="py-16 text-center">
+                            <td colSpan={2 + Object.values(docSettings.columns).filter(Boolean).length} className="py-16 text-center">
                               <User className="w-10 h-10 mx-auto mb-3 text-slate-200" />
                               <p className="text-[13px] font-medium text-slate-400">No customers found</p>
                               <p className="text-[11px] text-slate-300 mt-1">Try adjusting your filters or search query</p>
@@ -991,15 +1061,17 @@ const CustomerManagement: React.FC = () => {
                   <SectionHeader title="Customer Contact & Location" icon={MapPin} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input variant="compact" label="Email Address" readOnly value={viewingCustomer.email || 'N/A'} />
-                      <Input variant="compact" label="Phone Number" readOnly value={viewingCustomer.phone || 'N/A'} />
-                      <Input variant="compact" label="Mobile" readOnly value={viewingCustomer.mobile || 'N/A'} />
-                      <Input variant="compact" label="Website" readOnly value={viewingCustomer.website || 'N/A'} />
-                      <Input variant="compact" label="City / Province" readOnly value={viewingCustomer.city ? `${viewingCustomer.city}, ${viewingCustomer.province}` : 'N/A'} />
-                      <Input variant="compact" label="Country" readOnly value={viewingCustomer.country || 'N/A'} />
-                      <div className="col-span-2">
-                        <Input variant="compact" label="Address" readOnly value={viewingCustomer.address || 'N/A'} />
-                      </div>
+                      {docSettings.fields['Email Address'] && <Input variant="compact" label="Email Address" readOnly value={viewingCustomer.email || 'N/A'} />}
+                      {docSettings.fields['Phone Number'] && <Input variant="compact" label="Phone Number" readOnly value={viewingCustomer.phone || 'N/A'} />}
+                      {docSettings.fields['Mobile Number'] && <Input variant="compact" label="Mobile" readOnly value={viewingCustomer.mobile || 'N/A'} />}
+                      {docSettings.fields['Website Link'] && <Input variant="compact" label="Website" readOnly value={viewingCustomer.website || 'N/A'} />}
+                      {docSettings.fields['Billing Address'] && <Input variant="compact" label="City / Province" readOnly value={viewingCustomer.city ? `${viewingCustomer.city}, ${viewingCustomer.province}` : 'N/A'} />}
+                      {docSettings.fields['Billing Address'] && <Input variant="compact" label="Country" readOnly value={viewingCustomer.country || 'N/A'} />}
+                      {docSettings.fields['Billing Address'] && (
+                        <div className="col-span-2">
+                          <Input variant="compact" label="Address" readOnly value={viewingCustomer.address || 'N/A'} />
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </div>
@@ -1009,13 +1081,13 @@ const CustomerManagement: React.FC = () => {
                   <SectionHeader title="Business Settings & Credit" icon={CreditCard} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input variant="compact" label="Credit Limit (Rs.)" readOnly value={viewingCustomer.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-                      <Input variant="compact" label="Total Balance (Rs.)" readOnly value={viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} />
-                      <Input variant="compact" label="Payment Terms" readOnly value={`${viewingCustomer.payment_term_days} days`} />
-                      <Input variant="compact" label="Discount Percent" readOnly value={`${viewingCustomer.discount_percent}%`} />
-                      <Input variant="compact" label="Sales Person" readOnly value={salesPersonsList.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'} />
-                      <Input variant="compact" label="Walk-in Customer" readOnly value={viewingCustomer.is_walkin ? 'Yes' : 'No'} />
-                      <Input variant="compact" label="Tax Filer" readOnly value={viewingCustomer.is_filer ? 'Filer' : 'Non-Filer'} />
+                      {docSettings.fields['Credit Limit'] && <Input variant="compact" label="Credit Limit (Rs.)" readOnly value={viewingCustomer.credit_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })} />}
+                      {docSettings.fields['Total Balance'] && <Input variant="compact" label="Total Balance (Rs.)" readOnly value={viewingCustomer.opening_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} />}
+                      {docSettings.fields['Payment Terms'] && <Input variant="compact" label="Payment Terms" readOnly value={`${viewingCustomer.payment_term_days} days`} />}
+                      {docSettings.fields['Default Discount'] && <Input variant="compact" label="Discount Percent" readOnly value={`${viewingCustomer.discount_percent}%`} />}
+                      {docSettings.fields['Salesperson'] && <Input variant="compact" label="Sales Person" readOnly value={salesPersonsList.find(sp => sp.id === viewingCustomer.sales_person_id)?.name || 'N/A'} />}
+                      {docSettings.fields['Walk-in Customer'] && <Input variant="compact" label="Walk-in Customer" readOnly value={viewingCustomer.is_walkin ? 'Yes' : 'No'} />}
+                      {docSettings.fields['Tax Filer'] && <Input variant="compact" label="Tax Filer" readOnly value={viewingCustomer.is_filer ? 'Filer' : 'Non-Filer'} />}
                       <Input variant="compact" label="Status" readOnly value={viewingCustomer.is_active ? 'Active' : 'Inactive'} />
                     </div>
                   </Card>
@@ -1026,10 +1098,10 @@ const CustomerManagement: React.FC = () => {
                   <SectionHeader title="Tax Compliance Registry" icon={ShieldCheck} />
                   <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input variant="compact" label="NTN Code" readOnly value={viewingCustomer.ntn || 'N/A'} />
-                      <Input variant="compact" label="STRN Registry" readOnly value={viewingCustomer.stn || 'N/A'} />
-                      <Input variant="compact" label="CNIC Number" readOnly value={viewingCustomer.cnic || 'N/A'} />
-                      <Input variant="compact" label="WHT Category" readOnly value={viewingCustomer.wht_type || 'N/A'} />
+                      {docSettings.fields['NTN Code'] && <Input variant="compact" label="NTN Code" readOnly value={viewingCustomer.ntn || 'N/A'} />}
+                      {docSettings.fields['STRN Registry'] && <Input variant="compact" label="STRN Registry" readOnly value={viewingCustomer.stn || 'N/A'} />}
+                      {docSettings.fields['CNIC Number'] && <Input variant="compact" label="CNIC Number" readOnly value={viewingCustomer.cnic || 'N/A'} />}
+                      {docSettings.fields['WHT Category'] && <Input variant="compact" label="WHT Category" readOnly value={viewingCustomer.wht_type || 'N/A'} />}
                     </div>
                   </Card>
                 </div>
@@ -1174,28 +1246,30 @@ const CustomerManagement: React.FC = () => {
                         <div className="grid grid-cols-3 gap-3">
                           <Input variant="compact" label="Customer Code" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUS-1" readOnly={codeSetting.mode === 'auto'} />
                           <Input variant="compact" label="Customer Name *" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Acme Corporation" />
-                          <Input variant="compact" label="Email Address *" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="e.g. accounting@acme.com" />
-                          <Input variant="compact" label="Phone Number" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} placeholder="e.g. +92 21 3456789" />
-                          <Input variant="compact" label="Mobile Number" value={editing.mobile} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="e.g. +92 300 1234567" />
-                          <Input variant="compact" label="Website Link" value={editing.website} onChange={(e) => setEditing({ ...editing, website: e.target.value })} placeholder="e.g. www.acme.com" />
+                          {docSettings.fields['Email Address'] && <Input variant="compact" label="Email Address *" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="e.g. accounting@acme.com" />}
+                          {docSettings.fields['Phone Number'] && <Input variant="compact" label="Phone Number" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} placeholder="e.g. +92 21 3456789" />}
+                          {docSettings.fields['Mobile Number'] && <Input variant="compact" label="Mobile Number" value={editing.mobile} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="e.g. +92 300 1234567" />}
+                          {docSettings.fields['Website Link'] && <Input variant="compact" label="Website Link" value={editing.website} onChange={(e) => setEditing({ ...editing, website: e.target.value })} placeholder="e.g. www.acme.com" />}
                         </div>
                       </Card>
                     </div>
 
                     {/* SECTION 4: PHYSICAL ADDRESS */}
-                    <div className="space-y-1.5">
-                      <SectionHeader title="Physical Address" icon={MapPin} className="text-slate-700" />
-                      <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="col-span-2">
-                            <TextArea className="!rounded-lg !text-[11px] py-1.5 px-3 h-14" label="Billing Street Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="e.g. Suite #12, 3rd Floor, Commercial Plaza" />
+                    {docSettings.fields['Billing Address'] && (
+                      <div className="space-y-1.5">
+                        <SectionHeader title="Physical Address" icon={MapPin} className="text-slate-700" />
+                        <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="col-span-2">
+                              <TextArea className="!rounded-lg !text-[11px] py-1.5 px-3 h-14" label="Billing Street Address" value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} placeholder="e.g. Suite #12, 3rd Floor, Commercial Plaza" />
+                            </div>
+                            <Input variant="compact" label="City" value={editing.city} onChange={(e) => setEditing({ ...editing, city: e.target.value })} placeholder="Karachi" />
+                            <Input variant="compact" label="Province/State" value={editing.province} onChange={(e) => setEditing({ ...editing, province: e.target.value })} placeholder="Sindh" />
+                            <Input variant="compact" label="Country" value={editing.country} onChange={(e) => setEditing({ ...editing, country: e.target.value })} placeholder="Pakistan" />
                           </div>
-                          <Input variant="compact" label="City" value={editing.city} onChange={(e) => setEditing({ ...editing, city: e.target.value })} placeholder="Karachi" />
-                          <Input variant="compact" label="Province/State" value={editing.province} onChange={(e) => setEditing({ ...editing, province: e.target.value })} placeholder="Sindh" />
-                          <Input variant="compact" label="Country" value={editing.country} onChange={(e) => setEditing({ ...editing, country: e.target.value })} placeholder="Pakistan" />
-                        </div>
-                      </Card>
-                    </div>
+                        </Card>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1207,14 +1281,14 @@ const CustomerManagement: React.FC = () => {
                       <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                         <div className="space-y-4">
                           <div className="flex items-center gap-6 flex-wrap pt-1">
-                            <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk-in Retail Customer" />
-                            <Toggle checked={editing.is_filer} onChange={(v) => setEditing({ ...editing, is_filer: v })} label="Registered Tax Filer" />
+                            {docSettings.fields['Walk-in Customer'] && <Toggle checked={editing.is_walkin} onChange={(v) => setEditing({ ...editing, is_walkin: v })} label="Walk-in Retail Customer" />}
+                            {docSettings.fields['Tax Filer'] && <Toggle checked={editing.is_filer} onChange={(v) => setEditing({ ...editing, is_filer: v })} label="Registered Tax Filer" />}
                             <Toggle checked={editing.is_active} onChange={(v) => setEditing({ ...editing, is_active: v })} label="Active Account Status" />
                           </div>
                           <div className="grid grid-cols-3 gap-3 pt-2 border-t border-[#E2E8F0]">
-                            <Input variant="compact" label="Credit Limit (Rs.)" type="number" value={editing.credit_limit?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, credit_limit: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                            <Input variant="compact" label="Payment Terms (Days)" type="number" value={editing.payment_term_days?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, payment_term_days: parseInt(e.target.value) || 0 })} placeholder="30" />
-                            <Input variant="compact" label="Default Discount (%)" type="number" value={editing.discount_percent?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, discount_percent: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                            {docSettings.fields['Credit Limit'] && <Input variant="compact" label="Credit Limit (Rs.)" type="number" value={editing.credit_limit?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, credit_limit: parseFloat(e.target.value) || 0 })} placeholder="0.00" />}
+                            {docSettings.fields['Payment Terms'] && <Input variant="compact" label="Payment Terms (Days)" type="number" value={editing.payment_term_days?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, payment_term_days: parseInt(e.target.value) || 0 })} placeholder="30" />}
+                            {docSettings.fields['Default Discount'] && <Input variant="compact" label="Default Discount (%)" type="number" value={editing.discount_percent?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, discount_percent: parseFloat(e.target.value) || 0 })} placeholder="0" />}
                           </div>
                         </div>
                       </Card>
@@ -1225,10 +1299,10 @@ const CustomerManagement: React.FC = () => {
                       <SectionHeader title="Government Registries & WHT" icon={Globe} className="text-slate-700" />
                       <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                         <div className="grid grid-cols-3 gap-3">
-                          <Input variant="compact" label="National Tax Number (NTN)" value={editing.ntn} onChange={(e) => setEditing({ ...editing, ntn: e.target.value })} placeholder="1234567-8" />
-                          <Input variant="compact" label="Sales Tax Number (STRN)" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} placeholder="STN-12345" />
-                          <Input variant="compact" label="CNIC Number" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} placeholder="42101-1234567-1" />
-                          <Input variant="compact" label="Withholding Tax (WHT) Type" value={editing.wht_type} onChange={(e) => setEditing({ ...editing, wht_type: e.target.value })} placeholder="Active / Exempt / Suspended" />
+                          {docSettings.fields['NTN Code'] && <Input variant="compact" label="National Tax Number (NTN)" value={editing.ntn} onChange={(e) => setEditing({ ...editing, ntn: e.target.value })} placeholder="1234567-8" />}
+                          {docSettings.fields['STRN Registry'] && <Input variant="compact" label="Sales Tax Number (STRN)" value={editing.stn} onChange={(e) => setEditing({ ...editing, stn: e.target.value })} placeholder="STN-12345" />}
+                          {docSettings.fields['CNIC Number'] && <Input variant="compact" label="CNIC Number" value={editing.cnic} onChange={(e) => setEditing({ ...editing, cnic: e.target.value })} placeholder="42101-1234567-1" />}
+                          {docSettings.fields['WHT Category'] && <Input variant="compact" label="Withholding Tax (WHT) Type" value={editing.wht_type} onChange={(e) => setEditing({ ...editing, wht_type: e.target.value })} placeholder="Active / Exempt / Suspended" />}
                         </div>
                       </Card>
                     </div>
@@ -1242,17 +1316,19 @@ const CustomerManagement: React.FC = () => {
                       <SectionHeader title="Accounting Details" icon={CreditCard} className="text-slate-700" />
                       <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                         <div className="grid grid-cols-3 gap-3">
-                          <Input variant="compact" label="Total Balance (Rs.)" type="number" value={editing.opening_balance?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, opening_balance: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                          <Select
-                            variant="compact"
-                            label="Salesperson"
-                            value={editing.sales_person_id || ''}
-                            onChange={(e) => setEditing({ ...editing, sales_person_id: e.target.value })}
-                            options={[
-                              { value: '', label: 'Select Salesperson...' },
-                              ...salesPersonsList.map(sp => ({ value: sp.id, label: sp.name }))
-                            ]}
-                          />
+                          {docSettings.fields['Total Balance'] && <Input variant="compact" label="Total Balance (Rs.)" type="number" value={editing.opening_balance?.toString() ?? ''} onChange={(e) => setEditing({ ...editing, opening_balance: parseFloat(e.target.value) || 0 })} placeholder="0.00" />}
+                          {docSettings.fields['Salesperson'] && (
+                            <Select
+                              variant="compact"
+                              label="Salesperson"
+                              value={editing.sales_person_id || ''}
+                              onChange={(e) => setEditing({ ...editing, sales_person_id: e.target.value })}
+                              options={[
+                                { value: '', label: 'Select Salesperson...' },
+                                ...salesPersonsList.map(sp => ({ value: sp.id, label: sp.name }))
+                              ]}
+                            />
+                          )}
                         </div>
                       </Card>
                     </div>

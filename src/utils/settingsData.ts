@@ -385,6 +385,37 @@ export interface PrintTemplateSection {
   is_visible: boolean;
 }
 
+// ── Formula Builder Types ────────────────────────────────────────────────────
+export interface FormulaToken {
+  type: 'field' | 'operator' | 'constant';
+  // For type='field': key from FORMULA_FIELD_OPTIONS
+  fieldKey?: string;
+  fieldLabel?: string;
+  // For type='operator': +, -, *, /
+  operator?: '+' | '-' | '*' | '/';
+  // For type='constant': numeric literal
+  constant?: number;
+}
+
+export const FORMULA_FIELD_OPTIONS: { key: string; label: string; section: string }[] = [
+  { key: 'subtotal',          label: 'Subtotal',          section: 'Totals' },
+  { key: 'tax_amount',        label: 'Tax Amount',         section: 'Totals' },
+  { key: 'discount_amount',   label: 'Discount Amount',    section: 'Totals' },
+  { key: 'shipping_charges',  label: 'Shipping Charges',   section: 'Totals' },
+  { key: 'other_charges',     label: 'Other Charges',      section: 'Totals' },
+  { key: 'round_off',         label: 'Round Off',          section: 'Totals' },
+  { key: 'grand_total',       label: 'Grand Total',        section: 'Totals' },
+  { key: 'paid_amount',       label: 'Paid Amount',        section: 'Totals' },
+  { key: 'balance_due',       label: 'Balance Due',        section: 'Totals' },
+  { key: 'total_qty',         label: 'Total Qty',          section: 'Summary' },
+  { key: 'total_items',       label: 'Total Items',        section: 'Summary' },
+  { key: 'line_qty',          label: 'Line Qty',           section: 'Column' },
+  { key: 'line_unit_price',   label: 'Line Unit Price',    section: 'Column' },
+  { key: 'line_total',        label: 'Line Total',         section: 'Column' },
+  { key: 'line_discount',     label: 'Line Discount',      section: 'Column' },
+  { key: 'line_tax',          label: 'Line Tax',           section: 'Column' },
+];
+
 export interface PrintTemplateField {
   field_id: string;
   template_id: string;
@@ -421,14 +452,16 @@ export interface PrintTemplateField {
   margin_top?: number;
   custom_css?: string;
   required?: boolean;
+  options?: string[];
 }
 
 export interface PrintTemplateCustomField {
   custom_field_id: string;
   template_id: string;
   field_name: string;
-  field_type: 'text' | 'number' | 'date' | 'currency' | 'multiline' | 'boolean' | 'dropdown' | 'checkbox' | 'radio';
+  field_type: 'text' | 'number' | 'date' | 'currency' | 'multiline' | 'boolean' | 'dropdown' | 'checkbox' | 'radio' | 'formula';
   default_value: string;
+  formula_tokens?: FormulaToken[];
   display_order: number;
   is_visible: boolean;
   section_name?: string;
@@ -460,6 +493,7 @@ export interface PrintTemplateCustomField {
   margin_top?: number;
   custom_css?: string;
   required?: boolean;
+  options?: string[];
 }
 
 export interface PrintTemplateColumn {
@@ -472,10 +506,11 @@ export interface PrintTemplateColumn {
   width?: string;
   alignment?: 'left' | 'center' | 'right';
   is_custom?: boolean;
+  formula_tokens?: FormulaToken[];
 }
 
 export const seedPrintTemplates: PrintTemplate[] = [
-  // ── Sales Invoice (4 templates) ─────────────────────────────────────────────
+  // ── Sales Invoice (3 templates) ─────────────────────────────────────────────
   {
     template_id: 'si-1', template_name: 'Retail Invoice',
     document_type: 'Sales Invoice', paper_size: 'Thermal', orientation: 'Portrait',
@@ -483,14 +518,6 @@ export const seedPrintTemplates: PrintTemplate[] = [
     logo_size: 60, qr_enabled: true, barcode_enabled: true,
     signature_enabled: false, watermark_enabled: false,
     terms_enabled: false, remarks_enabled: true,
-  },
-  {
-    template_id: 'si-2', template_name: 'Without Logo Invoice',
-    document_type: 'Sales Invoice', paper_size: 'A4', orientation: 'Portrait',
-    is_default: false, is_active: true,
-    logo_size: 0, qr_enabled: false, barcode_enabled: false,
-    signature_enabled: true, watermark_enabled: false,
-    terms_enabled: true, remarks_enabled: true,
   },
   {
     template_id: 'si-3', template_name: 'Delivery Invoice',
@@ -509,36 +536,12 @@ export const seedPrintTemplates: PrintTemplate[] = [
     terms_enabled: true, remarks_enabled: true,
   },
 
-  // ── Sales Return (4 templates) ──────────────────────────────────────────────
+  // ── Sales Return (1 template) ───────────────────────────────────────────────
   {
-    template_id: 'srt-1', template_name: 'Sales Return Retail Invoice',
-    document_type: 'Sales Return', paper_size: 'Thermal', orientation: 'Portrait',
+    template_id: 'srt-1', template_name: 'Sales Return Invoice',
+    document_type: 'Sales Return', paper_size: 'A4', orientation: 'Portrait',
     is_default: true, is_active: true,
-    logo_size: 60, qr_enabled: true, barcode_enabled: true,
-    signature_enabled: false, watermark_enabled: false,
-    terms_enabled: false, remarks_enabled: true,
-  },
-  {
-    template_id: 'srt-2', template_name: 'Sales Return Without Logo',
-    document_type: 'Sales Return', paper_size: 'A4', orientation: 'Portrait',
-    is_default: false, is_active: true,
-    logo_size: 0, qr_enabled: false, barcode_enabled: false,
-    signature_enabled: true, watermark_enabled: false,
-    terms_enabled: true, remarks_enabled: true,
-  },
-  {
-    template_id: 'srt-3', template_name: 'Sales Return Delivery Invoice',
-    document_type: 'Sales Return', paper_size: 'A4', orientation: 'Portrait',
-    is_default: false, is_active: true,
-    logo_size: 80, qr_enabled: true, barcode_enabled: true,
-    signature_enabled: true, watermark_enabled: false,
-    terms_enabled: true, remarks_enabled: true,
-  },
-  {
-    template_id: 'srt-4', template_name: 'Sales Return Tax Invoice',
-    document_type: 'Sales Return', paper_size: 'A4', orientation: 'Portrait',
-    is_default: false, is_active: true,
-    logo_size: 80, qr_enabled: true, barcode_enabled: false,
+    logo_size: 80, qr_enabled: false, barcode_enabled: false,
     signature_enabled: true, watermark_enabled: false,
     terms_enabled: true, remarks_enabled: true,
   },
@@ -721,6 +724,88 @@ export const getSeedCustomFields = (templateId: string): PrintTemplateCustomFiel
   { custom_field_id: `cf-${templateId}-warranty`, template_id: templateId, field_name: 'Warranty No', field_type: 'text', default_value: 'W-99827-C', display_order: 7, is_visible: false },
   { custom_field_id: `cf-${templateId}-notes`, template_id: templateId, field_name: 'Custom Notes', field_type: 'multiline', default_value: 'Warranty covers manufacturer defects only.', display_order: 8, is_visible: false },
 ];
+
+const resolveTokenValue = (tok: FormulaToken, context: { row?: any; totals?: any }): number => {
+  if (tok.type === 'constant') {
+    return tok.constant ?? 0;
+  }
+  if (tok.type === 'field' && tok.fieldKey) {
+    const key = tok.fieldKey;
+    // Row level
+    if (context.row) {
+      const item = context.row;
+      const itemTotal = (item.quantity || 0) * (item.price || 0) - (item.discount || 0) + (item.tax || 0) + (item.furtherTax || 0);
+      if (key === 'line_qty') return item.quantity || 0;
+      if (key === 'line_unit_price') return item.price || 0;
+      if (key === 'line_discount') return item.discount || 0;
+      if (key === 'line_tax') return item.tax || 0;
+      if (key === 'line_total') return itemTotal || 0;
+    }
+    // Totals level
+    if (context.totals) {
+      const totals = context.totals;
+      if (key in totals) {
+        return totals[key as keyof typeof totals] || 0;
+      }
+    }
+  }
+  return 0;
+};
+
+export function evaluateFormula(tokens: FormulaToken[] | undefined, context: { row?: any; totals?: any }): number {
+  if (!tokens || tokens.length === 0) return 0;
+  
+  // Resolve values
+  const values: (number | string)[] = [];
+  tokens.forEach(tok => {
+    if (tok.type === 'operator') {
+      values.push(tok.operator || '+');
+    } else {
+      values.push(resolveTokenValue(tok, context));
+    }
+  });
+
+  // Evaluate multiplications and divisions first
+  const intermediate: (number | string)[] = [];
+  let i = 0;
+  while (i < values.length) {
+    const current = values[i];
+    if (current === '*' || current === '/') {
+      const prev = intermediate.pop();
+      const next = values[i + 1];
+      const prevNum = typeof prev === 'number' ? prev : 0;
+      const nextNum = typeof next === 'number' ? next : 0;
+      
+      let res = 0;
+      if (current === '*') res = prevNum * nextNum;
+      else if (current === '/') res = nextNum !== 0 ? prevNum / nextNum : 0;
+      
+      intermediate.push(res);
+      i += 2;
+    } else {
+      intermediate.push(current);
+      i++;
+    }
+  }
+
+  // Evaluate additions and subtractions
+  if (intermediate.length === 0) return 0;
+  let total = typeof intermediate[0] === 'number' ? intermediate[0] : 0;
+  let j = 1;
+  while (j < intermediate.length) {
+    const op = intermediate[j];
+    const nextVal = intermediate[j + 1];
+    const nextNum = typeof nextVal === 'number' ? nextVal : 0;
+    
+    if (op === '+') total += nextNum;
+    else if (op === '-') total -= nextNum;
+    
+    j += 2;
+  }
+  
+  return total;
+}
+
 
 
 

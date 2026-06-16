@@ -74,6 +74,61 @@ type SortDir = 'asc' | 'desc';
 
 const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
   const { brand } = useTheme();
+
+  const docSettings = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('document_view_settings');
+      const allSettings = stored ? JSON.parse(stored) : {};
+      const settingsForType = allSettings['Inventory'] || {};
+      
+      const defaultFields = {
+        'Category': true,
+        'Brand': true,
+        'Model': true,
+        'Size': true,
+        'Unit Of Measure': true,
+        'Weight (kg)': true,
+        'Description': true,
+        'Sale Price': true,
+        'Cost Price': true,
+        'Stocks (qty)': true,
+        'Low Stock Level': true,
+        'GST Rate': true,
+        'Non-Filer Rate': true,
+        'HS Code': true,
+        'Serial Prefix': true
+      };
+      
+      const defaultColumns = {
+        'Product Details': true,
+        'Category': true,
+        'In Stock': true,
+        'Price (Rs.)': true,
+        'Status': true,
+        'Last Updated': true
+      };
+      
+      return {
+        fields: { ...defaultFields, ...settingsForType.fields },
+        columns: { ...defaultColumns, ...settingsForType.columns }
+      };
+    } catch (e) {
+      console.error('Failed to parse document view settings', e);
+      return {
+        fields: {
+          'Category': true, 'Brand': true, 'Model': true, 'Size': true, 'Unit Of Measure': true,
+          'Weight (kg)': true, 'Description': true, 'Sale Price': true, 'Cost Price': true,
+          'Stocks (qty)': true, 'Low Stock Level': true, 'GST Rate': true, 'Non-Filer Rate': true,
+          'HS Code': true, 'Serial Prefix': true
+        },
+        columns: {
+          'Product Details': true, 'Category': true, 'In Stock': true, 'Price (Rs.)': true,
+          'Status': true, 'Last Updated': true
+        }
+      };
+    }
+  }, []);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
 
@@ -646,9 +701,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                               checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
                               onChange={handleSelectAll}
                               className="rounded border-slate-300 text-blue-600 focus:ring-blue-550/20 cursor-pointer w-4 h-4"
-                            />
-                          </th>
-                          {([
+                                            {([
                             { label: 'Product Details', key: 'name', width: 'w-[43%]' },
                             { label: 'Category', key: 'category_id', width: 'w-[13%]' },
                             { label: 'In Stock', key: 'qty', width: 'w-[10%]' },
@@ -656,7 +709,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                             { label: 'Status', key: 'status', width: 'w-[10%]' },
                             { label: 'Last Updated', key: null, width: 'w-[12%]' },
                             { label: 'Actions', key: null, width: 'w-20' },
-                          ] as { label: string; key: SortKey | null; width: string }[]).map((h) => (
+                          ] as { label: string; key: SortKey | null; width: string }[])
+                          .filter(h => h.label === 'Actions' || docSettings.columns[h.label])
+                          .map((h) => (
                             <TableHeader
                               key={h.label}
                               label={h.label}
@@ -692,47 +747,59 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
                               </td>
 
                               {/* Product Details (Name + UOM + Code) */}
-                              <td className="px-4 py-3">
-                                <div className="min-w-0">
-                                  <h4 className="text-[12px] font-normal truncate max-w-[200px]" style={{ color: brand.dark }}>{product.name}</h4>
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[9px] font-medium font-mono px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">
-                                      {product.code}
-                                    </span>
-                                    <span className="text-[10px] font-medium text-slate-400">
-                                      · {getUOMName(product.uom_id)}
-                                    </span>
+                              {docSettings.columns['Product Details'] && (
+                                <td className="px-4 py-3">
+                                  <div className="min-w-0">
+                                    <h4 className="text-[12px] font-normal truncate max-w-[200px]" style={{ color: brand.dark }}>{product.name}</h4>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-[9px] font-medium font-mono px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">
+                                        {product.code}
+                                      </span>
+                                      <span className="text-[10px] font-medium text-slate-400">
+                                        · {getUOMName(product.uom_id)}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </td>
+                                </td>
+                              )}
 
                               {/* Category */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
-                                {getCategoryName(product.category_id)}
-                              </td>
+                              {docSettings.columns['Category'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
+                                  {getCategoryName(product.category_id)}
+                                </td>
+                              )}
 
                               {/* Stocks */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
-                                {product.opening_qty}
-                              </td>
+                              {docSettings.columns['In Stock'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
+                                  {product.opening_qty}
+                                </td>
+                              )}
 
                               {/* Price */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
-                                {(product.sale_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
+                              {docSettings.columns['Price (Rs.)'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-slate-600">
+                                  {(product.sale_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              )}
 
                               {/* Status */}
-                              <td className="px-4 py-3">
-                                {product.is_active
-                                  ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(product.id)} />
-                                  : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(product.id)} />
-                                }
-                              </td>
+                              {docSettings.columns['Status'] && (
+                                <td className="px-4 py-3">
+                                  {product.is_active
+                                    ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(product.id)} />
+                                    : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(product.id)} />
+                                  }
+                                </td>
+                              )}
 
                               {/* Last Updated */}
-                              <td className="px-4 py-3 text-[12px] font-normal text-slate-500">
-                                {product.created_at || '2026-05-30'}
-                              </td>
+                              {docSettings.columns['Last Updated'] && (
+                                <td className="px-4 py-3 text-[12px] font-normal text-slate-500">
+                                  {product.created_at || '2026-05-30'}
+                                </td>
+                              )}
 
                               {/* Actions */}
                               <td className="px-1 py-3 w-16 whitespace-nowrap">
@@ -754,10 +821,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
 
                         {paginatedProducts.length === 0 && (
                           <tr>
-                            <td colSpan={9} className="py-16 text-center">
+                            <td colSpan={2 + Object.values(docSettings.columns).filter(Boolean).length} className="py-16 text-center">
                               <Box className="w-10 h-10 mx-auto mb-3 text-slate-200" />
                               <p className="text-[13px] font-medium text-slate-400">No products found</p>
-                              <p className="text-[11px] text-slate-300 mt-1">Try adjusting your filters or search query</p>
                             </td>
                           </tr>
                         )}
