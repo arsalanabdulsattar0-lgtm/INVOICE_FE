@@ -17,6 +17,7 @@ export interface ComboBoxProps {
   className?: string;
   autoFocus?: boolean;
   onQueryChange?: (query: string) => void;
+  minQueryLength?: number;
 }
 
 export const ComboBox: React.FC<ComboBoxProps> = ({
@@ -30,7 +31,8 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   error,
   className = '',
   autoFocus,
-  onQueryChange
+  onQueryChange,
+  minQueryLength
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -48,10 +50,12 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   // When closed, we show the selected option name. When open, we show the search query.
   const displayValue = isOpen ? query : (selectedOption?.name || "");
 
-  const filtered = options.filter(opt =>
-    opt.name.toLowerCase().includes(query.toLowerCase()) ||
-    opt.subtitle?.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = (minQueryLength && query.length < minQueryLength)
+    ? []
+    : options.filter(opt =>
+        opt.name.toLowerCase().includes(query.toLowerCase()) ||
+        opt.subtitle?.toLowerCase().includes(query.toLowerCase())
+      );
 
   useEffect(() => {
     setMounted(true);
@@ -117,8 +121,14 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       if (tr) {
         const inputs = Array.from(tr.querySelectorAll('input'));
         const myIndex = inputs.indexOf(inputRef.current!);
-        if (myIndex !== -1 && myIndex + 1 < inputs.length) {
-          inputs[myIndex + 1].focus();
+        if (myIndex !== -1) {
+          for (let i = myIndex + 1; i < inputs.length; i++) {
+            const input = inputs[i];
+            if (!input.disabled && !input.readOnly) {
+              input.focus();
+              break;
+            }
+          }
         }
       }
     }, 50);
@@ -204,7 +214,13 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                 }}
               >
                 <ScrollArea maxHeight="200px" className="p-1.5">
-                  {filtered.length > 0 ? (
+                  {minQueryLength && query.length < minQueryLength ? (
+                    <div className="py-8 text-center">
+                      <p className="text-[11px] font-normal text-slate-400">
+                        Type at least {minQueryLength} characters to search
+                      </p>
+                    </div>
+                  ) : filtered.length > 0 ? (
                     filtered.map((opt) => (
                       <div
                         key={opt.id}
@@ -241,7 +257,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
         )}
       </div>
 
-      {error && <p className="text-[11px] font-bold text-red-500 ml-1">{error}</p>}
+      {error && <p className="text-[11px] font-normal text-red-500 ml-1">{error}</p>}
     </div>
   );
 };

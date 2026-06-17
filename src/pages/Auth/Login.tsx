@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import loginIllustration from '../../assets/login-illustration.png';
+import { AlertModal } from '../../components/ui/AlertModal';
 
 interface Props {
   companies: any[];
@@ -20,6 +21,7 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showContextSelection, setShowContextSelection] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(true);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, title: '', message: '' });
 
   const [tempSelectedCompanyId, setTempSelectedCompanyId] = useState(() => {
     try {
@@ -47,7 +49,12 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      alert('Please fill in all fields.');
+      setAlertModal({
+        isOpen: true,
+        title: 'Fields Missing',
+        message: 'Please fill in all fields.',
+        variant: 'warning'
+      });
       return;
     }
     
@@ -279,7 +286,12 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
                           href="#"
                           onClick={(e) => {
                             e.preventDefault();
-                            alert('Simulated password reset trigger.');
+                            setAlertModal({
+                              isOpen: true,
+                              title: 'Password Reset',
+                              message: 'A password reset link has been simulated & sent to your email.',
+                              variant: 'info'
+                            });
                           }}
                           className="text-[11px] font-bold hover:underline"
                           style={{ color: brand.primary }}
@@ -346,6 +358,13 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
           </Card>
         </div>
       </div>
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant || "warning"}
+      />
     </div>
   );
 };

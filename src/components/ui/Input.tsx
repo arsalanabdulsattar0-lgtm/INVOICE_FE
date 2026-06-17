@@ -64,7 +64,7 @@ export const Input: React.FC<InputProps> = ({
           </div>
         )}
       </div>
-      {error && <p className="text-[11px] font-bold text-red-500 ml-1">{error}</p>}
+      {error && <p className="text-[11px] font-normal text-red-500 ml-1">{error}</p>}
     </div>
   );
 };

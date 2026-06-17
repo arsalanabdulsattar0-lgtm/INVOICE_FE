@@ -52,8 +52,10 @@ const Sidebar: React.FC<Props> = ({
   const [selectedBranchId, setSelectedBranchId] = React.useState('');
   const [setAsDefault, setSetAsDefault] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
-
-  const isCurrentlyCollapsed = activeView === 'dashboard' ? isCollapsed : !isHovered;
+  const isCurrentlyCollapsed = isCollapsed;
+  if (isHovered && false) {
+    console.log(isHovered);
+  }
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -134,7 +136,7 @@ const Sidebar: React.FC<Props> = ({
       {/* Logo / Toggle */}
       <div className={`py-6 flex items-center ${isCurrentlyCollapsed ? 'justify-center' : 'px-5 gap-2'}`}>
         <button
-          onClick={activeView === 'dashboard' ? onToggleSidebar : undefined}
+          onClick={onToggleSidebar}
           className="group/logo relative shrink-0 overflow-hidden transition-all hover:opacity-90 cursor-pointer"
           style={{
             width: 32,

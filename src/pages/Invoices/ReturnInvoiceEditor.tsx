@@ -38,6 +38,32 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
 
+  const departmentOptions = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('departments');
+      const list = stored ? JSON.parse(stored) : [];
+      const activeDepts = list.filter((d: any) => d.active);
+      if (activeDepts.length > 0) {
+        return [
+          { value: '', label: 'Select Department' },
+          ...activeDepts.map((d: any) => ({ value: d.id, label: `${d.id}-${d.name}` }))
+        ];
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [
+      { value: '', label: 'Select Department' },
+      { value: 'HR', label: 'HR-Human Resources' },
+      { value: 'FIN', label: 'FIN-Finance Department' },
+      { value: 'ACC', label: 'ACC-Accounts Department' },
+      { value: 'SALES', label: 'SALES-Sales Department' },
+      { value: 'PUR', label: 'PUR-Purchase Department' },
+      { value: 'INV', label: 'INV-Inventory Department' },
+      { value: 'IT', label: 'IT-Information Technology' },
+    ];
+  }, []);
+
   const codeSetting = useMemo(() => {
     try {
       const activeCo = sessionStorage.getItem('active_company');
@@ -135,7 +161,8 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
 
   // Modal state
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; type: 'new' | 'close' }>({ isOpen: false, type: 'new' });
-  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title?: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, message: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>((window as any).isSidebarCollapsed || false);
 
@@ -393,14 +420,39 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
       department: ''
     });
     setSelectedCustomerId('');
+    setErrors({});
   };
 
   const handleSave = () => {
+    const newErrors: Record<string, string> = {};
+    if (!selectedCustomerId) {
+      newErrors.customer = 'Customer is required';
+    }
+    if (data.items.length === 0) {
+      newErrors.items = 'At least one item is required';
+    } else {
+      data.items.forEach((item) => {
+        if (!item.productCode) {
+          newErrors[`item_${item.id}`] = 'Product Code is required';
+        }
+      });
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     if (onSave) {
       // Force 'Sale Return' type on save
       onSave({ ...data, type: 'Sale Return' });
     } else {
-      alert('Return Invoice ' + data.invoiceNumber + ' has been saved successfully!');
+      setAlertModal({
+        isOpen: true,
+        title: 'Return Invoice Saved',
+        message: 'Return Invoice ' + data.invoiceNumber + ' has been saved successfully!',
+        variant: 'info'
+      });
     }
   };
 
@@ -685,12 +737,21 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                     <div className="lg:col-span-5">
                       <ComboBox
                         variant="compact"
-                        label="Customer"
+                        label="Customer *"
                         placeholder="Search Customer..."
                         value={selectedCustomerId}
                         options={sampleCustomers}
+                        minQueryLength={3}
+                        error={errors.customer}
                         onChange={(id) => {
                           setSelectedCustomerId(id);
+                          if (errors.customer) {
+                            setErrors(prev => {
+                              const copy = { ...prev };
+                              delete copy.customer;
+                              return copy;
+                            });
+                          }
                           const customer = sampleCustomers.find(c => c.id === id);
                           if (customer) {
                             onChange({ ...data, customerName: customer.name, customerAddress: customer.fullAddress });
@@ -734,14 +795,7 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                         label="Department"
                         value={data.department || ''}
                         onChange={(e) => onChange({ ...data, department: e.target.value })}
-                        options={[
-                          { value: '', label: 'Select Department' },
-                          { value: 'D001', label: 'D001-Sales' },
-                          { value: 'D002', label: 'D002-Accounts' },
-                          { value: 'D003', label: 'D003-Purchase' },
-                          { value: 'D004', label: 'D004-Warehouse' },
-                          { value: 'D005', label: 'D005-Admin' },
-                        ]}
+                        options={departmentOptions}
                       />
                     </div>
                   )}
@@ -846,6 +900,7 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                   value=""
                   icon={Search}
                   options={sampleProducts}
+                  minQueryLength={3}
                   onChange={(id) => {
                     const prod = sampleProducts.find(p => p.id === id);
                     if (prod) {
@@ -945,7 +1000,9 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                                 placeholder="Search Code..."
                                 value={item.productCode}
                                 options={sampleProducts.map(p => ({ id: p.id, name: p.id, subtitle: p.name }))}
-                                onChange={(id) => {
+                                minQueryLength={3}
+                                error={errors[`item_${item.id}`]}
+                               onChange={(id) => {
                                   const prod = sampleProducts.find(p => p.id === id);
                                   if (prod) {
                                     const parsedPrice = parseFloat(prod.subtitle?.split('Rs. ')[1] || '0') || 450;
@@ -954,6 +1011,13 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                                       description: prod.name,
                                       price: parsedPrice
                                     });
+                                    if (errors[`item_${item.id}`]) {
+                                      setErrors(prev => {
+                                        const copy = { ...prev };
+                                        delete copy[`item_${item.id}`];
+                                        return copy;
+                                      });
+                                    }
                                     setLastAddedId(null);
                                   }
                                 }}
@@ -964,10 +1028,10 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                             <td className="px-2 py-3">
                               <Input
                                 variant="transparent"
-                                placeholder="Enter Item Description..."
+                                readOnly
+                                placeholder="Item Description"
                                 className="!text-[12px] font-normal text-slate-700 placeholder:text-slate-400 placeholder:font-normal"
                                 value={item.description}
-                                onChange={(e) => updateItem(item.id, { description: e.target.value })}
                               />
                             </td>
                           )}
@@ -1055,11 +1119,12 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                           )}
                           <td className="px-1 py-3 text-center">
                             <Button
-                              variant="danger"
-                              size="xs"
-                              className="!px-0 !w-6 !h-6 flex items-center justify-center"
-                              icon={Trash2}
                               onClick={() => removeItem(item.id)}
+                              variant="ghost"
+                              size="xs"
+                              icon={Trash2}
+                              title="Delete Item"
+                              className="!px-1 !text-red-500"
                             />
                           </td>
                         </motion.tr>
@@ -1524,9 +1589,9 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
     <AlertModal
       isOpen={alertModal.isOpen}
       onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
-      title="Required Fields Missing"
+      title={alertModal.title || "Required Fields Missing"}
       message={alertModal.message}
-      variant="warning"
+      variant={alertModal.variant || "warning"}
     />
   </>
   );

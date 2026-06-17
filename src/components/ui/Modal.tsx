@@ -13,6 +13,9 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   stepper?: React.ReactNode;
+  style?: React.CSSProperties;
+  noPadding?: boolean;
+  scrollableBody?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -24,6 +27,9 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   stepper,
+  style,
+  noPadding = false,
+  scrollableBody = true,
 }) => {
   const { brand } = useTheme();
 
@@ -50,7 +56,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
             className={`bg-white rounded-3xl w-full max-h-[88vh] flex flex-col overflow-hidden relative border border-[#E2E8F0] font-sans ${sizeClasses[size]}`}
-            style={{ boxShadow: 'none' }}
+            style={{ boxShadow: 'none', ...style }}
           >
             {/* Header */}
             <div
@@ -83,7 +89,7 @@ export const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Body */}
-            <div className="flex-grow overflow-y-auto p-6 scrollbar-thin">
+            <div className={`flex-grow ${scrollableBody ? 'overflow-y-auto' : 'overflow-hidden'} ${noPadding ? 'p-0' : 'p-6'} scrollbar-thin`}>
               {children}
             </div>
 

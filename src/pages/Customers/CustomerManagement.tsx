@@ -220,6 +220,19 @@ const CustomerManagement: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!editing?.name?.trim()) {
+      errs.name = 'This field is required';
+    }
+    if (!editing?.email?.trim()) {
+      errs.email = 'This field is required';
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -325,6 +338,7 @@ const CustomerManagement: React.FC = () => {
 
   const openCreate = () => {
     setActiveTab('general');
+    setFormErrors({});
     const activeCo = sessionStorage.getItem('active_company');
     const activeBr = sessionStorage.getItem('active_branch');
     const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
@@ -369,19 +383,21 @@ const CustomerManagement: React.FC = () => {
 
   const openEdit = (cust: Customer) => {
     setActiveTab('general');
+    setFormErrors({});
     setEditing({ ...cust });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setEditing(null);
+    setFormErrors({});
     setShowModal(false);
   };
 
   const handleSave = () => {
     if (!editing) return;
-    if (!editing.name.trim() || !editing.email.trim()) {
-      setAlertModal({ isOpen: true, message: 'Customer Name and Email are required fields. Please fill them in before saving.' });
+    if (!validateForm()) {
+      setActiveTab('general');
       return;
     }
     const existingIndex = customers.findIndex(c => c.id === editing.id);
@@ -1191,8 +1207,8 @@ const CustomerManagement: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!editing.name?.trim() || !editing.email?.trim()) {
-                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
+                        if (!validateForm()) {
+                          setActiveTab('general');
                           return;
                         }
                         setActiveTab('settings');
@@ -1215,8 +1231,8 @@ const CustomerManagement: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (!editing.name?.trim() || !editing.email?.trim()) {
-                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
+                        if (!validateForm()) {
+                          setActiveTab('general');
                           return;
                         }
                         setActiveTab('accounting');
@@ -1247,8 +1263,31 @@ const CustomerManagement: React.FC = () => {
                       <Card className="p-4" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                         <div className="grid grid-cols-3 gap-3">
                           <Input variant="compact" label="Customer Code" value={editing.customer_id || ''} onChange={(e) => setEditing({ ...editing, customer_id: e.target.value })} placeholder="e.g. CUS-1" readOnly={codeSetting.mode === 'auto'} />
-                          <Input variant="compact" label="Customer Name *" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Acme Corporation" />
-                          {docSettings.fields['Email Address'] && <Input variant="compact" label="Email Address *" type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="e.g. accounting@acme.com" />}
+                          <Input
+                            variant="compact"
+                            label="Customer Name *"
+                            value={editing.name}
+                            onChange={(e) => {
+                              setEditing({ ...editing, name: e.target.value });
+                              if (e.target.value.trim()) setFormErrors(prev => ({ ...prev, name: '' }));
+                            }}
+                            error={formErrors.name}
+                            placeholder="e.g. Acme Corporation"
+                          />
+                          {docSettings.fields['Email Address'] && (
+                            <Input
+                              variant="compact"
+                              label="Email Address *"
+                              type="email"
+                              value={editing.email}
+                              onChange={(e) => {
+                                setEditing({ ...editing, email: e.target.value });
+                                if (e.target.value.trim()) setFormErrors(prev => ({ ...prev, email: '' }));
+                              }}
+                              error={formErrors.email}
+                              placeholder="e.g. accounting@acme.com"
+                            />
+                          )}
                           {docSettings.fields['Phone Number'] && <Input variant="compact" label="Phone Number" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} placeholder="e.g. +92 21 3456789" />}
                           {docSettings.fields['Mobile Number'] && <Input variant="compact" label="Mobile Number" value={editing.mobile} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="e.g. +92 300 1234567" />}
                           {docSettings.fields['Website Link'] && <Input variant="compact" label="Website Link" value={editing.website} onChange={(e) => setEditing({ ...editing, website: e.target.value })} placeholder="e.g. www.acme.com" />}
@@ -1372,8 +1411,8 @@ const CustomerManagement: React.FC = () => {
                       icon={ChevronRight}
                       iconPosition="right"
                       onClick={() => {
-                        if (!editing.name?.trim() || !editing.email?.trim()) {
-                          setAlertModal({ isOpen: true, message: 'Please fill in the required fields (Name & Email) before proceeding to the next step.' });
+                        if (!validateForm()) {
+                          setActiveTab('general');
                           return;
                         }
                         if (activeTab === 'general') setActiveTab('settings');

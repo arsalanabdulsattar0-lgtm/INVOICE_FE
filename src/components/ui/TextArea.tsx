@@ -31,6 +31,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
         style={style}
         {...props}
       />
+      {error && <p className="text-[11px] font-normal text-red-500 ml-1">{error}</p>}
     </div>
   );
 };

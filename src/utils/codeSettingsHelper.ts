@@ -15,6 +15,7 @@ export interface BranchCodeSettings {
   customer: EntityCodeSetting;
   product: EntityCodeSetting;
   branch: EntityCodeSetting;
+  department: EntityCodeSetting;
 }
 
 export const DEFAULT_ENTITY_SETTINGS: Record<string, EntityCodeSetting> = {
@@ -26,7 +27,8 @@ export const DEFAULT_ENTITY_SETTINGS: Record<string, EntityCodeSetting> = {
   salesperson: { mode: 'auto', prefix: 'SP-', nextNumber: 1, padding: 1 },
   customer: { mode: 'auto', prefix: 'CUS-', nextNumber: 1, padding: 1 },
   product: { mode: 'auto', prefix: 'PRD-', nextNumber: 1, padding: 1 },
-  branch: { mode: 'auto', prefix: 'BR-', nextNumber: 1, padding: 1 }
+  branch: { mode: 'auto', prefix: 'BR-', nextNumber: 1, padding: 1 },
+  department: { mode: 'auto', prefix: 'HR', nextNumber: 1, padding: 1 }
 };
 
 export const getCodeSettingsForBranch = (companyId: string, branchId: string): BranchCodeSettings => {
@@ -48,6 +50,7 @@ export const getCodeSettingsForBranch = (companyId: string, branchId: string): B
           customer: { ...DEFAULT_ENTITY_SETTINGS.customer, ...companyLevelSettings.customer, ...branchSettings.customer },
           product: { ...DEFAULT_ENTITY_SETTINGS.product, ...companyLevelSettings.product, ...branchSettings.product },
           branch: { ...DEFAULT_ENTITY_SETTINGS.branch, ...companyLevelSettings.branch, ...branchSettings.branch },
+          department: { ...DEFAULT_ENTITY_SETTINGS.department, ...companyLevelSettings.department, ...branchSettings.department },
         };
       }
     }
@@ -63,7 +66,8 @@ export const getCodeSettingsForBranch = (companyId: string, branchId: string): B
     salesperson: { ...DEFAULT_ENTITY_SETTINGS.salesperson },
     customer: { ...DEFAULT_ENTITY_SETTINGS.customer },
     product: { ...DEFAULT_ENTITY_SETTINGS.product },
-    branch: { ...DEFAULT_ENTITY_SETTINGS.branch }
+    branch: { ...DEFAULT_ENTITY_SETTINGS.branch },
+    department: { ...DEFAULT_ENTITY_SETTINGS.department }
   };
 };
 

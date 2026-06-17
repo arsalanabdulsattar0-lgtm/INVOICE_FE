@@ -19,6 +19,7 @@ import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
 import ProductList from './pages/Products/ProductList';
 import InlineProductForm from './components/ui/InlineProductForm';
+import { AlertModal } from './components/ui/AlertModal';
 
 // Static imports for types / initial data only
 import { initialInvoices } from './pages/Invoices/invoiceTypes';
@@ -193,6 +194,11 @@ function App() {
   });
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [productFormInitialData, setProductFormInitialData] = useState<any>(undefined);
+  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm?: () => void }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
 
   const [invoiceList, setInvoiceList] = useState<Invoice[]>(() => {
     try {
@@ -789,8 +795,12 @@ function App() {
       }
     });
 
-    alert(`Invoice ${updatedInvoice.id} created & saved successfully!`);
-    setActiveView('invoices');
+    setSuccessModal({
+      isOpen: true,
+      title: 'Invoice Saved',
+      message: `Invoice ${updatedInvoice.id} created & saved successfully!`,
+      onConfirm: () => setActiveView('invoices')
+    });
   };
 
   const handleSaveReturnInvoice = (data: InvoiceData) => {
@@ -838,8 +848,12 @@ function App() {
       }
     });
 
-    alert(`Return Invoice ${updatedInvoice.id} saved successfully!`);
-    setActiveView('invoices');
+    setSuccessModal({
+      isOpen: true,
+      title: 'Return Invoice Saved',
+      message: `Return Invoice ${updatedInvoice.id} saved successfully!`,
+      onConfirm: () => setActiveView('invoices')
+    });
   };
 
   const handleEditInvoice = (id: string) => {
@@ -1046,6 +1060,20 @@ function App() {
           </div>
         )}
       </div>
+
+      <AlertModal
+        isOpen={successModal.isOpen}
+        onClose={() => {
+          setSuccessModal(prev => ({ ...prev, isOpen: false }));
+          if (successModal.onConfirm) {
+            successModal.onConfirm();
+          }
+        }}
+        title={successModal.title}
+        message={successModal.message}
+        variant="info"
+        closeLabel="Got It"
+      />
 
       <InlineProductForm
         isOpen={isProductFormOpen}

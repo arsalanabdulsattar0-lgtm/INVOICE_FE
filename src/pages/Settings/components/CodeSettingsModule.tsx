@@ -25,7 +25,8 @@ const ENTITIES = [
   { id: 'salesperson', label: 'Salesperson Code', desc: 'Manage Salesperson code prefix and sequence.', icon: Users },
   { id: 'customer', label: 'Customer Code', desc: 'Manage Customer code prefix and sequence.', icon: Shield },
   { id: 'product', label: 'Product Code', desc: 'Manage Product code prefix and sequence.', icon: Package },
-  { id: 'branch', label: 'Branch Code', desc: 'Manage Branch code prefix and sequence.', icon: Building2 }
+  { id: 'branch', label: 'Branch Code', desc: 'Manage Branch code prefix and sequence.', icon: Building2 },
+  { id: 'department', label: 'Department Code', desc: 'Manage Department code prefix and sequence.', icon: Building2 }
 ] as const;
 
 export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand }) => {
@@ -106,7 +107,8 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         salesperson: { ...DEFAULT_ENTITY_SETTINGS.salesperson },
         customer: { ...DEFAULT_ENTITY_SETTINGS.customer },
         product: { ...DEFAULT_ENTITY_SETTINGS.product },
-        branch: { ...DEFAULT_ENTITY_SETTINGS.branch }
+        branch: { ...DEFAULT_ENTITY_SETTINGS.branch },
+        department: { ...DEFAULT_ENTITY_SETTINGS.department }
       };
     }
     const companySettings = settings[selectedCompanyId] || {};
@@ -122,6 +124,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       customer: { ...DEFAULT_ENTITY_SETTINGS.customer, ...branchSettings.customer },
       product: { ...DEFAULT_ENTITY_SETTINGS.product, ...branchSettings.product },
       branch: { ...DEFAULT_ENTITY_SETTINGS.branch, ...branchSettings.branch },
+      department: { ...DEFAULT_ENTITY_SETTINGS.department, ...branchSettings.department },
     };
   }, [settings, selectedCompanyId, selectedBranchId]);
 

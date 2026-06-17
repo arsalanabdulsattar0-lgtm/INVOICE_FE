@@ -14,6 +14,7 @@ import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import Card from '../../components/ui/Card';
 import type { InvoiceData, InvoiceItem } from '../../types';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
+import { AlertModal } from '../../components/ui/AlertModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
 import { sampleCustomers } from '../../utils/customerData';
 
@@ -110,6 +111,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<InvoiceData | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, title: '', message: '' });
   const perPage = 15;
 
   const sortRef = useRef<HTMLDivElement>(null);
@@ -180,7 +182,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
       document.body.removeChild(link);
     } catch (e) {
       console.error(e);
-      alert('Failed to export invoices.');
+      setAlertModal({
+        isOpen: true,
+        title: 'Export Failed',
+        message: 'Failed to export invoices.',
+        variant: 'error'
+      });
     }
   };
 
@@ -231,7 +238,12 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
         setPreviewInvoice(fallback);
       }
     } catch {
-      alert('Failed to load invoice preview!');
+      setAlertModal({
+        isOpen: true,
+        title: 'Load Failed',
+        message: 'Failed to load invoice preview!',
+        variant: 'error'
+      });
     }
   };
 
@@ -1028,6 +1040,14 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
         title="Delete Invoice?"
         itemName={deleteModal.name}
         warningText="This action cannot be undone and all associated invoice items and records will be permanently deleted."
+      />
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant || "warning"}
       />
     </div>
   );

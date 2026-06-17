@@ -54,6 +54,7 @@ export const Select: React.FC<SelectProps> = ({
           </svg>
         </div>
       </div>
+      {error && <p className="text-[11px] font-normal text-red-500 ml-1">{error}</p>}
     </div>
   );
 };

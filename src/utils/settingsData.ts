@@ -383,7 +383,10 @@ export interface PrintTemplateSection {
   section_name: string;
   display_order: number;
   is_visible: boolean;
+  spacing?: number;
+  layout?: 'grid' | 'flex' | 'row';
 }
+
 
 // ── Formula Builder Types ────────────────────────────────────────────────────
 export interface FormulaToken {
@@ -453,7 +456,9 @@ export interface PrintTemplateField {
   custom_css?: string;
   required?: boolean;
   options?: string[];
+  default_value?: string;
 }
+
 
 export interface PrintTemplateCustomField {
   custom_field_id: string;

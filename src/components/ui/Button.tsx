@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-black transition-all rounded-lg disabled:opacity-50 disabled:cursor-not-allowed border border-[#E2E8F0] shadow-none";
+  const baseStyles = "inline-flex items-center justify-center font-black transition-all rounded-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border border-[#E2E8F0] shadow-none";
 
   const variants = {
     primary: "bg-[#2759CD] text-white hover:opacity-90",

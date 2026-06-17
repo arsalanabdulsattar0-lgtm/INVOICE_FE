@@ -73,7 +73,7 @@ const CustomerList: React.FC = () => {
                 <div className="text-[12px] font-bold text-brand-primary" style={{ color: brand.primary }}>
                   {customer.name}
                 </div>
-                <Button variant="ghost" size="xs" icon={MoreHorizontal} className="px-2 py-2 text-slate-300 hover:text-slate-650 hover:bg-slate-50" />
+                <Button variant="ghost" size="xs" icon={MoreHorizontal} title="More Options" className="px-2 py-2 text-slate-300 hover:text-slate-650 hover:bg-slate-50" />
               </div>
               
               <div className="space-y-3 flex-grow">
@@ -98,7 +98,7 @@ const CustomerList: React.FC = () => {
                     {customer.totalInvoiced.replace(/^(Rs\.|PKR|\$)\s*/i, '').trim()}
                   </p>
                 </div>
-                <Button variant="ghost" size="xs" className="text-blue-650 hover:bg-blue-50 font-bold px-3 py-1.5">
+                <Button variant="ghost" size="xs" title="View Customer Profile" className="text-blue-650 hover:bg-blue-50 font-bold px-3 py-1.5">
                   View Profile
                 </Button>
               </div>

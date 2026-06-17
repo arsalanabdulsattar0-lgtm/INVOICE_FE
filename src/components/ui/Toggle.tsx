@@ -5,13 +5,19 @@ export interface ToggleProps {
   onChange: (value: boolean) => void;
   label?: string;
   className?: string;
+  compact?: boolean;
 }
 
-export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label, className = '' }) => {
-  const toggleClasses = `relative inline-flex flex-shrink-0 h-6 w-11 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none toggle-switch-base ${checked ? 'toggle-switch-checked' : 'toggle-switch-unchecked'} ${className}`;
-  const thumb = checked ? 'translate-x-5' : 'translate-x-0';
+export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label, className = '', compact = false }) => {
+  const sizeClasses = compact ? 'h-4 w-7' : 'h-6 w-11';
+  const thumbSize = compact ? 'h-3 w-3' : 'h-5 w-5';
+  const thumbTranslate = checked ? (compact ? 'translate-x-3' : 'translate-x-5') : 'translate-x-0';
+  const spacingClass = compact ? 'space-x-2' : 'space-x-3';
+
+  const toggleClasses = `relative inline-flex flex-shrink-0 ${sizeClasses} cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none toggle-switch-base ${checked ? 'toggle-switch-checked' : 'toggle-switch-unchecked'} ${className}`;
+
   return (
-    <label className="inline-flex items-center space-x-3 cursor-pointer select-none">
+    <label className={`inline-flex items-center ${spacingClass} cursor-pointer select-none`}>
       <button
         type="button"
         className={toggleClasses}
@@ -20,7 +26,7 @@ export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label, classN
         onClick={() => onChange(!checked)}
       >
         <span
-          className={`pointer-events-none block h-5 w-5 rounded-full bg-white border border-slate-200 shadow-none transform ring-0 transition duration-200 ease-in-out ${thumb}`}
+          className={`pointer-events-none block ${thumbSize} rounded-full bg-white border border-slate-200 shadow-none transform ring-0 transition duration-200 ease-in-out ${thumbTranslate}`}
         />
       </button>
       {label && <span className="text-xs font-bold text-slate-600">{label}</span>}

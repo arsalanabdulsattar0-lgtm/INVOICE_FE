@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, CreditCard, Palette, Receipt, Users, Building2, Shield, Package, Warehouse, Printer,
-  ChevronDown, Settings2, X, FileText, Binary,
+  ChevronDown, Settings2, X, FileText, Binary, FolderOpen
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -19,6 +19,7 @@ import { WarehouseModule } from './components/WarehouseModule';
 import { PrintTemplatesModule } from './components/PrintTemplatesModule';
 import { DocumentSettingsModule } from './components/DocumentSettingsModule';
 import { CodeSettingsModule } from './components/CodeSettingsModule';
+import { DepartmentModule } from './components/DepartmentModule';
 
 // Re-export types
 export type { TaxSetup } from './components/TaxSetupModule';
@@ -46,6 +47,7 @@ const Settings: React.FC = () => {
     { id: 'warehouse',       title: 'Warehouse',         desc: 'Manage warehouses, storage locations and inventory distribution.',          icon: Warehouse },
     { id: 'print-templates', title: 'Print Templates',   desc: 'Create and manage customizable print layouts for invoices and documents.',  icon: Printer },
     { id: 'documents',       title: 'Document Settings', desc: 'Toggle visibility of header fields and table columns for sales invoices and return screens.', icon: FileText },
+    { id: 'department',      title: 'Department Settings', desc: 'Manage departments used throughout the ERP system.', icon: FolderOpen },
   ];
 
   const renderModule = (id: string) => {
@@ -62,6 +64,7 @@ const Settings: React.FC = () => {
       case 'print-templates': return <PrintTemplatesModule brand={brand} />;
       case 'documents':       return <DocumentSettingsModule brand={brand} />;
       case 'code-settings':   return <CodeSettingsModule brand={brand} />;
+      case 'department':      return <DepartmentModule brand={brand} />;
       default:                return null;
     }
   };

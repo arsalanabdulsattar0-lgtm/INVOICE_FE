@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
-  ChevronLeft, ChevronRight, Eye, Copy, ArrowLeft,
-  Move, Layers, Settings, ChevronDown, ChevronUp,
-  Download, Upload, EyeOff, FileText, Undo, Redo
+  ChevronLeft, ChevronRight, Copy, ArrowLeft,
+  Move, Settings, ChevronDown, ChevronUp,
+  Download, Upload, FileText, Undo, Redo, Eye, EyeOff
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -35,6 +35,7 @@ import {
   saveSingleTemplateLayout
 } from '../../../utils/templateApi';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
+import { AlertModal } from '../../../components/ui/AlertModal';
 
 const dummyContext = {
   row: {
@@ -341,14 +342,40 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   });
   const [formError, setFormError] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
-  const [isAdminRole, setIsAdminRole] = useState<boolean>(true);
+  const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, title: '', message: '' });
+  
 
   // Designer local states
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [selectedCustomFieldId, setSelectedCustomFieldId] = useState<string | null>(null);
+
+  // Modals for Top Toolbar Managers
+  const [showLayoutModal, setShowLayoutModal] = useState<boolean>(false);
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
+  const [showFormulasModal, setShowFormulasModal] = useState<boolean>(false);
+  const [showTemplateSettingsModal, setShowTemplateSettingsModal] = useState<boolean>(false);
+  const [editingFormulaId, setEditingFormulaId] = useState<string | null>(null);
+
+  // Modals for Double Click Properties Editing
+  const [showFieldPropertiesModal, setShowFieldPropertiesModal] = useState<boolean>(false);
+  const [showColumnPropertiesModal, setShowColumnPropertiesModal] = useState<boolean>(false);
+  const [showSectionPropertiesModal, setShowSectionPropertiesModal] = useState<boolean>(false);
+
+  // Active item for Section Properties modal
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+
+  // Search query inside Fields Manager Modal
+  const [fieldsSearchQuery, setFieldsSearchQuery] = useState<string>('');
+
+  // Zoom level for Preview Canvas
+  const [zoomLevel, setZoomLevel] = useState<'50' | '75' | '100' | '125' | 'fit'>('100');
+
+  // Tab state for Field Properties Modal
+  const [activeElementTab, setActiveElementTab] = useState<'content' | 'style'>('content');
+
   const [dragOverField, setDragOverField] = useState<{ id: string; pos: 'left' | 'right' | 'top' | 'bottom' } | null>(null);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  
 
   // Free Layout Mode Draggability and Renaming States
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -696,11 +723,78 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
     };
   }, [resizingElement]);
 
-  const handleDoubleClick = (e: React.MouseEvent, id: string, currentLabel: string) => {
+  const handleDoubleClick = (e: React.MouseEvent, id: string, _currentLabel?: string) => {
     e.stopPropagation();
-    setEditingLabelId(id);
-    setEditingLabelText(currentLabel);
+    const isCustom = activeCustomFields.some(cf => cf.custom_field_id === id);
+    const isColumn = activeColumns.some(col => col.column_id === id);
+    
+    if (isColumn) {
+      setSelectedColumnId(id);
+      setSelectedFieldId(null);
+      setSelectedCustomFieldId(null);
+      setShowColumnPropertiesModal(true);
+    } else if (isCustom) {
+      setSelectedCustomFieldId(id);
+      setSelectedFieldId(null);
+      setSelectedColumnId(null);
+      setShowFieldPropertiesModal(true);
+    } else {
+      setSelectedFieldId(id);
+      setSelectedCustomFieldId(null);
+      setSelectedColumnId(null);
+      setShowFieldPropertiesModal(true);
+    }
   };
+
+  const moveFieldOrder = (itemId: string, isCustom: boolean, direction: 'up' | 'down') => {
+    const field = isCustom 
+      ? allCustomFields.find(cf => cf.custom_field_id === itemId)
+      : allFields.find(f => f.field_id === itemId);
+    if (!field) return;
+
+    const secName = field.section_name || 'Custom Fields';
+    
+    const secFields = allFields.filter(f => f.template_id === currentTemplateId && f.section_name === secName);
+    const secCustom = allCustomFields.filter(cf => cf.template_id === currentTemplateId && (cf.section_name || 'Custom Fields') === secName);
+    const combined = [
+      ...secFields.map(f => ({ ...f, isCustom: false as const, id: f.field_id })),
+      ...secCustom.map(cf => ({ ...cf, isCustom: true as const, id: cf.custom_field_id }))
+    ].sort((a, b) => a.display_order - b.display_order);
+
+    const index = combined.findIndex(item => item.id === itemId);
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= combined.length) return;
+
+    const tempOrder = combined[index].display_order;
+    combined[index].display_order = combined[targetIndex].display_order;
+    combined[targetIndex].display_order = tempOrder;
+
+    combined.sort((a, b) => a.display_order - b.display_order);
+    
+    const updatedCombined = combined.map((item, idx) => ({
+      ...item,
+      display_order: idx + 1
+    }));
+
+    setAllFields(prev => prev.map(f => {
+      if (f.template_id === currentTemplateId && f.section_name === secName) {
+        const match = updatedCombined.find(item => !item.isCustom && item.id === f.field_id);
+        if (match) return { ...f, display_order: match.display_order };
+      }
+      return f;
+    }));
+
+    setAllCustomFields(prev => prev.map(cf => {
+      if (cf.template_id === currentTemplateId && (cf.section_name || 'Custom Fields') === secName) {
+        const match = updatedCombined.find(item => item.isCustom && item.id === cf.custom_field_id);
+        if (match) return { ...cf, display_order: match.display_order };
+      }
+      return cf;
+    }));
+  };
+
 
   const handleSaveInlineLabel = () => {
     if (!editingLabelId) return;
@@ -721,20 +815,28 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   };
 
   // Modals for adding Formula Fields
-  const [showCustomFieldModal, setShowCustomFieldModal] = useState(false);
+
   const [formulaFieldName, setFormulaFieldName] = useState('');
-  const [formulaPlacement, setFormulaPlacement] = useState<'totals' | 'column'>('totals');
+  const [formulaPlacement, setFormulaPlacement] = useState<'totals' | 'column' | 'custom'>('custom');
 
   // Formula builder state
   const [formulaTokens, setFormulaTokens] = useState<FormulaToken[]>([]);
   const [formulaAddType, setFormulaAddType] = useState<'field' | 'operator' | 'constant'>('field');
   const [formulaSelectedField, setFormulaSelectedField] = useState(FORMULA_FIELD_OPTIONS[0]?.key || '');
-  const [formulaSelectedOp, setFormulaSelectedOp] = useState<'+' | '-' | '*' | '/'>('-');
+  const [formulaSelectedOp] = useState<'+' | '-' | '*' | '/'>('-');
   const [formulaConstant, setFormulaConstant] = useState('');
+  // Crystal Reports Formula Manager extra state
+  const [formulaValidationErrors, setFormulaValidationErrors] = useState<string[]>([]);
+  const [formulaDescription, setFormulaDescription] = useState('');
+  if (formulaAddType && formulaSelectedField && formulaSelectedOp && formulaDescription && false) {
+    console.log({ formulaAddType, formulaSelectedField, formulaSelectedOp, formulaDescription });
+  }
+  const [formulaCategory, setFormulaCategory] = useState<'summary' | 'column'>('summary');
+  const [formulaSearchQuery, setFormulaSearchQuery] = useState('');
 
   const resetFormulaModal = () => {
     setFormulaFieldName('');
-    setFormulaPlacement('totals');
+    setFormulaPlacement('custom');
     setFormulaTokens([]);
     setFormulaConstant('');
     setFormulaAddType('field');
@@ -773,9 +875,19 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   const targetHeight = targetWidth / aspectRatio;
 
   useEffect(() => {
-    const scale = containerWidth > 0 ? Math.min(1.0, containerWidth / targetWidth) : 1;
-    setPreviewScale(scale);
-  }, [containerWidth, targetWidth]);
+    if (zoomLevel === '50') {
+      setPreviewScale(0.5);
+    } else if (zoomLevel === '75') {
+      setPreviewScale(0.75);
+    } else if (zoomLevel === '100') {
+      setPreviewScale(1.0);
+    } else if (zoomLevel === '125') {
+      setPreviewScale(1.25);
+    } else if (zoomLevel === 'fit') {
+      const scale = containerWidth > 0 ? (containerWidth / targetWidth) : 1;
+      setPreviewScale(scale);
+    }
+  }, [zoomLevel, containerWidth, targetWidth]);
 
   const activeSections = useMemo(() => {
     if (!currentTemplateId) return [];
@@ -1198,22 +1310,14 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   };
 
   // ─── Collapsible Sections Map toggler ──────────────────────────────────────
-  const toggleSectionCollapse = (secId: string) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [secId]: !prev[secId]
-    }));
-  };
+
 
   // ─── Drag and Drop Section Handlers ────────────────────────────────────────
 
   // ─── Drag and Drop Field Handlers ──────────────────────────────────────────
   const [draggedElement, setDraggedElement] = useState<{ id: string; type: 'default' | 'custom' } | null>(null);
 
-  const handleElementDrop = (targetId: string, targetIsCustom: boolean) => {
-    if (!draggedElement) return;
-    executeFieldMove(draggedElement.id, draggedElement.type, targetId, targetIsCustom ? 'custom' : 'default', 'bottom');
-  };
+
 
 
 
@@ -1522,43 +1626,73 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
   };
 
   // ─── Formula Field Builder ──────────────────────────────────────────────────
-  const handleAddCustomField = () => {
+  const handleSaveFormula = () => {
     if (!formulaFieldName.trim()) return;
     if (formulaTokens.length === 0) return;
 
-    if (formulaPlacement === 'column') {
-      // Add as a table column
-      const newCol: PrintTemplateColumn = {
-        column_id: `col-formula-${currentTemplateId}-${Date.now()}`,
-        template_id: currentTemplateId || '',
-        column_name: formulaFieldName,
-        display_order: activeColumns.length + 1,
-        is_visible: false,
-        width: '12%',
-        is_custom: true,
-        formula_tokens: formulaTokens
-      };
-      setAllColumns(prev => [...prev, newCol]);
+    let savedId = editingFormulaId;
+
+    if (editingFormulaId) {
+      if (editingFormulaId.startsWith('col-formula-')) {
+        setAllColumns(prev => prev.map(c => {
+          if (c.column_id === editingFormulaId) {
+            return {
+              ...c,
+              column_name: formulaFieldName,
+              formula_tokens: formulaTokens
+            };
+          }
+          return c;
+        }));
+      } else {
+        setAllCustomFields(prev => prev.map(cf => {
+          if (cf.custom_field_id === editingFormulaId) {
+            return {
+              ...cf,
+              field_name: formulaFieldName,
+              formula_tokens: formulaTokens
+            };
+          }
+          return cf;
+        }));
+      }
     } else {
-      // Add as a custom field in Totals / Summary footer
-      const newField: PrintTemplateCustomField = {
-        custom_field_id: `cf-formula-${currentTemplateId}-${Date.now()}`,
-        template_id: currentTemplateId || '',
-        field_name: formulaFieldName,
-        field_type: 'formula',
-        default_value: '',
-        display_order: activeCustomFields.length + 1,
-        is_visible: false,
-        section_name: 'Totals',
-        row_position: 10,
-        column_position: 1,
-        formula_tokens: formulaTokens
-      };
-      setAllCustomFields(prev => [...prev, newField]);
+      if (formulaPlacement === 'column') {
+        const newId = `col-formula-${currentTemplateId}-${Date.now()}`;
+        savedId = newId;
+        const newCol: PrintTemplateColumn = {
+          column_id: newId,
+          template_id: currentTemplateId || '',
+          column_name: formulaFieldName,
+          display_order: activeColumns.length + 1,
+          is_visible: true,
+          width: '12%',
+          is_custom: true,
+          formula_tokens: formulaTokens
+        };
+        setAllColumns(prev => [...prev, newCol]);
+      } else {
+        const newId = `cf-formula-${currentTemplateId}-${Date.now()}`;
+        savedId = newId;
+        const newField: PrintTemplateCustomField = {
+          custom_field_id: newId,
+          template_id: currentTemplateId || '',
+          field_name: formulaFieldName,
+          field_type: 'formula',
+          default_value: '',
+          display_order: activeCustomFields.length + 1,
+          is_visible: true,
+          section_name: formulaPlacement === 'totals' ? 'Totals' : 'Custom Fields',
+          row_position: 10,
+          column_position: 1,
+          formula_tokens: formulaTokens
+        };
+        setAllCustomFields(prev => [...prev, newField]);
+      }
     }
 
-    setShowCustomFieldModal(false);
-    resetFormulaModal();
+    setEditingFormulaId(savedId);
+    setFormulaAddType('field');
   };
 
   const handleRemoveCustomField = (cfId: string) => {
@@ -1660,10 +1794,20 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
               setAllCustomFields(prev => [...prev, ...importedCustom]);
             }
 
-            alert('Template imported successfully!');
+            setAlertModal({
+              isOpen: true,
+              title: 'Template Imported',
+              message: 'Template imported successfully!',
+              variant: 'info'
+            });
           }
         } catch {
-          alert('Failed to parse template JSON file!');
+          setAlertModal({
+            isOpen: true,
+            title: 'Import Failed',
+            message: 'Failed to parse template JSON file!',
+            variant: 'error'
+          });
         }
       };
       reader.readAsText(file);
@@ -1768,6 +1912,19 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                     }}
                     className="py-1 px-1.5 font-black text-slate-700 cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors border border-slate-300"
                     style={{ width: col.width, textAlign: col.alignment || 'left' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedColumnId(col.column_id);
+                      setSelectedFieldId(null);
+                      setSelectedCustomFieldId(null);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedColumnId(col.column_id);
+                      setSelectedFieldId(null);
+                      setSelectedCustomFieldId(null);
+                      setShowColumnPropertiesModal(true);
+                    }}
                   >
                     {col.custom_label || col.column_name}
                   </th>
@@ -2137,6 +2294,19 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                           setSelectedColumnId(null);
                         }
                       }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        if (item.isCustom) {
+                          setSelectedCustomFieldId(itemId);
+                          setSelectedFieldId(null);
+                          setSelectedColumnId(null);
+                        } else {
+                          setSelectedFieldId(itemId);
+                          setSelectedCustomFieldId(null);
+                          setSelectedColumnId(null);
+                        }
+                        setShowFieldPropertiesModal(true);
+                      }}
                     >
                       {fieldElement}
                     </div>
@@ -2152,1591 +2322,155 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   if (view === 'designer' && activeTemplate) {
+    
     return (
       <div className="space-y-4">
         {/* Designer Header bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#E2E8F0]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setView('list')}
-              className="p-1.5 rounded-full hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <h2 className="text-sm font-black text-slate-800">
-                Template Designer — {activeTemplate.template_name}
-              </h2>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                {activeTemplate.document_type} · {activeTemplate.paper_size} · {activeTemplate.orientation}
-              </p>
+        <div className="flex flex-col gap-3 pb-3 border-b border-[#E2E8F0]">
+          {/* Row 1: Back, Title, and Save Actions */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setView('list')}
+                className="p-1.5 rounded-full hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-700 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <h2 className="text-sm font-black text-slate-800">
+                  Template Designer — {activeTemplate.template_name}
+                </h2>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {activeTemplate.document_type} · {activeTemplate.paper_size} · {activeTemplate.orientation}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="white"
+                size="sm"
+                icon={Undo}
+                onClick={undo}
+                disabled={historyIndex <= 0}
+                title="Undo (Ctrl+Z)"
+              >
+                Undo
+              </Button>
+              <Button
+                variant="white"
+                size="sm"
+                icon={Redo}
+                onClick={redo}
+                disabled={historyIndex >= history.length - 1}
+                title="Redo (Ctrl+Y)"
+              >
+                Redo
+              </Button>
+              <Button
+                variant="white"
+                size="sm"
+                icon={Download}
+                onClick={() => handleExportTemplate(activeTemplate)}
+              >
+                Export
+              </Button>
+              <Button
+                variant="white"
+                size="sm"
+                icon={Copy}
+                onClick={() => handleDuplicate(activeTemplate)}
+              >
+                Duplicate
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={Check}
+                onClick={() => {
+                  if (activeTemplate) {
+                    saveSingleTemplateLayout(activeTemplate, allSections, allFields, allColumns, allCustomFields);
+                  }
+                  setView('list');
+                }}
+                style={{ backgroundColor: brand.primary }}
+              >
+                Save layout
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="white"
-              size="sm"
-              icon={Undo}
-              onClick={undo}
-              disabled={historyIndex <= 0}
-              title="Undo (Ctrl+Z)"
-            >
-              Undo
-            </Button>
-            <Button
-              variant="white"
-              size="sm"
-              icon={Redo}
-              onClick={redo}
-              disabled={historyIndex >= history.length - 1}
-              title="Redo (Ctrl+Y)"
-            >
-              Redo
-            </Button>
-            <Button
-              variant="white"
-              size="sm"
-              icon={Download}
-              onClick={() => handleExportTemplate(activeTemplate)}
-            >
-              Export
-            </Button>
-            <Button
-              variant="white"
-              size="sm"
-              icon={Copy}
-              onClick={() => handleDuplicate(activeTemplate)}
-            >
-              Duplicate
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={Check}
-              onClick={() => {
-                if (activeTemplate) {
-                  saveSingleTemplateLayout(activeTemplate, allSections, allFields, allColumns, allCustomFields);
-                }
-                setView('list');
-              }}
-              style={{ backgroundColor: brand.primary }}
-            >
-              Save layout
-            </Button>
+
+          {/* Row 2: Manager Buttons and Zoom Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="white"
+                size="sm"
+                icon={SlidersHorizontal}
+                onClick={() => {
+                  setExpandedSectionId('company');
+                  setShowLayoutModal(true);
+                }}
+              >
+                Layout Settings
+              </Button>
+              <Button
+                variant="white"
+                size="sm"
+                icon={FileText}
+                onClick={() => {
+                  const firstField = activeCustomFields.find(cf => cf.field_type === 'formula');
+                  const firstCol = activeColumns.find(c => c.is_custom && c.formula_tokens && c.formula_tokens.length > 0);
+                  if (firstField) {
+                    setEditingFormulaId(firstField.custom_field_id);
+                    setFormulaFieldName(firstField.field_name);
+                    setFormulaPlacement(firstField.section_name === 'Custom Fields' ? 'custom' : 'totals');
+                    setFormulaTokens(firstField.formula_tokens || []);
+                  } else if (firstCol) {
+                    setEditingFormulaId(firstCol.column_id);
+                    setFormulaFieldName(firstCol.column_name);
+                    setFormulaPlacement('column');
+                    setFormulaTokens(firstCol.formula_tokens || []);
+                  } else {
+                    setEditingFormulaId(null);
+                    resetFormulaModal();
+                  }
+                  setShowFormulasModal(true);
+                }}
+              >
+                Formulas
+              </Button>
+              <Button
+                variant="white"
+                size="sm"
+                icon={Settings}
+                onClick={() => setShowTemplateSettingsModal(true)}
+              >
+                Template Settings
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] font-bold text-slate-400">Zoom:</span>
+              <select
+                value={zoomLevel}
+                onChange={e => setZoomLevel(e.target.value as any)}
+                className="text-[10px] font-bold text-slate-650 bg-white border border-slate-200 rounded px-2 py-1 outline-none cursor-pointer"
+              >
+                <option value="50">50%</option>
+                <option value="75">75%</option>
+                <option value="100">100%</option>
+                <option value="125">125%</option>
+                <option value="fit">Fit Width</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* 3-Panel Designer Grid Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* 1. Left Panel: Section Builder */}
-          <div className="lg:col-span-6 h-[350px] border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-slate-400" />
-                <h3 className="text-xs font-bold text-slate-700">Section Builder</h3>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-slate-400">Role:</span>
-                <select
-                  value={isAdminRole ? 'admin' : 'user'}
-                  onChange={e => setIsAdminRole(e.target.value === 'admin')}
-                  className="text-[10px] font-bold text-slate-600 bg-white border rounded px-1.5 py-0.5 outline-none cursor-pointer"
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Super Admin</option>
-                </select>
-              </div>
-            </div>
-
-            <ScrollArea maxHeight="100%">
-              <div className="space-y-2.5">
-                {/* Available Fields Panel (Field Library) */}
-                {(() => {
-                  const isLibraryCollapsed = !!collapsedSections['available-fields-library'];
-                  const hiddenFields = activeFields.filter(f => !f.is_visible);
-                  const hiddenCustomFields = activeCustomFields.filter(cf => !cf.is_visible);
-                  const libraryCombined = [
-                    ...hiddenFields.map(f => ({ ...f, isCustom: false as const })),
-                    ...hiddenCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
-                  ].sort((a, b) => a.display_order - b.display_order);
-
-                  return (
-                    <div
-                      className="border border-indigo-150 bg-indigo-50/10 rounded-xl overflow-hidden shadow-3xs hover:shadow-2xs transition-shadow mb-4"
-                    >
-                      {/* Panel Header */}
-                      <div 
-                        className="flex items-center justify-between px-3 py-2 bg-indigo-550 border-b border-indigo-100 cursor-pointer select-none"
-                        onClick={() => toggleSectionCollapse('available-fields-library')}
-                        style={{ backgroundColor: `${brand.primary}15` }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-3.5 h-3.5 text-indigo-600" style={{ color: brand.primary }} />
-                          <span className="text-[11px] font-black text-indigo-900 uppercase tracking-wide" style={{ color: brand.primary }}>Available Fields</span>
-                          {libraryCombined.length > 0 && (
-                            <span className="text-[9.5px] font-extrabold bg-indigo-100 text-indigo-850 px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${brand.primary}30`, color: brand.primary }}>
-                              {libraryCombined.length}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="white"
-                            size="xs"
-                            icon={Plus}
-                            style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFormulaPlacement('totals');
-                              setShowCustomFieldModal(true);
-                            }}
-                          >
-                            Add Field
-                          </Button>
-                          {isLibraryCollapsed ? (
-                            <ChevronDown className="w-3.5 h-3.5 text-indigo-600" style={{ color: brand.primary }} />
-                          ) : (
-                            <ChevronUp className="w-3.5 h-3.5 text-indigo-600" style={{ color: brand.primary }} />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Panel Body */}
-                      {!isLibraryCollapsed && (
-                        <div className="p-3 bg-white space-y-2">
-                          {libraryCombined.length === 0 ? (
-                            <p className="text-[10px] text-slate-400 text-center py-2">No hidden fields.</p>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {libraryCombined.map((item) => {
-                                const itemId = item.isCustom ? item.custom_field_id : item.field_id;
-                                const itemName = item.field_name;
-                                const isSelected = item.isCustom 
-                                  ? selectedCustomFieldId === itemId
-                                  : selectedFieldId === itemId;
-
-                                return (
-                                  <div
-                                    key={itemId}
-                                    draggable
-                                    onDragStart={() => setDraggedElement({ id: itemId, type: item.isCustom ? 'custom' : 'default' })}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    className="flex items-center justify-between px-2 py-1 rounded-lg border text-[10px] font-semibold cursor-pointer transition-all hover:bg-slate-50"
-                                    style={isSelected ? {
-                                      backgroundColor: `${brand.primary}10`,
-                                      borderColor: brand.primary,
-                                      color: brand.primary
-                                    } : {
-                                      backgroundColor: '#F8FAFC',
-                                      borderColor: '#E2E8F0',
-                                      color: '#475569'
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (item.isCustom) {
-                                        setSelectedCustomFieldId(itemId);
-                                        setSelectedFieldId(null);
-                                        setSelectedColumnId(null);
-                                      } else {
-                                        setSelectedFieldId(itemId);
-                                        setSelectedCustomFieldId(null);
-                                        setSelectedColumnId(null);
-                                      }
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-1 min-w-0 flex-grow">
-                                      <Move className="w-2.5 h-2.5 text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" />
-                                      <span className="truncate" title={item.custom_label || itemName}>{item.custom_label || itemName}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 flex-shrink-0">
-                                      <button
-                                        type="button"
-                                        title="Show on canvas"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (item.isCustom) {
-                                            updateCustomFieldProperty(itemId, { 
-                                              is_visible: true, 
-                                              section_name: item.section_name || 'Customer Information' 
-                                            });
-                                          } else {
-                                            updateFieldProperty(itemId, { 
-                                              is_visible: true, 
-                                              section_name: item.section_name || 'Customer Information' 
-                                            });
-                                          }
-                                        }}
-                                        className="text-slate-400 hover:text-indigo-650"
-                                        style={{ color: brand.primary }}
-                                      >
-                                        <Plus className="w-3 h-3" />
-                                      </button>
-                                      {item.isCustom && (
-                                        <button
-                                          type="button"
-                                          title="Remove permanently"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveCustomField(itemId);
-                                          }}
-                                          className="text-slate-350 hover:text-red-500"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {activeSections.map((sec) => {
-                  const isCollapsed = !!collapsedSections[sec.section_id];
-                  
-                  return (
-                    <div
-                      key={sec.section_id}
-                      draggable
-                      onDragStart={(e) => {
-                        if (draggedElement || draggedColumnId) {
-                          e.preventDefault();
-                          return;
-                        }
-                        handleSectionDragStart(sec.section_id);
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (draggedElement) {
-                          handleSectionDropField(sec.section_name);
-                        } else if (draggedSectionId) {
-                          handleSectionDrop(sec.section_id);
-                        }
-                      }}
-                      className="border border-slate-200 bg-white rounded-xl overflow-hidden shadow-3xs hover:shadow-2xs transition-shadow cursor-move"
-                    >
-                      {/* Section Header */}
-                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-slate-700">{sec.section_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => updateSectionProperty(sec.section_id, { is_visible: !sec.is_visible })}
-                            className="text-slate-450 hover:text-slate-700 cursor-pointer"
-                          >
-                            {sec.is_visible ? (
-                              <Eye className="w-3.5 h-3.5 text-blue-500" />
-                            ) : (
-                              <EyeOff className="w-3.5 h-3.5 text-slate-300" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleSectionCollapse(sec.section_id)}
-                            className="text-slate-450 hover:text-slate-700 cursor-pointer"
-                          >
-                            {isCollapsed ? (
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            ) : (
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-
-                      {/* Section Fields Body */}
-                      {!isCollapsed && (
-                        <div className="p-3 bg-white space-y-2">
-                          {sec.section_name === 'Product Table' ? (
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center pb-1 border-b">
-                                <span className="text-[10px] font-bold text-slate-400">Table Columns</span>
-                                <Button
-                                  variant="white"
-                                  size="xs"
-                                  icon={Plus}
-                                  onClick={() => {
-                                    setFormulaPlacement('column');
-                                    setShowCustomFieldModal(true);
-                                  }}
-                                >
-                                  Add Column
-                                </Button>
-                              </div>
-                              <div className="space-y-1.5">
-                                {activeColumns.map((col) => {
-                                  const isSelected = selectedColumnId === col.column_id;
-                                  return (
-                                    <div
-                                      key={col.column_id}
-                                      draggable
-                                      onDragStart={(e) => {
-                                        e.stopPropagation();
-                                        handleColumnDragStart(e, col.column_id);
-                                      }}
-                                      onDragOver={handleColumnDragOver}
-                                      onDrop={(e) => {
-                                        handleColumnDrop(e, col.column_id);
-                                      }}
-                                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold cursor-pointer transition-all ${!col.is_visible ? 'opacity-60' : ''}`}
-                                      style={isSelected ? {
-                                        backgroundColor: `${brand.primary}10`,
-                                        borderColor: brand.primary,
-                                        color: brand.primary
-                                      } : {
-                                        backgroundColor: '#F8FAFC',
-                                        borderColor: '#E2E8F0',
-                                        color: '#334155'
-                                      }}
-                                      onClick={() => {
-                                        setSelectedColumnId(col.column_id);
-                                        setSelectedFieldId(null);
-                                        setSelectedCustomFieldId(null);
-                                      }}
-                                    >
-                                      <div className="flex items-center gap-1.5 min-w-0 flex-grow">
-                                        <input
-                                          type="checkbox"
-                                          checked={col.is_visible}
-                                          onChange={(e) => {
-                                            e.stopPropagation();
-                                            updateColumnProperty(col.column_id, { is_visible: e.target.checked });
-                                          }}
-                                          className="rounded border-slate-350 cursor-pointer w-3.5 h-3.5 mr-1 flex-shrink-0"
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                        <Move className="w-3.5 h-3.5 text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" />
-                                        <span className="font-bold truncate" title={col.custom_label || col.column_name}>{col.custom_label || col.column_name}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-slate-400 font-normal">{col.width || '10%'}</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {sec.section_name === 'Custom Fields' && (
-                                <div className="flex justify-between items-center pb-1 border-b">
-                                  <span className="text-[10px] font-bold text-slate-400">User Defined Custom Fields</span>
-                                  <Button
-                                    variant="white"
-                                    size="xs"
-                                    icon={Plus}
-                                    onClick={() => {
-                                      setFormulaPlacement('totals');
-                                      setShowCustomFieldModal(true);
-                                    }}
-                                  >
-                                    Add Field
-                                  </Button>
-                                </div>
-                              )}
-                              <div className="space-y-1.5">
-                                {(() => {
-                                  const secFields = activeFields.filter(f => f.section_name === sec.section_name);
-                                  const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === sec.section_name);
-                                  const combined = [
-                                    ...secFields.map(f => ({ ...f, isCustom: false as const })),
-                                    ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
-                                  ].sort((a, b) => a.display_order - b.display_order);
-
-                                  if (combined.length === 0) {
-                                    return <p className="text-[10px] text-slate-400 text-center py-2">No fields in this section.</p>;
-                                  }
-
-                                  return combined.map((item) => {
-                                    const isSelected = item.isCustom 
-                                      ? selectedCustomFieldId === item.custom_field_id
-                                      : selectedFieldId === item.field_id;
-                                    const itemId = item.isCustom ? item.custom_field_id : item.field_id;
-                                    const itemName = item.isCustom ? item.field_name : item.field_name;
-
-                                    return (
-                                      <div
-                                        key={itemId}
-                                        draggable
-                                        onDragStart={(e) => {
-                                          e.stopPropagation();
-                                          setDraggedElement({ id: itemId, type: item.isCustom ? 'custom' : 'default' });
-                                        }}
-                                        onDragOver={(e) => e.preventDefault()}
-                                        onDrop={(e) => {
-                                          e.stopPropagation();
-                                          handleElementDrop(itemId, item.isCustom);
-                                        }}
-                                        className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all cursor-pointer ${!item.is_visible ? 'opacity-60' : ''}`}
-                                        style={isSelected ? {
-                                          backgroundColor: `${brand.primary}10`,
-                                          borderColor: brand.primary,
-                                          color: brand.primary
-                                        } : {
-                                          backgroundColor: '#FFFFFF',
-                                          borderColor: '#E2E8F0',
-                                          color: '#4B5563'
-                                        }}
-                                        onClick={() => {
-                                          if (item.isCustom) {
-                                            setSelectedCustomFieldId(itemId);
-                                            setSelectedFieldId(null);
-                                            setSelectedColumnId(null);
-                                          } else {
-                                            setSelectedFieldId(itemId);
-                                            setSelectedCustomFieldId(null);
-                                            setSelectedColumnId(null);
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1.5 min-w-0 flex-grow">
-                                          <input
-                                            type="checkbox"
-                                            checked={item.is_visible}
-                                            onChange={(e) => {
-                                              e.stopPropagation();
-                                              const newVisible = e.target.checked;
-                                              if (item.isCustom) {
-                                                updateCustomFieldProperty(itemId, { is_visible: newVisible });
-                                              } else {
-                                                updateFieldProperty(itemId, { is_visible: newVisible });
-                                              }
-                                            }}
-                                            className="rounded border-slate-350 cursor-pointer w-3.5 h-3.5 mr-1 flex-shrink-0"
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                          <Move className="w-3 h-3 text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" />
-                                          <span className="truncate" title={item.custom_label || itemName}>{item.custom_label || itemName}</span>
-                                          {item.isCustom && (
-                                            <span className="ml-1 text-[8.5px] px-1 bg-slate-100 border border-slate-200 text-slate-500 rounded font-normal capitalize flex-shrink-0">
-                                              {item.field_type}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* 3. Right Panel: Properties & Advanced Options */}
-          <div className="lg:col-span-6 h-[350px] border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-4 flex flex-col overflow-y-auto">
-            <ScrollArea maxHeight="100%">
-              <div className="space-y-4">
-                {/* Advanced Options Section */}
-                <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-3 shadow-3xs">
-                  <h4 className="text-[11px] font-black text-slate-700 flex items-center gap-1.5 pb-1 border-b">
-                    <Settings className="w-3.5 h-3.5 text-slate-400" />
-                    Advanced Options
-                  </h4>
-
-                  {/* Rename template input */}
-                  <Input
-                    label="Rename Template"
-                    variant="compact"
-                    value={activeTemplate.template_name}
-                    onChange={e => updateTemplateProperty({ template_name: e.target.value })}
-                  />
-
-                  {/* Document Type select */}
-                  <Select
-                    label="Document Type"
-                    variant="compact"
-                    value={activeTemplate.document_type}
-                    onChange={e => updateTemplateProperty({ document_type: e.target.value })}
-                    options={DOCUMENT_TYPES.map(t => ({ value: t, label: t }))}
-                  />
-
-                  {/* Layout Mode select */}
-                  <Select
-                    label="Layout Mode"
-                    variant="compact"
-                    value={activeTemplate.layout_mode || 'flow'}
-                    onChange={e => updateTemplateProperty({ layout_mode: e.target.value as any })}
-                    options={[
-                      { value: 'flow', label: 'Flow Layout' },
-                      { value: 'free', label: 'Free Layout' }
-                    ]}
-                  />
-
-                  {/* Paper Size select */}
-                  <Select
-                    label="Paper Size"
-                    variant="compact"
-                    value={activeTemplate.paper_size}
-                    onChange={e => {
-                      const size = e.target.value as any;
-                      updateTemplateProperty({
-                        paper_size: size,
-                        paper_width: size === 'Thermal' ? '80mm' : size === 'A5' ? '148mm' : size === 'Letter' ? '216mm' : '210mm',
-                        paper_height: size === 'Thermal' ? 'auto' : size === 'A5' ? '210mm' : size === 'Letter' ? '279mm' : '297mm'
-                      });
-                    }}
-                    options={PAPER_SIZES.map(t => ({ value: t, label: t }))}
-                  />
-
-                  {activeTemplate.paper_size === 'Custom' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Width (mm)"
-                        variant="compact"
-                        value={activeTemplate.paper_width || ''}
-                        onChange={e => updateTemplateProperty({ paper_width: e.target.value })}
-                      />
-                      <Input
-                        label="Height (mm)"
-                        variant="compact"
-                        value={activeTemplate.paper_height || ''}
-                        onChange={e => updateTemplateProperty({ paper_height: e.target.value })}
-                      />
-                    </div>
-                  )}
-
-                  {/* Orientation select */}
-                  <Select
-                    label="Orientation"
-                    variant="compact"
-                    value={activeTemplate.orientation}
-                    onChange={e => updateTemplateProperty({ orientation: e.target.value as any })}
-                    options={ORIENTATIONS.map(t => ({ value: t, label: t }))}
-                  />
-
-                  {/* Logo upload and size slider */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-slate-400">Company Logo</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                        id="designer-logo-upload"
-                      />
-                      <label
-                        htmlFor="designer-logo-upload"
-                        className="flex-grow flex items-center justify-center border border-dashed rounded-lg py-1.5 px-3 bg-slate-50 text-[10px] font-bold text-slate-650 cursor-pointer hover:bg-slate-100 border-slate-300"
-                      >
-                        <Upload className="w-3.5 h-3.5 mr-1" />
-                        {activeTemplate.logo_url ? 'Change Logo' : 'Upload Logo'}
-                      </label>
-                      {activeTemplate.logo_url && (
-                        <Button
-                          variant="danger"
-                          size="xs"
-                          icon={Trash2}
-                          onClick={() => updateTemplateProperty({ logo_url: undefined })}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {activeTemplate.logo_url && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400">
-                        <span>Logo Size</span>
-                        <span>{activeTemplate.logo_size || 80}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="30"
-                        max="200"
-                        value={activeTemplate.logo_size || 80}
-                        onChange={e => updateTemplateProperty({ logo_size: parseInt(e.target.value) })}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500 outline-none"
-                      />
-                    </div>
-                  )}
-
-                  {/* Advanced Option Toggles */}
-                  <div className="space-y-2.5 pt-2 border-t">
-                    <Toggle
-                      checked={activeTemplate.qr_enabled}
-                      onChange={val => updateTemplateProperty({ qr_enabled: val })}
-                      label="Enable QR Code"
-                    />
-                    <Toggle
-                      checked={activeTemplate.barcode_enabled}
-                      onChange={val => updateTemplateProperty({ barcode_enabled: val })}
-                      label="Enable Barcode"
-                    />
-                    <Toggle
-                      checked={activeTemplate.signature_enabled}
-                      onChange={val => updateTemplateProperty({ signature_enabled: val })}
-                      label="Enable Signature Line"
-                    />
-                    <Toggle
-                      checked={activeTemplate.watermark_enabled}
-                      onChange={val => updateTemplateProperty({ watermark_enabled: val })}
-                      label="Enable Watermark Background"
-                    />
-                    <Toggle
-                      checked={activeTemplate.terms_enabled}
-                      onChange={val => updateTemplateProperty({ terms_enabled: val })}
-                      label="Enable Terms & Conditions"
-                    />
-                    <Toggle
-                      checked={activeTemplate.remarks_enabled}
-                      onChange={val => updateTemplateProperty({ remarks_enabled: val })}
-                      label="Enable Invoice Remarks"
-                    />
-                  </div>
-                </div>
-
-                {/* Selected Field Style Editor */}
-                {selectedField ? (
-                  <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-3 shadow-3xs">
-                    <h4 className="text-[11px] font-black text-slate-700 flex items-center gap-1.5 pb-1 border-b">
-                      <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                      Field Styles: {selectedField.field_name}
-                    </h4>
-
-                    {/* Rename Field label */}
-                    <Input
-                      label="Custom Label (Rename)"
-                      variant="compact"
-                      value={selectedField.custom_label || ''}
-                      onChange={e => updateFieldProperty(selectedField.field_id, { custom_label: e.target.value })}
-                      placeholder={selectedField.field_name}
-                    />
-
-                    {/* Show/Hide */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-650 font-bold">Field Visibility</span>
-                      <Toggle
-                        checked={selectedField.is_visible}
-                        onChange={val => updateFieldProperty(selectedField.field_id, { is_visible: val })}
-                        label="Visible"
-                      />
-                    </div>
-
-                    {/* Grid Positioning */}
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                      <Input
-                        label="Row Position"
-                        variant="compact"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={String(selectedField.row_position || 1)}
-                        onChange={e => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          updateFieldRowPosition(selectedField.field_id, 'default', val);
-                        }}
-                      />
-                      <Input
-                        label="Column Position"
-                        variant="compact"
-                        type="number"
-                        min="1"
-                        max="12"
-                        value={String(selectedField.column_position || 1)}
-                        onChange={e => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          updateFieldColumnPosition(selectedField.field_id, 'default', val);
-                        }}
-                      />
-                    </div>
-
-                    {activeTemplate.layout_mode === 'free' && (
-                      <div className="border border-slate-100 p-2.5 rounded-lg bg-slate-50 space-y-2.5">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b pb-0.5">Canvas Positioning</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            label="Position X (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.position_x ?? 5)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                position_x: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Position Y (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.position_y ?? 5)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                position_y: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            label="Width (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.width_percent ?? 50)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                width_percent: Math.max(1, Math.min(100, parseInt(e.target.value) || 50))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Height (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.height_px || '')}
-                            placeholder="Auto"
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                height_px: e.target.value ? Math.max(10, Math.min(2000, parseInt(e.target.value) || 0)) : undefined
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          <Input
-                            label="Margin L (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.margin_left ?? 0)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                margin_left: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Margin R (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.margin_right ?? 0)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                margin_right: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Margin T (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.margin_top ?? 0)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                margin_top: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Select
-                            label="Font Weight"
-                            variant="compact"
-                            value={selectedField.font_weight || 'normal'}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                font_weight: e.target.value
-                              })
-                            }
-                            options={[
-                              { value: 'normal', label: 'Normal' },
-                              { value: 'semibold', label: 'Semibold' },
-                              { value: 'bold', label: 'Bold' }
-                            ]}
-                          />
-                          <Input
-                            label="Custom CSS"
-                            variant="compact"
-                            value={selectedField.custom_css || ''}
-                            onChange={e => updateFieldProperty(selectedField.field_id, { custom_css: e.target.value })}
-                            placeholder="e.g. border-radius: 4px;"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select
-                        label="Width"
-                        variant="compact"
-                        value={String(selectedField.width_percent || (selectedField.section_name === 'Invoice Information' ? 33 : selectedField.section_name === 'Customer Information' ? 50 : 100))}
-                        onChange={e =>
-                          updateFieldProperty(selectedField.field_id, {
-                            width_percent: parseInt(e.target.value)
-                          })
-                        }
-                        options={[
-                          { value: '100', label: 'Full (100%)' },
-                          { value: '50', label: 'Half (50%)' },
-                          { value: '33', label: 'One-Third (33%)' },
-                          { value: '25', label: 'One-Quarter (25%)' }
-                        ]}
-                      />
-                      <div className="flex items-center pt-5">
-                        <Toggle
-                          checked={!!selectedField.is_bold}
-                          onChange={val => updateFieldProperty(selectedField.field_id, { is_bold: val })}
-                          label="Bold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Font Size (px)"
-                        variant="compact"
-                        type="number"
-                        value={String(selectedField.font_size || 10)}
-                        onChange={e =>
-                          updateFieldProperty(selectedField.field_id, {
-                            font_size: Math.max(6, Math.min(32, parseInt(e.target.value) || 10))
-                          })
-                        }
-                      />
-                      <Input
-                        label="Spacing Below (px)"
-                        variant="compact"
-                        type="number"
-                        value={String(selectedField.margin_bottom || 0)}
-                        onChange={e =>
-                          updateFieldProperty(selectedField.field_id, {
-                            margin_bottom: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                          })
-                        }
-                      />
-                      <Select
-                        label="Alignment"
-                        variant="compact"
-                        value={selectedField.alignment || 'left'}
-                        onChange={e =>
-                          updateFieldProperty(selectedField.field_id, {
-                            alignment: e.target.value as any
-                          })
-                        }
-                        options={[
-                          { value: 'left', label: 'Left' },
-                          { value: 'center', label: 'Center' },
-                          { value: 'right', label: 'Right' }
-                        ]}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="General Text Color"
-                        variant="compact"
-                        value={selectedField.color || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                      <Input
-                        label="Background"
-                        variant="compact"
-                        value={selectedField.background || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { background: e.target.value })}
-                        placeholder="transparent"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                      <div className="flex items-center pt-2">
-                        <Toggle
-                          checked={selectedField.label_is_bold !== undefined ? !!selectedField.label_is_bold : !!selectedField.is_bold}
-                          onChange={val => updateFieldProperty(selectedField.field_id, { label_is_bold: val })}
-                          label="Label Bold"
-                        />
-                      </div>
-                      <Input
-                        label="Label Color"
-                        variant="compact"
-                        value={selectedField.label_color || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { label_color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center pt-2">
-                        <Toggle
-                          checked={selectedField.value_is_bold !== undefined ? !!selectedField.value_is_bold : !!selectedField.is_bold}
-                          onChange={val => updateFieldProperty(selectedField.field_id, { value_is_bold: val })}
-                          label="Value Bold"
-                        />
-                      </div>
-                      <Input
-                        label="Value Color"
-                        variant="compact"
-                        value={selectedField.value_color || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { value_color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                      <Select
-                        label="Border Preset"
-                        variant="compact"
-                        value={selectedField.border || 'none'}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { border: e.target.value })}
-                        options={[
-                          { value: 'none', label: 'None' },
-                          { value: '1px solid #cbd5e1', label: 'Light Solid' },
-                          { value: '1px solid #475569', label: 'Slate Solid' },
-                          { value: '1px solid #000000', label: 'Black Solid' },
-                          { value: '1px dashed #cbd5e1', label: 'Light Dashed' },
-                          { value: 'bottom-light', label: 'Bottom Border (Light)' },
-                          { value: 'bottom-slate', label: 'Bottom Border (Slate)' },
-                          { value: 'bottom-black', label: 'Bottom Border (Black)' },
-                        ]}
-                      />
-                      <Input
-                        label="Custom Border CSS"
-                        variant="compact"
-                        value={selectedField.border || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { border: e.target.value })}
-                        placeholder="e.g. 1px solid black"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Padding"
-                        variant="compact"
-                        value={selectedField.padding || ''}
-                        onChange={e => updateFieldProperty(selectedField.field_id, { padding: e.target.value })}
-                        placeholder="0px"
-                      />
-                    </div>
-
-                    {/* Layout Positioning */}
-                    <div className="border border-slate-100 p-2 rounded bg-slate-50 space-y-2">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b pb-0.5">Layout positioning</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          label="Height (px)"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedField.height_px || '')}
-                          placeholder="Auto"
-                          onChange={e =>
-                            updateFieldProperty(selectedField.field_id, {
-                              height_px: e.target.value ? Math.max(10, Math.min(2000, parseInt(e.target.value) || 0)) : undefined
-                            })
-                          }
-                        />
-                        <Input
-                          label="Display Order"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedField.display_order || '')}
-                          onChange={e =>
-                            updateFieldProperty(selectedField.field_id, {
-                              display_order: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          label="Row Position"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedField.row_position ?? 1)}
-                          onChange={e =>
-                            updateFieldProperty(selectedField.field_id, {
-                              row_position: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                        <Input
-                          label="Col Position"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedField.column_position ?? 1)}
-                          onChange={e =>
-                            updateFieldProperty(selectedField.field_id, {
-                              column_position: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                      </div>
-                      {activeTemplate.layout_mode === 'free' && (
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t">
-                          <Input
-                            label="Position X (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.position_x ?? 5)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                position_x: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Position Y (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedField.position_y ?? 5)}
-                            onChange={e =>
-                              updateFieldProperty(selectedField.field_id, {
-                                position_y: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : selectedCustomField ? (
-                  <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-3 shadow-3xs">
-                    <h4 className="text-[11px] font-black text-slate-700 flex items-center gap-1.5 pb-1 border-b">
-                      <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                      Custom Field: {selectedCustomField.field_name}
-                    </h4>
-
-                    <Input
-                      label="Field Label"
-                      variant="compact"
-                      value={selectedCustomField.field_name}
-                      onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { field_name: e.target.value })}
-                    />
-
-                    {/* Show/Hide */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-650 font-bold">Field Visibility</span>
-                      <Toggle
-                        checked={selectedCustomField.is_visible}
-                        onChange={val => updateCustomFieldProperty(selectedCustomField.custom_field_id, { is_visible: val })}
-                        label="Visible"
-                      />
-                    </div>
-
-                    {/* Grid Positioning */}
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
-                      <Input
-                        label="Row Position"
-                        variant="compact"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={String(selectedCustomField.row_position || 1)}
-                        onChange={e => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          updateFieldRowPosition(selectedCustomField.custom_field_id, 'custom', val);
-                        }}
-                      />
-                      <Input
-                        label="Column Position"
-                        variant="compact"
-                        type="number"
-                        min="1"
-                        max="12"
-                        value={String(selectedCustomField.column_position || 1)}
-                        onChange={e => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          updateFieldColumnPosition(selectedCustomField.custom_field_id, 'custom', val);
-                        }}
-                      />
-                    </div>
-
-                    {selectedCustomField.field_type === 'formula' && selectedCustomField.formula_tokens && (
-                      <div className="space-y-1">
-                        <span className="text-[11.5px] text-slate-600 font-semibold block">Formula</span>
-                        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10.5px] font-mono flex flex-wrap gap-1 leading-normal">
-                          {selectedCustomField.formula_tokens.map((tok, i) => (
-                            <span key={i} className={`rounded px-1 py-0.5 font-bold ${
-                              tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
-                              tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
-                                                       'bg-green-100 text-green-700'
-                            }`}>
-                              {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-650 font-bold">Field Visibility</span>
-                      <Toggle
-                        checked={selectedCustomField.is_visible}
-                        onChange={val => updateCustomFieldProperty(selectedCustomField.custom_field_id, { is_visible: val })}
-                      />
-                    </div>
-
-                    {activeTemplate.layout_mode === 'free' && (
-                      <div className="border border-slate-100 p-2.5 rounded-lg bg-slate-50 space-y-2.5">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b pb-0.5">Canvas Positioning</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            label="Position X (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.position_x ?? 10)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                position_x: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Position Y (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.position_y ?? 60)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                position_y: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            label="Width (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.width_percent ?? 50)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                width_percent: Math.max(1, Math.min(100, parseInt(e.target.value) || 50))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Height (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.height_px || '')}
-                            placeholder="Auto"
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                height_px: e.target.value ? Math.max(10, Math.min(2000, parseInt(e.target.value) || 0)) : undefined
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          <Input
-                            label="Margin L (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.margin_left ?? 0)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                margin_left: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Margin R (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.margin_right ?? 0)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                margin_right: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Margin T (px)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.margin_top ?? 0)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                margin_top: Math.max(0, Math.min(500, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Select
-                            label="Font Weight"
-                            variant="compact"
-                            value={selectedCustomField.font_weight || 'normal'}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                font_weight: e.target.value
-                              })
-                            }
-                            options={[
-                              { value: 'normal', label: 'Normal' },
-                              { value: 'semibold', label: 'Semibold' },
-                              { value: 'bold', label: 'Bold' }
-                            ]}
-                          />
-                          <Input
-                            label="Custom CSS"
-                            variant="compact"
-                            value={selectedCustomField.custom_css || ''}
-                            onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { custom_css: e.target.value })}
-                            placeholder="e.g. border-radius: 4px;"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select
-                        label="Width"
-                        variant="compact"
-                        value={String(selectedCustomField.width_percent || 50)}
-                        onChange={e =>
-                          updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                            width_percent: parseInt(e.target.value)
-                          })
-                        }
-                        options={[
-                          { value: '100', label: 'Full (100%)' },
-                          { value: '50', label: 'Half (50%)' },
-                          { value: '33', label: 'One-Third (33%)' },
-                          { value: '25', label: 'One-Quarter (25%)' }
-                        ]}
-                      />
-                      <div className="flex items-center pt-5">
-                        <Toggle
-                          checked={!!selectedCustomField.is_bold}
-                          onChange={val => updateCustomFieldProperty(selectedCustomField.custom_field_id, { is_bold: val })}
-                          label="Bold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Font Size (px)"
-                        variant="compact"
-                        type="number"
-                        value={String(selectedCustomField.font_size || 10)}
-                        onChange={e =>
-                          updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                            font_size: Math.max(6, Math.min(32, parseInt(e.target.value) || 10))
-                          })
-                        }
-                      />
-                      <Input
-                        label="Spacing Below (px)"
-                        variant="compact"
-                        type="number"
-                        value={String(selectedCustomField.margin_bottom || 0)}
-                        onChange={e =>
-                          updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                            margin_bottom: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select
-                        label="Alignment"
-                        variant="compact"
-                        value={selectedCustomField.alignment || 'left'}
-                        onChange={e =>
-                          updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                            alignment: e.target.value as any
-                          })
-                        }
-                        options={[
-                          { value: 'left', label: 'Left' },
-                          { value: 'center', label: 'Center' },
-                          { value: 'right', label: 'Right' }
-                        ]}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="General Text Color"
-                        variant="compact"
-                        value={selectedCustomField.color || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                      <Input
-                        label="Background"
-                        variant="compact"
-                        value={selectedCustomField.background || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { background: e.target.value })}
-                        placeholder="transparent"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                      <div className="flex items-center pt-2">
-                        <Toggle
-                          checked={selectedCustomField.label_is_bold !== undefined ? !!selectedCustomField.label_is_bold : !!selectedCustomField.is_bold}
-                          onChange={val => updateCustomFieldProperty(selectedCustomField.custom_field_id, { label_is_bold: val })}
-                          label="Label Bold"
-                        />
-                      </div>
-                      <Input
-                        label="Label Color"
-                        variant="compact"
-                        value={selectedCustomField.label_color || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { label_color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center pt-2">
-                        <Toggle
-                          checked={selectedCustomField.value_is_bold !== undefined ? !!selectedCustomField.value_is_bold : !!selectedCustomField.is_bold}
-                          onChange={val => updateCustomFieldProperty(selectedCustomField.custom_field_id, { value_is_bold: val })}
-                          label="Value Bold"
-                        />
-                      </div>
-                      <Input
-                        label="Value Color"
-                        variant="compact"
-                        value={selectedCustomField.value_color || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { value_color: e.target.value })}
-                        placeholder="#000000"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
-                      <Select
-                        label="Border Preset"
-                        variant="compact"
-                        value={selectedCustomField.border || 'none'}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { border: e.target.value })}
-                        options={[
-                          { value: 'none', label: 'None' },
-                          { value: '1px solid #cbd5e1', label: 'Light Solid' },
-                          { value: '1px solid #475569', label: 'Slate Solid' },
-                          { value: '1px solid #000000', label: 'Black Solid' },
-                          { value: '1px dashed #cbd5e1', label: 'Light Dashed' },
-                          { value: 'bottom-light', label: 'Bottom Border (Light)' },
-                          { value: 'bottom-slate', label: 'Bottom Border (Slate)' },
-                          { value: 'bottom-black', label: 'Bottom Border (Black)' },
-                        ]}
-                      />
-                      <Input
-                        label="Custom Border CSS"
-                        variant="compact"
-                        value={selectedCustomField.border || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { border: e.target.value })}
-                        placeholder="e.g. 1px solid black"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Padding"
-                        variant="compact"
-                        value={selectedCustomField.padding || ''}
-                        onChange={e => updateCustomFieldProperty(selectedCustomField.custom_field_id, { padding: e.target.value })}
-                        placeholder="0px"
-                      />
-                    </div>
-
-                    {/* Layout Positioning */}
-                    <div className="border border-slate-100 p-2 rounded bg-slate-50 space-y-2">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block border-b pb-0.5">Layout positioning</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          label="Height (px)"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedCustomField.height_px || '')}
-                          placeholder="Auto"
-                          onChange={e =>
-                            updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                              height_px: e.target.value ? Math.max(10, Math.min(2000, parseInt(e.target.value) || 0)) : undefined
-                            })
-                          }
-                        />
-                        <Input
-                          label="Display Order"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedCustomField.display_order || '')}
-                          onChange={e =>
-                            updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                              display_order: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          label="Row Position"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedCustomField.row_position ?? 1)}
-                          onChange={e =>
-                            updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                              row_position: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                        <Input
-                          label="Col Position"
-                          variant="compact"
-                          type="number"
-                          value={String(selectedCustomField.column_position ?? 1)}
-                          onChange={e =>
-                            updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                              column_position: parseInt(e.target.value) || 1
-                            })
-                          }
-                        />
-                      </div>
-                      {activeTemplate.layout_mode === 'free' && (
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t">
-                          <Input
-                            label="Position X (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.position_x ?? 10)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                position_x: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                          <Input
-                            label="Position Y (%)"
-                            variant="compact"
-                            type="number"
-                            value={String(selectedCustomField.position_y ?? 60)}
-                            onChange={e =>
-                              updateCustomFieldProperty(selectedCustomField.custom_field_id, {
-                                position_y: Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-2">
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        fullWidth
-                        icon={Trash2}
-                        onClick={() => {
-                          handleRemoveCustomField(selectedCustomField.custom_field_id);
-                          setSelectedCustomFieldId(null);
-                        }}
-                      >
-                        Delete Custom Field
-                      </Button>
-                    </div>
-                  </div>
-                ) : selectedColumn ? (
-                  <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-3 shadow-3xs">
-                    <h4 className="text-[11px] font-black text-slate-700 flex items-center gap-1.5 pb-1 border-b">
-                      <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                      Column: {selectedColumn.column_name}
-                    </h4>
-
-                    <Input
-                      label="Column Label"
-                      variant="compact"
-                      value={selectedColumn.custom_label || selectedColumn.column_name}
-                      onChange={e => updateColumnProperty(selectedColumn.column_id, { custom_label: e.target.value })}
-                    />
-
-                    <Input
-                      label="Width"
-                      variant="compact"
-                      value={selectedColumn.width || ''}
-                      onChange={e => updateColumnProperty(selectedColumn.column_id, { width: e.target.value })}
-                      placeholder="e.g. 10%, 120px"
-                    />
-
-                    <Select
-                      label="Alignment"
-                      variant="compact"
-                      value={selectedColumn.alignment || 'left'}
-                      onChange={e =>
-                        updateColumnProperty(selectedColumn.column_id, {
-                          alignment: e.target.value as any
-                        })
-                      }
-                      options={[
-                        { value: 'left', label: 'Left' },
-                        { value: 'center', label: 'Center' },
-                        { value: 'right', label: 'Right' }
-                      ]}
-                    />
-
-                    {selectedColumn.is_custom && selectedColumn.formula_tokens && (
-                      <div className="space-y-1">
-                        <span className="text-[11.5px] text-slate-600 font-semibold block">Formula</span>
-                        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10.5px] font-mono flex flex-wrap gap-1 leading-normal">
-                          {selectedColumn.formula_tokens.map((tok, i) => (
-                            <span key={i} className={`rounded px-1 py-0.5 font-bold ${
-                              tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
-                              tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
-                                                       'bg-green-100 text-green-700'
-                            }`}>
-                              {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-650 font-bold">Column Visibility</span>
-                      <Toggle
-                        checked={selectedColumn.is_visible}
-                        onChange={val => updateColumnProperty(selectedColumn.column_id, { is_visible: val })}
-                      />
-                    </div>
-
-                    {selectedColumn.is_custom && (
-                      <div className="pt-2">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          fullWidth
-                          icon={Trash2}
-                          onClick={() => {
-                            handleRemoveCustomColumn(selectedColumn.column_id);
-                            setSelectedColumnId(null);
-                          }}
-                        >
-                          Delete Column
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 border border-dashed rounded-lg border-slate-200 bg-white">
-                    <p className="text-[10px] text-slate-400">
-                      Select a field or column in the builder to customize styling & layout.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+        {/* Designer Workspace - Centered Preview Canvas */}
+        <div className="w-full flex justify-center py-2">
           {/* 2. Center Panel: Live print-like Preview Canvas */}
-          <div className="col-span-12 h-[650px] border border-[#E2E8F0] bg-slate-100 rounded-xl p-4 flex flex-col justify-between overflow-hidden relative">
+          <div className="w-[85%] mx-auto h-[750px] border border-[#E2E8F0] bg-slate-100 rounded-xl p-4 flex flex-col justify-between overflow-hidden relative">
             <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-slate-500 px-1 border-b pb-1 select-none">
               <span>Live Print Preview</span>
               <span>100% Visual Consistency</span>
@@ -3819,6 +2553,19 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                         }}
                                         className="py-1 px-1.5 font-black text-slate-700 cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors"
                                         style={{ width: col.width, textAlign: col.alignment || 'left' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedColumnId(col.column_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedCustomFieldId(null);
+                                        }}
+                                        onDoubleClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedColumnId(col.column_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedCustomFieldId(null);
+                                          setShowColumnPropertiesModal(true);
+                                        }}
                                       >
                                         {col.custom_label || col.column_name}
                                       </th>
@@ -4073,6 +2820,13 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                               setSelectedColumnId(null);
                               setSelectedCustomFieldId(null);
                             }}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedFieldId(f.field_id);
+                              setSelectedColumnId(null);
+                              setSelectedCustomFieldId(null);
+                              setShowFieldPropertiesModal(true);
+                            }}
                           >
                             {elementContent}
                             {isSelected && (
@@ -4129,6 +2883,13 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                               setSelectedCustomFieldId(cf.custom_field_id);
                               setSelectedFieldId(null);
                               setSelectedColumnId(null);
+                            }}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCustomFieldId(cf.custom_field_id);
+                              setSelectedFieldId(null);
+                              setSelectedColumnId(null);
+                              setShowFieldPropertiesModal(true);
                             }}
                           >
                             <div className="w-full flex" style={{ justifyContent: cf.alignment === 'center' ? 'center' : cf.alignment === 'right' ? 'flex-end' : 'flex-start' }}>
@@ -4208,7 +2969,16 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                onDragOver={e => e.preventDefault()}
                                onDrop={() => { if (draggedElement) handleSectionDropField(sec.section_name); }}
                           >
-                            <span className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider">{sec.section_name}</span>
+                            <span 
+                              className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider cursor-pointer hover:bg-slate-100 px-1 rounded"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedSectionId(sec.section_id);
+                                setShowSectionPropertiesModal(true);
+                              }}
+                            >
+                              {sec.section_name}
+                            </span>
                             {dynamicFields}
                           </div>
                         );
@@ -4220,9 +2990,17 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                       <div>
                         {/* 1. Header (Company details & centered Title) */}
                         {activeSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
-                          <div className="w-full flex justify-between items-start border-b pb-4 mb-2"
+                          <div className="w-full flex justify-between items-start border-b pb-4 mb-2 cursor-pointer hover:bg-slate-50/30"
                                onDragOver={e => e.preventDefault()}
                                onDrop={() => { if (draggedElement) handleSectionDropField('Company Information'); }}
+                               onDoubleClick={(e) => {
+                                 e.stopPropagation();
+                                 const s = activeSections.find(sec => sec.section_name === 'Company Information');
+                                 if (s) {
+                                   setSelectedSectionId(s.section_id);
+                                   setShowSectionPropertiesModal(true);
+                                 }
+                               }}
                           >
                             <div className="flex-grow">
                               {renderSectionFields('Company Information')}
@@ -4240,9 +3018,17 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                         {/* 2. Side-by-Side Information Boxes (Invoice & Customer details) */}
                         <div className="grid grid-cols-2 gap-4 mb-4 items-stretch">
                           {activeSections.find(s => s.section_name === 'Invoice Information' && s.is_visible) ? (
-                            <div className="flex flex-col space-y-1.5 h-full justify-between"
+                            <div className="flex flex-col space-y-1.5 h-full justify-between cursor-pointer hover:bg-slate-50/30"
                                  onDragOver={e => e.preventDefault()}
                                  onDrop={() => { if (draggedElement) handleSectionDropField('Invoice Information'); }}
+                                 onDoubleClick={(e) => {
+                                   e.stopPropagation();
+                                   const s = activeSections.find(sec => sec.section_name === 'Invoice Information');
+                                   if (s) {
+                                     setSelectedSectionId(s.section_id);
+                                     setShowSectionPropertiesModal(true);
+                                   }
+                                 }}
                             >
                               {(() => {
                                 const secFields = activeFields.filter(f => f.section_name === 'Invoice Information');
@@ -4299,7 +3085,30 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                         opacity: item.is_visible ? 1 : 0.45,
                                         border: item.is_visible ? borderStyles.border : '1px dashed #cbd5e1',
                                       }}
-                                      onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
+                                      onClick={() => {
+                                        if (item.isCustom) {
+                                          setSelectedCustomFieldId(item.custom_field_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedColumnId(null);
+                                        } else {
+                                          setSelectedFieldId(item.field_id);
+                                          setSelectedCustomFieldId(null);
+                                          setSelectedColumnId(null);
+                                        }
+                                      }}
+                                      onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        if (item.isCustom) {
+                                          setSelectedCustomFieldId(item.custom_field_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedColumnId(null);
+                                        } else {
+                                          setSelectedFieldId(item.field_id);
+                                          setSelectedCustomFieldId(null);
+                                          setSelectedColumnId(null);
+                                        }
+                                        setShowFieldPropertiesModal(true);
+                                      }}
                                     >
                                       {isEditingLabel ? (
                                         <input
@@ -4331,7 +3140,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
 
                           {activeSections.find(s => s.section_name === 'Customer Information' && s.is_visible) ? (
                             <div 
-                              className="rounded p-3 flex flex-col justify-start text-[9px]"
+                              className="rounded p-3 flex flex-col justify-start text-[9px] cursor-pointer hover:bg-slate-50/30"
                               style={{ 
                                 border: '1px solid #cbd5e1', 
                                 backgroundColor: '#ffffff', 
@@ -4340,6 +3149,14 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                               }}
                               onDragOver={e => e.preventDefault()}
                               onDrop={() => { if (draggedElement) handleSectionDropField('Customer Information'); }}
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                const s = activeSections.find(sec => sec.section_name === 'Customer Information');
+                                if (s) {
+                                  setSelectedSectionId(s.section_id);
+                                  setShowSectionPropertiesModal(true);
+                                }
+                              }}
                             >
                               <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left text-[9px]">
                                 Customer Details
@@ -4399,7 +3216,30 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                           opacity: item.is_visible ? 1 : 0.45,
                                           borderBottom: item.is_visible ? borderStyles.borderBottom : '1px dashed #cbd5e1',
                                         }}
-                                        onClick={() => setSelectedFieldId(item.isCustom ? item.custom_field_id : item.field_id)}
+                                        onClick={() => {
+                                        if (item.isCustom) {
+                                          setSelectedCustomFieldId(item.custom_field_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedColumnId(null);
+                                        } else {
+                                          setSelectedFieldId(item.field_id);
+                                          setSelectedCustomFieldId(null);
+                                          setSelectedColumnId(null);
+                                        }
+                                      }}
+                                      onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        if (item.isCustom) {
+                                          setSelectedCustomFieldId(item.custom_field_id);
+                                          setSelectedFieldId(null);
+                                          setSelectedColumnId(null);
+                                        } else {
+                                          setSelectedFieldId(item.field_id);
+                                          setSelectedCustomFieldId(null);
+                                          setSelectedColumnId(null);
+                                        }
+                                        setShowFieldPropertiesModal(true);
+                                      }}
                                       >
                                         {isEditingLabel ? (
                                           <input
@@ -4433,9 +3273,17 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
 
                         {/* 3. Product Table */}
                         {activeSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
-                          <div className="w-full my-4"
+                          <div className="w-full my-4 cursor-pointer hover:bg-slate-50/30"
                                onDragOver={e => e.preventDefault()}
                                onDrop={() => { if (draggedElement) handleSectionDropField('Product Table'); }}
+                               onDoubleClick={(e) => {
+                                 e.stopPropagation();
+                                 const s = activeSections.find(sec => sec.section_name === 'Product Table');
+                                 if (s) {
+                                   setSelectedSectionId(s.section_id);
+                                   setShowSectionPropertiesModal(true);
+                                 }
+                               }}
                           >
                             {renderSectionFields('Product Table')}
                           </div>
@@ -4464,12 +3312,19 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                             {renderSectionFields('Footer')}
                           </div>
                         </div>
-
                         {/* Right: Bordered Totals Box */}
                         {activeSections.find(s => s.section_name === 'Totals' && s.is_visible) && (
-                          <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[9px]"
+                          <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[9px] cursor-pointer hover:bg-slate-55/30"
                                onDragOver={e => e.preventDefault()}
                                onDrop={() => { if (draggedElement) handleSectionDropField('Totals'); }}
+                               onDoubleClick={(e) => {
+                                 e.stopPropagation();
+                                 const s = activeSections.find(sec => sec.section_name === 'Totals');
+                                 if (s) {
+                                   setSelectedSectionId(s.section_id);
+                                   setShowSectionPropertiesModal(true);
+                                 }
+                               }}
                           >
                             <div className="font-bold border-b pb-1 mb-2 text-slate-700 uppercase tracking-wider text-right">Summary</div>
                             <div className="space-y-1.5 flex flex-col items-end w-full">
@@ -4484,198 +3339,1555 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                 </div>
               )}
           </div>
-
         </div>
 
-        {/* ── Add Formula Field Modal ── */}
+        {/* ── Unified Layout Settings Modal ── */}
         <Modal
-          isOpen={showCustomFieldModal}
-          onClose={() => { setShowCustomFieldModal(false); resetFormulaModal(); }}
-          title="🧮 Add Formula Field"
-          size="sm"
+          isOpen={showLayoutModal}
+          onClose={() => setShowLayoutModal(false)}
+          title="🛠️ Layout Settings"
+          style={{ width: '35%', maxWidth: '35%' }}
+          noPadding={true}
+          scrollableBody={false}
           footer={
-            <>
-              <Button variant="white" size="sm" onClick={() => { setShowCustomFieldModal(false); resetFormulaModal(); }}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Plus}
-                onClick={handleAddCustomField}
-                style={{ backgroundColor: brand.primary }}
-              >
-                Add Formula Field
-              </Button>
-            </>
+            <Button variant="white" size="sm" onClick={() => setShowLayoutModal(false)}>
+              Close
+            </Button>
           }
         >
-          <div className="space-y-3">
+          {(() => {
+            const query = fieldsSearchQuery.toLowerCase().trim();
 
-            {/* Field Name */}
-            <Input
-              label="Field Label *"
-              variant="compact"
-              placeholder="e.g. Net Payable, Profit, Balance"
-              value={formulaFieldName}
-              onChange={e => setFormulaFieldName(e.target.value)}
-            />
-
-            {/* Placement */}
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary, #64748b)', display: 'block', marginBottom: 6 }}>
-                Add To
-              </label>
-              <div className="flex gap-2">
-                {(['totals', 'column'] as const).map(p => (
-                  <button key={p} type="button"
-                    onClick={() => {
-                      setFormulaPlacement(p);
-                      const firstValid = FORMULA_FIELD_OPTIONS.find(f => {
-                        if (p === 'totals') return f.section === 'Totals' || f.section === 'Summary';
-                        return f.section === 'Column';
-                      })?.key || '';
-                      setFormulaSelectedField(firstValid);
+            const renderAccordionSection = (title: string, sectionKey: string, matchCount: number, totalCount: number, content: React.ReactNode) => {
+              const isOpen = expandedSectionId === sectionKey;
+              return (
+                <div style={{
+                  background: '#fff',
+                  border: '1.5px solid',
+                  borderColor: isOpen ? `${brand.primary}35` : '#e2e8f0',
+                  borderRadius: 12,
+                  marginBottom: 10,
+                  overflow: 'hidden',
+                  boxShadow: isOpen ? '0 4px 12px -2px rgb(0 0 0 / 0.05), 0 2px 6px -1px rgb(0 0 0 / 0.03)' : 'none',
+                  transition: 'all 0.2s ease-in-out'
+                }}>
+                  {/* Header */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSectionId(isOpen ? null : sectionKey)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      background: isOpen ? `${brand.primary}06` : '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      textAlign: 'left'
                     }}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      formulaPlacement === p
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
                   >
-                    {p === 'totals' ? '📋 Summary / Footer' : '📊 Table Column'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: isOpen ? brand.primary : '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {title}
+                      </span>
+                      {query !== '' ? (
+                        <span style={{ fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 10, background: matchCount > 0 ? '#dcfce7' : '#f1f5f9', color: matchCount > 0 ? '#15803d' : '#64748b' }}>
+                          {matchCount} match{matchCount !== 1 ? 'es' : ''}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: '#f1f5f9', color: '#64748b' }}>
+                          {totalCount}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown
+                      style={{
+                        width: 15,
+                        height: 15,
+                        color: isOpen ? brand.primary : '#94a3b8',
+                        transform: isOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s ease'
+                      }}
+                    />
                   </button>
-                ))}
+
+                  {/* Content */}
+                  {isOpen && (
+                    <div style={{
+                      padding: '12px 14px',
+                      borderTop: '1.5px solid #f1f5f9',
+                      background: '#fff',
+                    }}>
+                      {content}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const renderFieldsForSection = (sectionName: string) => {
+              const secFields = activeFields.filter(f => f.section_name === sectionName);
+              const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === sectionName);
+              const combined = [
+                ...secFields.map(f => ({ ...f, isCustom: false as const, id: f.field_id })),
+                ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const, id: cf.custom_field_id }))
+              ].sort((a, b) => a.display_order - b.display_order);
+
+              const filtered = query
+                ? combined.filter(f => f.field_name.toLowerCase().includes(query) || (f.custom_label && f.custom_label.toLowerCase().includes(query)))
+                : combined;
+
+              return {
+                matchCount: filtered.length,
+                totalCount: combined.length,
+                node: (
+                  <div className="space-y-1.5">
+                    {filtered.length === 0 && (
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>
+                        {query ? 'No matching fields' : 'No fields in this section'}
+                      </div>
+                    )}
+                    {filtered.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between px-2.5 py-1.5 border border-slate-100 bg-white hover:bg-slate-50/50 rounded-lg text-xs transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`font-semibold truncate ${item.is_visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                            {item.custom_label || item.field_name}
+                          </span>
+                          {item.isCustom && (
+                            <span className="text-[8px] px-1 bg-slate-100 border text-slate-500 rounded font-normal capitalize">
+                              {item.field_type}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => moveFieldOrder(item.id, item.isCustom, 'up')}
+                              className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === filtered.length - 1}
+                              onClick={() => moveFieldOrder(item.id, item.isCustom, 'down')}
+                              className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const val = !item.is_visible;
+                              if (item.isCustom) {
+                                updateCustomFieldProperty(item.id, { is_visible: val });
+                              } else {
+                                updateFieldProperty(item.id, { is_visible: val });
+                              }
+                            }}
+                            className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                            title={item.is_visible ? "Hide field" : "Show field"}
+                          >
+                            {item.is_visible ? (
+                              <Eye className="w-3.5 h-3.5 text-indigo-650" />
+                            ) : (
+                              <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            title="Edit styles & settings"
+                            onClick={() => {
+                              if (item.isCustom) {
+                                setSelectedCustomFieldId(item.id);
+                                setSelectedFieldId(null);
+                                setSelectedColumnId(null);
+                              } else {
+                                setSelectedFieldId(item.id);
+                                setSelectedCustomFieldId(null);
+                                setSelectedColumnId(null);
+                              }
+                              setShowFieldPropertiesModal(true);
+                            }}
+                            className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+
+                          {item.isCustom && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomField(item.id)}
+                              className="p-0.5 rounded hover:bg-red-50 text-slate-355 hover:text-red-500 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {(sectionName === 'Totals' || sectionName === 'Custom Fields') && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                        <Button
+                          variant="white"
+                          size="xs"
+                          icon={Plus}
+                          style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
+                          onClick={() => {
+                            setFormulaPlacement(sectionName === 'Totals' ? 'totals' : 'custom');
+                            setEditingFormulaId(null);
+                            resetFormulaModal();
+                            setShowLayoutModal(false);
+                            setShowFormulasModal(true);
+                          }}
+                        >
+                          Add Custom Field
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
+              };
+            };
+
+            const renderTableColumnsSection = () => {
+              const filtered = query
+                ? activeColumns.filter(c => c.column_name.toLowerCase().includes(query) || (c.custom_label && c.custom_label.toLowerCase().includes(query)))
+                : activeColumns;
+
+              return {
+                matchCount: filtered.length,
+                totalCount: activeColumns.length,
+                node: (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <span className="text-[10px] font-bold text-slate-400">Drag to reorder table columns.</span>
+                      <Button
+                        variant="white"
+                        size="xs"
+                        icon={Plus}
+                        style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
+                        onClick={() => {
+                          setFormulaPlacement('column');
+                          setEditingFormulaId(null);
+                          resetFormulaModal();
+                          setShowLayoutModal(false);
+                          setShowFormulasModal(true);
+                        }}
+                      >
+                        Add Column
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {filtered.length === 0 && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>
+                          No matching columns
+                        </div>
+                      )}
+                      {filtered.map((col) => (
+                        <div
+                          key={col.column_id}
+                          draggable
+                          onDragStart={(e) => {
+                            setDraggedColumnId(col.column_id);
+                            e.dataTransfer.setData('text/plain', col.column_id);
+                          }}
+                          onDragOver={handleColumnDragOver}
+                          onDrop={(e) => handleColumnDrop(e, col.column_id)}
+                          className="flex items-center justify-between px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs cursor-move hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-grow">
+                            <Move className="w-3.5 h-3.5 text-slate-400 cursor-grab shrink-0" />
+                            <span className={`font-semibold truncate ${col.is_visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                              {col.custom_label || col.column_name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="w-16">
+                              <Input
+                                variant="compact"
+                                placeholder="Width"
+                                value={col.width || ''}
+                                onChange={e => updateColumnProperty(col.column_id, { width: e.target.value })}
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => updateColumnProperty(col.column_id, { is_visible: !col.is_visible })}
+                              className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                              title={col.is_visible ? "Hide column" : "Show column"}
+                            >
+                              {col.is_visible ? (
+                                <Eye className="w-3.5 h-3.5 text-indigo-650" />
+                              ) : (
+                                <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedColumnId(col.column_id);
+                                setSelectedFieldId(null);
+                                setSelectedCustomFieldId(null);
+                                setShowColumnPropertiesModal(true);
+                              }}
+                              className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                            </button>
+
+                            {col.is_custom && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCustomColumn(col.column_id)}
+                                className="p-1 rounded hover:bg-red-50 text-slate-355 hover:text-red-500 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              };
+            };
+
+            const renderPageSectionsOrderSection = () => {
+              const filtered = query
+                ? activeSections.filter(sec => sec.section_name.toLowerCase().includes(query))
+                : activeSections;
+
+              return {
+                matchCount: filtered.length,
+                totalCount: activeSections.length,
+                node: (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold text-slate-400 border-b pb-2">
+                      Drag sections to reorder how they print sequentially (Flow Layout only).
+                    </p>
+
+                    <div className="space-y-1.5">
+                      {filtered.length === 0 && (
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>
+                          No matching sections
+                        </div>
+                      )}
+                      {filtered.map((sec) => (
+                        <div
+                          key={sec.section_id}
+                          draggable
+                          onDragStart={() => handleSectionDragStart(sec.section_id)}
+                          onDragOver={e => e.preventDefault()}
+                          onDrop={() => handleSectionDrop(sec.section_id)}
+                          className="flex items-center justify-between px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs cursor-move hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Move className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className={`font-semibold ${sec.is_visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                              {sec.section_name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => updateSectionProperty(sec.section_id, { is_visible: !sec.is_visible })}
+                              className="p-0.5 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                              title={sec.is_visible ? "Hide section" : "Show section"}
+                            >
+                              {sec.is_visible ? (
+                                <Eye className="w-3.5 h-3.5 text-indigo-650" />
+                              ) : (
+                                <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedSectionId(sec.section_id);
+                                setShowSectionPropertiesModal(true);
+                              }}
+                              className="p-1 rounded hover:bg-slate-150 text-slate-400 hover:text-indigo-650 cursor-pointer"
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              };
+            };
+
+            const companyData = renderFieldsForSection('Company Information');
+            const customerData = renderFieldsForSection('Customer Information');
+            const invoiceData = renderFieldsForSection('Invoice Information');
+            const columnsData = renderTableColumnsSection();
+            const customFieldsData = renderFieldsForSection('Custom Fields');
+            const totalsData = renderFieldsForSection('Totals');
+            const footerData = renderFieldsForSection('Footer');
+            const pageSectionsData = renderPageSectionsOrderSection();
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '540px', background: '#fff', overflow: 'hidden' }}>
+                {/* Global Search Bar */}
+                <div style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', flexShrink: 0, display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Search fields, columns, or page sections..."
+                      value={fieldsSearchQuery}
+                      onChange={e => setFieldsSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        paddingLeft: 28,
+                        paddingRight: 10,
+                        paddingTop: 6,
+                        paddingBottom: 6,
+                        fontSize: 11.5,
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 7,
+                        outline: 'none',
+                        background: '#fff',
+                        color: '#334155'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Body Container with 2 Columns */}
+                <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="custom-scrollbar">
+                  {/* Left Column */}
+                  <div>
+                    {renderAccordionSection('📂 Company Information', 'company', companyData.matchCount, companyData.totalCount, companyData.node)}
+                    {renderAccordionSection('📂 Customer Information', 'customer', customerData.matchCount, customerData.totalCount, customerData.node)}
+                    {renderAccordionSection('📂 Invoice Information', 'invoice', invoiceData.matchCount, invoiceData.totalCount, invoiceData.node)}
+                    {renderAccordionSection('📊 Table Columns', 'columns', columnsData.matchCount, columnsData.totalCount, columnsData.node)}
+                  </div>
+
+                  {/* Right Column */}
+                  <div>
+                    {renderAccordionSection('✨ Custom Fields', 'custom', customFieldsData.matchCount, customFieldsData.totalCount, customFieldsData.node)}
+                    {renderAccordionSection('💵 Totals', 'totals', totalsData.matchCount, totalsData.totalCount, totalsData.node)}
+                    {renderAccordionSection('📝 Footer', 'footer', footerData.matchCount, footerData.totalCount, footerData.node)}
+                    {renderAccordionSection('🧱 Page Sections Order', 'sections', pageSectionsData.matchCount, pageSectionsData.totalCount, pageSectionsData.node)}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+
+        {/* -- Crystal Reports Formula Manager Modal -- */}
+        <Modal
+          isOpen={showFormulasModal}
+          onClose={() => {
+            setShowFormulasModal(false);
+            setEditingFormulaId(null);
+            resetFormulaModal();
+            setFormulaValidationErrors([]);
+            setFormulaDescription('');
+            setFormulaCategory('summary');
+            setFormulaSearchQuery('');
+          }}
+          title="Formula Manager"
+          style={{ width: '50%', maxWidth: '50%' }}
+          noPadding={true}
+          scrollableBody={false}
+          footer={null}
+        >
+          {(() => {
+            const summaryFormulas = activeCustomFields.filter(cf => cf.field_type === 'formula');
+            const columnFormulas  = activeColumns.filter(c => c.is_custom && c.formula_tokens && c.formula_tokens.length > 0);
+            const allFormulaNames = [...summaryFormulas.map(f => f.field_name), ...columnFormulas.map(c => c.column_name)];
+            const fq = formulaSearchQuery.toLowerCase().trim();
+            const filteredSummary = summaryFormulas.filter(f => !fq || f.field_name.toLowerCase().includes(fq));
+            const filteredColumn  = columnFormulas.filter(c  => !fq || c.column_name.toLowerCase().includes(fq));
+
+            const fieldMap: Record<string, number> = {
+              subtotal: 7500, tax_amount: 1125, discount_amount: 500,
+              shipping_charges: 150, other_charges: 0, round_off: 0,
+              grand_total: 8275, paid_amount: 5000, balance_due: 3275,
+              total_qty: 12, total_items: 3,
+              line_qty: 5, line_unit_price: 1500, line_total: 7500,
+              line_discount: 250, line_tax: 625,
+            };
+
+            const evalTokens = (tokens: FormulaToken[]): number => {
+              try {
+                let result = 0; let pendingOp = '+';
+                for (const tok of tokens) {
+                  if (tok.type === 'operator') { pendingOp = tok.operator ?? '+'; continue; }
+                  const num = tok.type === 'field' ? (fieldMap[tok.fieldKey ?? ''] ?? 0) : parseFloat(String(tok.constant ?? '0')) || 0;
+                  if (pendingOp === '+') result += num;
+                  else if (pendingOp === '-') result -= num;
+                  else if (pendingOp === '*') result *= num;
+                  else if (pendingOp === '/') result = num !== 0 ? result / num : 0;
+                  else if (pendingOp === '%') result = result * num / 100;
+                }
+                return result;
+              } catch { return 0; }
+            };
+
+            const tokensToExpr = (tokens: FormulaToken[]) =>
+              tokens.map(tok =>
+                tok.type === 'field' ? (tok.fieldLabel ?? '') :
+                tok.type === 'operator' ? ` ${tok.operator} ` : String(tok.constant ?? '')
+              ).join('');
+
+            const validateFormula = (): string[] => {
+              const errors: string[] = [];
+              if (!formulaFieldName.trim()) errors.push('Formula name is required.');
+              if (formulaTokens.length === 0) errors.push('Formula expression cannot be empty.');
+              if (formulaTokens.length > 0 && formulaTokens[0].type === 'operator')
+                errors.push('Formula cannot start with an operator.');
+              if (formulaTokens.length > 0 && formulaTokens[formulaTokens.length - 1].type === 'operator')
+                errors.push('Formula cannot end with an operator.');
+              for (let i = 0; i < formulaTokens.length - 1; i++) {
+                if (formulaTokens[i].type === 'operator' && formulaTokens[i + 1].type === 'operator')
+                  errors.push('Invalid syntax: two consecutive operators.');
+              }
+              const editingName = editingFormulaId
+                ? (summaryFormulas.find(f => f.custom_field_id === editingFormulaId)?.field_name
+                    ?? columnFormulas.find(c => c.column_id === editingFormulaId)?.column_name ?? '')
+                : '';
+              if (allFormulaNames.filter(n => n !== editingName).some(n => n.toLowerCase() === formulaFieldName.trim().toLowerCase()))
+                errors.push('A formula with this name already exists.');
+              let lastOp = '';
+              for (const tok of formulaTokens) {
+                if (tok.type === 'operator') { lastOp = tok.operator ?? ''; continue; }
+                if (lastOp === '/' && tok.type === 'constant' && (tok.constant === 0 || tok.constant === undefined))
+                  errors.push('Warning: Possible division by zero detected.');
+              }
+              return errors;
+            };
+
+            const previewResult = formulaTokens.length > 0
+              ? evalTokens(formulaTokens).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : null;
+            const expressionStr = tokensToExpr(formulaTokens);
+
+            const editingEntityName = editingFormulaId
+              ? (columnFormulas.find(c => c.column_id === editingFormulaId)?.column_name
+                  ?? summaryFormulas.find(f => f.custom_field_id === editingFormulaId)?.field_name
+                  ?? formulaFieldName)
+              : '';
+
+            const availableFields = FORMULA_FIELD_OPTIONS.filter(f =>
+              formulaCategory === 'column' ? f.section === 'Column' : (f.section === 'Totals' || f.section === 'Summary')
+            );
+
+            const handleValidatedSave = () => {
+              const errors = validateFormula();
+              setFormulaValidationErrors(errors);
+              if (errors.length > 0) {
+                const bodyEl = document.getElementById('formula-editor-body');
+                if (bodyEl) {
+                  bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                return;
+              }
+              handleSaveFormula();
+              setFormulaValidationErrors([]);
+              setFormulaDescription('');
+              setShowFormulasModal(false);
+            };
+
+            const handleDuplicateFormula = (id: string, isCol: boolean) => {
+              if (isCol) {
+                const col = columnFormulas.find(c => c.column_id === id);
+                if (!col) return;
+                const nid = `col-formula-${currentTemplateId}-${Date.now()}`;
+                setAllColumns(prev => [...prev, { ...col, column_id: nid, column_name: `${col.column_name} (Copy)`, is_visible: false }]);
+              } else {
+                const cf = summaryFormulas.find(f => f.custom_field_id === id);
+                if (!cf) return;
+                const nid = `cf-formula-${currentTemplateId}-${Date.now()}`;
+                setAllCustomFields(prev => [...prev, { ...cf, custom_field_id: nid, field_name: `${cf.field_name} (Copy)`, is_visible: false }]);
+              }
+            };
+
+            const handleToggleFormula = (id: string, isCol: boolean) => {
+              if (isCol) setAllColumns(prev => prev.map(c => c.column_id === id ? { ...c, is_visible: !c.is_visible } : c));
+              else setAllCustomFields(prev => prev.map(cf => cf.custom_field_id === id ? { ...cf, is_visible: !cf.is_visible } : cf));
+            };
+
+            const itemStyle = (isSel: boolean, accent: string): React.CSSProperties => ({
+              display: 'flex', alignItems: 'center', padding: '6px 8px',
+              borderRadius: 6, cursor: 'pointer', marginBottom: 2,
+              background: isSel ? `${accent}15` : 'transparent',
+              border: `1px solid ${isSel ? `${accent}40` : 'transparent'}`,
+            });
+
+            return (
+              <div style={{ display: 'flex', height: '620px', overflow: 'hidden' }}>
+
+                {/* LEFT PANEL */}
+                <div style={{ width: 272, flexShrink: 0, borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+                  <div style={{ padding: '12px 12px 10px', borderBottom: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, color: '#334155', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Formula Explorer</span>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Search style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, color: '#94a3b8' }} />
+                      <input type="text" placeholder="Search formulas..." value={formulaSearchQuery}
+                        onChange={e => setFormulaSearchQuery(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 26, paddingRight: 8, paddingTop: 5, paddingBottom: 5, fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6, outline: 'none', background: '#fff', color: '#334155' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} className="custom-scrollbar">
+                    {/* Summary Formulas */}
+                    <div style={{ marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '5px 4px 4px', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />
+                          Summary Formulas
+                          <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, background: '#eef2ff', color: '#6366f1', padding: '0 5px', borderRadius: 10 }}>{filteredSummary.length}</span>
+                        </div>
+                        <button type="button"
+                          onClick={() => { setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); setFormulaDescription(''); setFormulaCategory('summary'); setFormulaPlacement('custom'); }}
+                          style={{ fontSize: 9, fontWeight: 700, color: brand.primary, background: `${brand.primary}15`, border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer' }}>
+                          + New
+                        </button>
+                      </div>
+                      {filteredSummary.length === 0 && <div style={{ fontSize: 10, color: '#94a3b8', padding: '5px 10px', fontStyle: 'italic', textAlign: 'center' }}>{fq ? 'No matches' : 'None created yet'}</div>}
+                      {filteredSummary.map(f => {
+                        const isSel = editingFormulaId === f.custom_field_id;
+                        return (
+                          <div key={f.custom_field_id} style={itemStyle(isSel, brand.primary)}
+                            onClick={() => { setEditingFormulaId(f.custom_field_id); setFormulaFieldName(f.field_name); setFormulaPlacement(f.section_name === 'Custom Fields' ? 'custom' : 'totals'); setFormulaCategory('summary'); setFormulaTokens(f.formula_tokens || []); setFormulaValidationErrors([]); setFormulaDescription(''); }}>
+                            <span style={{ fontSize: 12, marginRight: 6 }}>{'<>'}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 11, fontWeight: isSel ? 700 : 500, color: isSel ? brand.primary : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.field_name}</div>
+                              <div style={{ fontSize: 9, color: f.is_visible ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>{f.is_visible ? '● Active' : '○ Inactive'}</div>
+                            </div>
+                            {isSel && (
+                              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                <button type="button" title="Duplicate" onClick={e => { e.stopPropagation(); handleDuplicateFormula(f.custom_field_id, false); }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}><Copy style={{ width: 11, height: 11 }} /></button>
+                                <button type="button" title="Toggle" onClick={e => { e.stopPropagation(); handleToggleFormula(f.custom_field_id, false); }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: f.is_visible ? '#22c55e' : '#94a3b8' }}><Check style={{ width: 11, height: 11 }} /></button>
+                                <button type="button" title="Delete" onClick={e => { e.stopPropagation(); handleRemoveCustomField(f.custom_field_id); if (editingFormulaId === f.custom_field_id) { setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); } }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#f43f5e' }}><Trash2 style={{ width: 11, height: 11 }} /></button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Column Formulas */}
+                    <div style={{ marginTop: 10, marginBottom: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '5px 4px 4px', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+                          Table Column Formulas
+                          <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, background: '#fffbeb', color: '#d97706', padding: '0 5px', borderRadius: 10 }}>{filteredColumn.length}</span>
+                        </div>
+                        <button type="button"
+                          onClick={() => { setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); setFormulaDescription(''); setFormulaCategory('column'); setFormulaPlacement('column'); }}
+                          style={{ fontSize: 9, fontWeight: 700, color: '#d97706', background: '#fffbeb', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer' }}>
+                          + New
+                        </button>
+                      </div>
+                      {filteredColumn.length === 0 && <div style={{ fontSize: 10, color: '#94a3b8', padding: '5px 10px', fontStyle: 'italic', textAlign: 'center' }}>{fq ? 'No matches' : 'None created yet'}</div>}
+                      {filteredColumn.map(c => {
+                        const isSel = editingFormulaId === c.column_id;
+                        return (
+                          <div key={c.column_id} style={{ ...itemStyle(isSel, '#f59e0b'), background: isSel ? '#fffbeb' : 'transparent', border: `1px solid ${isSel ? '#fcd34d' : 'transparent'}` }}
+                            onClick={() => { setEditingFormulaId(c.column_id); setFormulaFieldName(c.column_name); setFormulaPlacement('column'); setFormulaCategory('column'); setFormulaTokens(c.formula_tokens || []); setFormulaValidationErrors([]); setFormulaDescription(''); }}>
+                            <span style={{ fontSize: 12, marginRight: 6 }}>{'[]'}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 11, fontWeight: isSel ? 700 : 500, color: isSel ? '#b45309' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.column_name}</div>
+                              <div style={{ fontSize: 9, color: c.is_visible ? '#22c55e' : '#94a3b8', fontWeight: 600 }}>{c.is_visible ? '● Active' : '○ Inactive'}</div>
+                            </div>
+                            {isSel && (
+                              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                <button type="button" title="Duplicate" onClick={e => { e.stopPropagation(); handleDuplicateFormula(c.column_id, true); }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b' }}><Copy style={{ width: 11, height: 11 }} /></button>
+                                <button type="button" title="Toggle" onClick={e => { e.stopPropagation(); handleToggleFormula(c.column_id, true); }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: c.is_visible ? '#22c55e' : '#94a3b8' }}><Check style={{ width: 11, height: 11 }} /></button>
+                                <button type="button" title="Delete" onClick={e => { e.stopPropagation(); handleRemoveCustomColumn(c.column_id); if (editingFormulaId === c.column_id) { setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); } }} style={{ padding: 3, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#f43f5e' }}><Trash2 style={{ width: 11, height: 11 }} /></button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>{summaryFormulas.length + columnFormulas.length} formula(s) total</div>
+                  </div>
+                </div>
+
+                {/* RIGHT PANEL – Formula Editor */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+
+                  {/* Editor Header */}
+                  <div style={{ padding: '12px 18px 10px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#1e293b' }}>
+                        {editingFormulaId ? `Edit Formula: ${editingEntityName}` : 'Create New Formula'}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                        {editingFormulaId ? (formulaPlacement === 'totals' ? 'Summary / Footer Formula' : 'Table Column Formula') : 'Define a new formula for your invoice template'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {editingFormulaId && (() => {
+                        const isCol = editingFormulaId.startsWith('col-formula-');
+                        const entity = isCol ? columnFormulas.find(c => c.column_id === editingFormulaId) : summaryFormulas.find(f => f.custom_field_id === editingFormulaId);
+                        return (
+                          <>
+                            <button type="button" onClick={() => handleDuplicateFormula(editingFormulaId, isCol)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                              <Copy style={{ width: 11, height: 11 }} /> Duplicate
+                            </button>
+                            <button type="button" onClick={() => handleToggleFormula(editingFormulaId, isCol)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: entity?.is_visible ? '#22c55e' : '#94a3b8', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                              <Check style={{ width: 11, height: 11 }} /> {entity?.is_visible ? 'Enabled' : 'Disabled'}
+                            </button>
+                          </>
+                        );
+                      })()}
+                      <button type="button" onClick={() => { setShowFormulasModal(false); setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); setFormulaDescription(''); setFormulaCategory('summary'); setFormulaSearchQuery(''); }}
+                        style={{ fontSize: 10, fontWeight: 600, color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Editor Body */}
+                  <div id="formula-editor-body" style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }} className="custom-scrollbar">
+
+                    {/* Validation Errors Banner */}
+                    {formulaValidationErrors.length > 0 && (
+                      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>Validation Errors</div>
+                        {formulaValidationErrors.map((err, i) => (
+                          <div key={i} style={{ fontSize: 10.5, color: '#ef4444', marginBottom: 2 }}>* {err}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Name field */}
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Formula Name *</label>
+                      <input type="text" placeholder="e.g. Net Payable, Profit, Balance" value={formulaFieldName}
+                        onChange={e => { setFormulaFieldName(e.target.value); if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]); }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', fontSize: 11.5, border: '1.5px solid #e2e8f0', borderRadius: 7, outline: 'none', color: '#1e293b', background: '#fff' }}
+                        onFocus={e => (e.target.style.borderColor = brand.primary)}
+                        onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                    </div>
+
+                    {/* Formula Builder */}
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 800, color: '#475569', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Formula Builder</div>
+
+                      {/* Small Operators Section */}
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Operators</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {['+', '-', '*', '/', '%', '>', '<', '>=', '<=', '==', '!=', 'AND', 'OR'].map(op => (
+                            <button key={op} type="button"
+                              onClick={() => { setFormulaTokens(prev => [...prev, { type: 'operator', operator: op as any }]); if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]); }}
+                              style={{
+                                padding: '3px 8px',
+                                minWidth: 24,
+                                height: 24,
+                                borderRadius: 5,
+                                cursor: 'pointer',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                background: ['AND', 'OR'].includes(op) ? '#fdf4ff' : ['>', '<', '>=', '<=', '==', '!='].includes(op) ? '#f0fdf4' : '#fff7ed',
+                                color: ['AND', 'OR'].includes(op) ? '#7e22ce' : ['>', '<', '>=', '<=', '==', '!='].includes(op) ? '#166534' : '#c2410c',
+                                border: '1px solid',
+                                borderColor: ['AND', 'OR'].includes(op) ? '#e9d5ff' : ['>', '<', '>=', '<=', '==', '!='].includes(op) ? '#bbf7d0' : '#ffedd5',
+                              }}
+                            >
+                              {op}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Fields Section */}
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {formulaCategory === 'column' ? 'Line-Level Fields' : 'Summary & Totals Fields'}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                          {availableFields.map(f => (
+                            <button key={f.key} type="button"
+                              onClick={() => { setFormulaTokens(prev => [...prev, { type: 'field', fieldKey: f.key, fieldLabel: f.label }]); if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]); }}
+                              style={{ padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 650, background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}
+                            >
+                              + {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Constant Section */}
+                      <div style={{ paddingTop: 10, borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Numeric Constant</div>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <input type="number" placeholder="e.g. 100, 0.05" value={formulaConstant}
+                            onChange={e => setFormulaConstant(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const n = parseFloat(formulaConstant);
+                                if (!isNaN(n)) {
+                                  setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
+                                  setFormulaConstant('');
+                                  if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]);
+                                }
+                              }
+                            }}
+                            style={{ flex: 1, padding: '5px 10px', fontSize: 11, border: '1.5px solid #e2e8f0', borderRadius: 7, outline: 'none', color: '#1e293b', background: '#fff' }}
+                            onFocus={e => (e.target.style.borderColor = '#10b981')}
+                            onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+                          />
+                          <button type="button"
+                            onClick={() => {
+                              const n = parseFloat(formulaConstant);
+                              if (!isNaN(n)) {
+                                setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
+                                setFormulaConstant('');
+                                if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]);
+                              }
+                            }}
+                            style={{ padding: '6px 12px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#10b981', color: '#fff', border: 'none' }}
+                          >
+                            Add Constant
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Formula Preview & Management */}
+                    {formulaTokens.length > 0 && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ fontSize: 10.5, fontWeight: 800, color: '#15803d' }}>Formula Preview</div>
+                          <button type="button" onClick={() => { setFormulaTokens([]); setFormulaValidationErrors([]); }} style={{ fontSize: 10, color: '#ef4444', fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+                            Clear all
+                          </button>
+                        </div>
+                        <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 10px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4, fontFamily: 'monospace', marginBottom: 10 }}>
+                          {formulaTokens.map((tok, i) => (
+                            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10.5, fontWeight: 700, borderRadius: 5, padding: '2px 7px', background: tok.type === 'field' ? '#e0e7ff' : tok.type === 'operator' ? '#fef3c7' : '#dcfce7', color: tok.type === 'field' ? '#4338ca' : tok.type === 'operator' ? '#b45309' : '#15803d' }}>
+                              {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : String(tok.constant)}
+                              <button type="button" onClick={() => { setFormulaTokens(prev => prev.filter((_, j) => j !== i)); if (formulaValidationErrors.length > 0) setFormulaValidationErrors([]); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.6, fontSize: 12, fontWeight: 800, lineHeight: 1, padding: 0 }}>x</button>
+                            </span>
+                          ))}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9.5, color: '#16a34a', fontWeight: 700, marginBottom: 4 }}>Sample Result (demo values — Subtotal=7500, Tax=1125, Discount=500, Grand Total=8275):</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ fontFamily: 'monospace', fontSize: 10.5, color: '#64748b', background: '#f0fdf4', padding: '4px 8px', borderRadius: 5 }}>{expressionStr}</div>
+                            <span style={{ color: '#22c55e', fontWeight: 800, fontSize: 16 }}>=</span>
+                            <div style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 800, color: '#15803d', background: '#dcfce7', padding: '5px 12px', borderRadius: 6, border: '1px solid #86efac' }}>{previewResult}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Editor Footer */}
+                  <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', flexShrink: 0 }}>
+                    <div>
+                      {editingFormulaId && (
+                        <button type="button"
+                          onClick={() => { const isCol = editingFormulaId.startsWith('col-formula-'); if (isCol) handleRemoveCustomColumn(editingFormulaId); else handleRemoveCustomField(editingFormulaId); setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); setFormulaDescription(''); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#fff1f2', color: '#f43f5e', border: '1.5px solid #fecdd3' }}>
+                          <Trash2 style={{ width: 12, height: 12 }} /> Delete Formula
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button"
+                        onClick={() => { setEditingFormulaId(null); resetFormulaModal(); setFormulaValidationErrors([]); setFormulaDescription(''); setFormulaCategory('summary'); }}
+                        style={{ padding: '7px 16px', borderRadius: 7, cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#f8fafc', color: '#64748b', border: '1.5px solid #e2e8f0' }}>
+                        Cancel
+                      </button>
+                      <button type="button" onClick={handleValidatedSave}
+                        disabled={!formulaFieldName.trim() || formulaTokens.length === 0}
+                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 18px', borderRadius: 7, cursor: (!formulaFieldName.trim() || formulaTokens.length === 0) ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 800, background: (!formulaFieldName.trim() || formulaTokens.length === 0) ? '#e2e8f0' : brand.primary, color: (!formulaFieldName.trim() || formulaTokens.length === 0) ? '#94a3b8' : '#fff', border: 'none' }}>
+                        <Check style={{ width: 13, height: 13 }} />
+                        {editingFormulaId ? 'Save Formula' : 'Create Formula'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+        {/* ── Template Settings Modal ── */}
+        <Modal
+          isOpen={showTemplateSettingsModal}
+          onClose={() => setShowTemplateSettingsModal(false)}
+          title={`⚙️ Template Settings: ${activeTemplate.template_name}`}
+          style={{ width: '40%', maxWidth: '40%' }}
+          footer={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowTemplateSettingsModal(false)}
+              style={{ backgroundColor: brand.primary }}
+            >
+              Apply Settings
+            </Button>
+          }
+        >
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar py-1">
+            <div className="grid grid-cols-2 gap-3.5">
+              <Input
+                label="Rename Template"
+                variant="compact"
+                value={activeTemplate.template_name}
+                onChange={e => updateTemplateProperty({ template_name: e.target.value })}
+              />
+              <Select
+                label="Document Type"
+                variant="compact"
+                value={activeTemplate.document_type}
+                onChange={e => updateTemplateProperty({ document_type: e.target.value })}
+                options={DOCUMENT_TYPES.map(t => ({ value: t, label: t }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3.5">
+              <Select
+                label="Layout Mode"
+                variant="compact"
+                value={activeTemplate.layout_mode || 'flow'}
+                onChange={e => updateTemplateProperty({ layout_mode: e.target.value as any })}
+                options={[
+                  { value: 'flow', label: 'Flow Layout' },
+                  { value: 'free', label: 'Free Layout' }
+                ]}
+              />
+              <Select
+                label="Paper Size"
+                variant="compact"
+                value={activeTemplate.paper_size}
+                onChange={e => {
+                  const size = e.target.value as any;
+                  updateTemplateProperty({
+                    paper_size: size,
+                    paper_width: size === 'Thermal' ? '80mm' : size === 'A5' ? '148mm' : size === 'Letter' ? '216mm' : '210mm',
+                    paper_height: size === 'Thermal' ? 'auto' : size === 'A5' ? '210mm' : size === 'Letter' ? '279mm' : '297mm'
+                  });
+                }}
+                options={PAPER_SIZES.map(t => ({ value: t, label: t }))}
+              />
+            </div>
+
+            {activeTemplate.paper_size === 'Custom' && (
+              <div className="grid grid-cols-2 gap-3.5">
+                <Input
+                  label="Width (mm)"
+                  variant="compact"
+                  value={activeTemplate.paper_width || ''}
+                  onChange={e => updateTemplateProperty({ paper_width: e.target.value })}
+                />
+                <Input
+                  label="Height (mm)"
+                  variant="compact"
+                  value={activeTemplate.paper_height || ''}
+                  onChange={e => updateTemplateProperty({ paper_height: e.target.value })}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3.5">
+              <Select
+                label="Orientation"
+                variant="compact"
+                value={activeTemplate.orientation}
+                onChange={e => updateTemplateProperty({ orientation: e.target.value as any })}
+                options={ORIENTATIONS.map(t => ({ value: t, label: t }))}
+              />
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-400">Company Logo</label>
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    id="settings-logo-upload"
+                  />
+                  <label
+                    htmlFor="settings-logo-upload"
+                    className="flex-grow flex items-center justify-center border border-dashed rounded-lg py-1.5 px-3 bg-slate-50 text-[10px] font-bold text-slate-650 cursor-pointer hover:bg-slate-100 border-slate-300"
+                  >
+                    <Upload className="w-3.5 h-3.5 mr-1" />
+                    {activeTemplate.logo_url ? 'Change Logo' : 'Upload Logo'}
+                  </label>
+                  {activeTemplate.logo_url && (
+                    <Button
+                      variant="danger"
+                      size="xs"
+                      icon={Trash2}
+                      onClick={() => updateTemplateProperty({ logo_url: undefined })}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Formula Builder */}
-            <div className="space-y-2">
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary, #64748b)', display: 'block', marginBottom: 2 }}>
-                Formula
-              </label>
-
-              {/* Live preview */}
-              <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-mono min-h-[34px] flex flex-wrap items-center gap-1">
-                {formulaTokens.length === 0 && <span className="text-slate-400 italic">Build your formula below…</span>}
-                {formulaTokens.map((tok, i) => (
-                  <span key={i} className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-semibold ${
-                    tok.type === 'field'    ? 'bg-indigo-100 text-indigo-800' :
-                    tok.type === 'operator' ? 'bg-amber-100 text-amber-700' :
-                                             'bg-green-100 text-green-700'
-                  }`}>
-                    {tok.type === 'field' ? tok.fieldLabel : tok.type === 'operator' ? tok.operator : tok.constant}
-                    <button type="button" onClick={() => setFormulaTokens(prev => prev.filter((_, j) => j !== i))}
-                      className="ml-0.5 text-slate-400 hover:text-red-500 font-bold leading-none">×</button>
-                  </span>
-                ))}
+            {activeTemplate.logo_url && (
+              <div className="space-y-1 bg-slate-50 p-2 rounded-lg border">
+                <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                  <span>Logo Size</span>
+                  <span>{activeTemplate.logo_size || 80}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="30"
+                  max="200"
+                  value={activeTemplate.logo_size || 80}
+                  onChange={e => updateTemplateProperty({ logo_size: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500 outline-none"
+                />
               </div>
+            )}
 
-              {/* Tab row */}
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden text-[11px] font-semibold w-fit">
-                {(['field', 'operator', 'constant'] as const).map(t => (
-                  <button key={t} type="button"
-                    onClick={() => setFormulaAddType(t)}
-                    className={`px-3 py-1 transition-colors ${
-                      formulaAddType === t ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
-                    }`}>
-                    {t === 'field' ? '📊 Field' : t === 'operator' ? '➕ Operator' : '🔢 Number'}
-                  </button>
-                ))}
+            <div className="space-y-2.5 pt-3 border-t">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Advanced Option Toggles</span>
+              <div className="grid grid-cols-2 gap-3.5">
+                <Toggle
+                  checked={activeTemplate.qr_enabled}
+                  onChange={val => updateTemplateProperty({ qr_enabled: val })}
+                  label="Enable QR Code"
+                  compact={true}
+                />
+                <Toggle
+                  checked={activeTemplate.barcode_enabled}
+                  onChange={val => updateTemplateProperty({ barcode_enabled: val })}
+                  label="Enable Barcode"
+                  compact={true}
+                />
+                <Toggle
+                  checked={activeTemplate.signature_enabled}
+                  onChange={val => updateTemplateProperty({ signature_enabled: val })}
+                  label="Enable Signature Line"
+                  compact={true}
+                />
+                <Toggle
+                  checked={activeTemplate.watermark_enabled}
+                  onChange={val => updateTemplateProperty({ watermark_enabled: val })}
+                  label="Enable Watermark Background"
+                  compact={true}
+                />
+                <Toggle
+                  checked={activeTemplate.terms_enabled}
+                  onChange={val => updateTemplateProperty({ terms_enabled: val })}
+                  label="Enable Terms & Conditions"
+                  compact={true}
+                />
+                <Toggle
+                  checked={activeTemplate.remarks_enabled}
+                  onChange={val => updateTemplateProperty({ remarks_enabled: val })}
+                  label="Enable Invoice Remarks"
+                  compact={true}
+                />
               </div>
-
-              {/* Field picker */}
-              {formulaAddType === 'field' && (
-                <div className="flex gap-2">
-                  <select
-                    className="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    value={formulaSelectedField}
-                    onChange={e => setFormulaSelectedField(e.target.value)}
-                  >
-                    {['Totals', 'Summary', 'Column']
-                      .filter(sec => {
-                        if (formulaPlacement === 'totals') {
-                          return sec === 'Totals' || sec === 'Summary';
-                        } else {
-                          return sec === 'Column';
-                        }
-                      })
-                      .map(section => (
-                        <optgroup key={section} label={section}>
-                          {FORMULA_FIELD_OPTIONS.filter(f => f.section === section).map(f => (
-                            <option key={f.key} value={f.key}>{f.label}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                  </select>
-                  <button type="button"
-                    onClick={() => {
-                      const opt = FORMULA_FIELD_OPTIONS.find(f => f.key === formulaSelectedField);
-                      if (opt) setFormulaTokens(prev => [...prev, { type: 'field', fieldKey: opt.key, fieldLabel: opt.label }]);
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 whitespace-nowrap"
-                  >Add</button>
-                </div>
-              )}
-
-              {/* Operator picker */}
-              {formulaAddType === 'operator' && (
-                <div className="flex gap-2 items-center">
-                  <div className="flex gap-1">
-                    {(['+', '-', '*', '/'] as const).map(op => (
-                      <button key={op} type="button"
-                        onClick={() => setFormulaSelectedOp(op)}
-                        className={`w-9 h-9 rounded-lg text-base font-bold border transition-colors ${
-                          formulaSelectedOp === op
-                            ? 'bg-amber-500 text-white border-amber-500'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50'
-                        }`}>
-                        {op}
-                      </button>
-                    ))}
-                  </div>
-                  <button type="button"
-                    onClick={() => setFormulaTokens(prev => [...prev, { type: 'operator', operator: formulaSelectedOp }])}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 whitespace-nowrap"
-                  >Add Operator</button>
-                </div>
-              )}
-
-              {/* Constant picker */}
-              {formulaAddType === 'constant' && (
-                <div className="flex gap-2">
-                  <input type="number" placeholder="Enter number"
-                    className="w-32 border border-slate-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-400"
-                    value={formulaConstant}
-                    onChange={e => setFormulaConstant(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        const n = parseFloat(formulaConstant);
-                        if (!isNaN(n)) setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
-                        setFormulaConstant('');
-                      }
-                    }}
-                  />
-                  <button type="button"
-                    onClick={() => {
-                      const n = parseFloat(formulaConstant);
-                      if (!isNaN(n)) setFormulaTokens(prev => [...prev, { type: 'constant', constant: n }]);
-                      setFormulaConstant('');
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 whitespace-nowrap"
-                  >Add</button>
-                </div>
-              )}
-
-              {formulaTokens.length > 0 && (
-                <button type="button" onClick={() => setFormulaTokens([])}
-                  className="text-[10px] text-red-400 hover:text-red-600 font-medium">
-                  Clear formula
-                </button>
-              )}
-              <p className="text-[10px] text-slate-400 italic">e.g. Subtotal − Discount + Tax = Net Payable</p>
             </div>
           </div>
+        </Modal>
+
+        {/* ── Field Properties Modal (Double-Click) ── */}
+        <Modal
+          isOpen={showFieldPropertiesModal}
+          onClose={() => setShowFieldPropertiesModal(false)}
+          title={
+            selectedField
+              ? `✏️ Field Properties: ${selectedField.custom_label || selectedField.field_name}`
+              : selectedCustomField
+              ? `✏️ Custom Field Properties: ${selectedCustomField.custom_label || selectedCustomField.field_name}`
+              : '✏️ Field Properties'
+          }
+          style={{ width: '40%', maxWidth: '40%' }}
+          footer={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowFieldPropertiesModal(false)}
+              style={{ backgroundColor: brand.primary }}
+            >
+              Save & Apply
+            </Button>
+          }
+        >
+          <div className="flex border-b border-slate-200 mb-4 flex-shrink-0">
+            {(['content', 'style'] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveElementTab(tab)}
+                className={`pb-2 px-3 text-xs font-bold capitalize transition-all border-b-2 ${
+                  activeElementTab === tab
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-450 hover:text-slate-650'
+                }`}
+              >
+                {tab === 'content' ? 'Text & Size' : 'Design & Style'}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-[380px] overflow-y-auto pr-1 custom-scrollbar py-1">
+            {(() => {
+              const activeElement = selectedField || selectedCustomField;
+              if (!activeElement) return <p className="text-xs text-slate-400 text-center">No field selected.</p>;
+              
+              const isCustom = 'custom_field_id' in activeElement;
+              const updateProp = (props: any) => {
+                if (isCustom) {
+                  updateCustomFieldProperty(activeElement.custom_field_id, props);
+                } else {
+                  updateFieldProperty(activeElement.field_id, props);
+                }
+              };
+
+              return (
+                <div className="space-y-4">
+                  {activeElementTab === 'content' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          label="Custom Label"
+                          variant="compact"
+                          value={activeElement.custom_label || ''}
+                          onChange={e => updateProp({ custom_label: e.target.value })}
+                          placeholder={activeElement.field_name}
+                        />
+                        <div className="flex items-center pt-5">
+                          <Toggle
+                            checked={activeElement.is_visible}
+                            onChange={val => updateProp({ is_visible: val })}
+                            label="Visibility"
+                            compact={true}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                        <Select
+                          label="Width"
+                          variant="compact"
+                          value={String(activeElement.width_percent || 50)}
+                          onChange={e => updateProp({ width_percent: parseInt(e.target.value) })}
+                          options={[
+                            { value: '100', label: 'Full (100%)' },
+                            { value: '50', label: 'Half (50%)' },
+                            { value: '33', label: 'One-Third (33%)' },
+                            { value: '25', label: 'One-Quarter (25%)' }
+                          ]}
+                        />
+                        <Input
+                          label="Height (px)"
+                          variant="compact"
+                          type="number"
+                          value={String(activeElement.height_px || '')}
+                          placeholder="Auto"
+                          onChange={e =>
+                            updateProp({
+                              height_px: e.target.value ? Math.max(10, Math.min(2000, parseInt(e.target.value) || 0)) : undefined
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                        <div className="flex items-center pt-5">
+                          <Toggle
+                            checked={!!activeElement.required}
+                            onChange={val => updateProp({ required: val })}
+                            label="Required Field"
+                            compact={true}
+                          />
+                        </div>
+                        <Input
+                          label="Default Value"
+                          variant="compact"
+                          value={activeElement.default_value || ''}
+                          onChange={e => updateProp({ default_value: e.target.value })}
+                        />
+                      </div>
+
+                      {/* Typography Sub-section */}
+                      <div className="space-y-3 pt-3 border-t border-slate-100">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Typography</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input
+                            label="Font Size (px)"
+                            variant="compact"
+                            type="number"
+                            value={String(activeElement.font_size || 10)}
+                            onChange={e => updateProp({ font_size: Math.max(6, Math.min(32, parseInt(e.target.value) || 10)) })}
+                          />
+                          <Select
+                            label="Alignment"
+                            variant="compact"
+                            value={activeElement.alignment || 'left'}
+                            onChange={e => updateProp({ alignment: e.target.value })}
+                            options={[
+                              { value: 'left', label: 'Left' },
+                              { value: 'center', label: 'Center' },
+                              { value: 'right', label: 'Right' }
+                            ]}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="flex items-center pt-2">
+                            <Toggle
+                              checked={!!activeElement.is_bold}
+                              onChange={val => updateProp({ is_bold: val })}
+                              label="Bold"
+                              compact={true}
+                            />
+                          </div>
+                          <div className="flex items-center pt-2">
+                            <Toggle
+                              checked={activeElement.label_is_bold !== undefined ? !!activeElement.label_is_bold : !!activeElement.is_bold}
+                              onChange={val => updateProp({ label_is_bold: val })}
+                              label="Label Bold"
+                              compact={true}
+                            />
+                          </div>
+                          <div className="flex items-center pt-2">
+                            <Toggle
+                              checked={activeElement.value_is_bold !== undefined ? !!activeElement.value_is_bold : !!activeElement.is_bold}
+                              onChange={val => updateProp({ value_is_bold: val })}
+                              label="Value Bold"
+                              compact={true}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {activeTemplate.layout_mode === 'free' ? (
+                        <div className="space-y-4 pt-3 border-t border-slate-100">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input
+                              label="Position X (%)"
+                              variant="compact"
+                              type="number"
+                              value={String(activeElement.position_x ?? 5)}
+                              onChange={e => updateProp({ position_x: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+                            />
+                            <Input
+                              label="Position Y (%)"
+                              variant="compact"
+                              type="number"
+                              value={String(activeElement.position_y ?? 5)}
+                              onChange={e => updateProp({ position_y: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <Input
+                              label="Margin L (px)"
+                              variant="compact"
+                              type="number"
+                              value={String(activeElement.margin_left ?? 0)}
+                              onChange={e => updateProp({ margin_left: Math.max(0, Math.min(500, parseInt(e.target.value) || 0)) })}
+                            />
+                            <Input
+                              label="Margin R (px)"
+                              variant="compact"
+                              type="number"
+                              value={String(activeElement.margin_right ?? 0)}
+                              onChange={e => updateProp({ margin_right: Math.max(0, Math.min(500, parseInt(e.target.value) || 0)) })}
+                            />
+                            <Input
+                              label="Margin T (px)"
+                              variant="compact"
+                              type="number"
+                              value={String(activeElement.margin_top ?? 0)}
+                              onChange={e => updateProp({ margin_top: Math.max(0, Math.min(500, parseInt(e.target.value) || 0)) })}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                          <Input
+                            label="Row Position"
+                            variant="compact"
+                            type="number"
+                            min="1"
+                            value={String(activeElement.row_position || 1)}
+                            onChange={e => {
+                              const val = Math.max(1, parseInt(e.target.value) || 1);
+                              updateFieldRowPosition(isCustom ? activeElement.custom_field_id : activeElement.field_id, isCustom ? 'custom' : 'default', val);
+                            }}
+                          />
+                          <Input
+                            label="Column Position"
+                            variant="compact"
+                            type="number"
+                            min="1"
+                            value={String(activeElement.column_position || 1)}
+                            onChange={e => {
+                              const val = Math.max(1, parseInt(e.target.value) || 1);
+                              updateFieldColumnPosition(isCustom ? activeElement.custom_field_id : activeElement.field_id, isCustom ? 'custom' : 'default', val);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeElementTab === 'style' && (
+                    <div className="space-y-4">
+                      {/* Colors Sub-section */}
+                      <div className="space-y-3">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Colors</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input
+                            label="Text Color"
+                            variant="compact"
+                            value={activeElement.color || ''}
+                            onChange={e => updateProp({ color: e.target.value })}
+                            placeholder="#000000"
+                          />
+                          <Input
+                            label="Background Color"
+                            variant="compact"
+                            value={activeElement.background || ''}
+                            onChange={e => updateProp({ background: e.target.value })}
+                            placeholder="transparent"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input
+                            label="Label Color"
+                            variant="compact"
+                            value={activeElement.label_color || ''}
+                            onChange={e => updateProp({ label_color: e.target.value })}
+                            placeholder="#64748b"
+                          />
+                          <Input
+                            label="Value Color"
+                            variant="compact"
+                            value={activeElement.value_color || ''}
+                            onChange={e => updateProp({ value_color: e.target.value })}
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Borders & Spacing Sub-section */}
+                      <div className="space-y-3 pt-4 border-t border-slate-100">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Borders & Spacing</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Select
+                            label="Border Preset"
+                            variant="compact"
+                            value={activeElement.border || 'none'}
+                            onChange={e => updateProp({ border: e.target.value })}
+                            options={[
+                              { value: 'none', label: 'None' },
+                              { value: '1px solid #cbd5e1', label: 'Light Solid' },
+                              { value: '1px solid #475569', label: 'Slate Solid' },
+                              { value: '1px solid #000000', label: 'Black Solid' },
+                              { value: '1px dashed #cbd5e1', label: 'Light Dashed' },
+                              { value: 'bottom-light', label: 'Bottom Border (Light)' },
+                              { value: 'bottom-slate', label: 'Bottom Border (Slate)' },
+                              { value: 'bottom-black', label: 'Bottom Border (Black)' },
+                            ]}
+                          />
+                          <Input
+                            label="Custom Border CSS"
+                            variant="compact"
+                            value={activeElement.border || ''}
+                            onChange={e => updateProp({ border: e.target.value })}
+                            placeholder="e.g. 1px solid black"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input
+                            label="Padding (CSS)"
+                            variant="compact"
+                            value={activeElement.padding || ''}
+                            onChange={e => updateProp({ padding: e.target.value })}
+                            placeholder="e.g. 4px 8px"
+                          />
+                          <Input
+                            label="Spacing Below (Margin bottom)"
+                            variant="compact"
+                            type="number"
+                            value={String(activeElement.margin_bottom || 0)}
+                            onChange={e => updateProp({ margin_bottom: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+                          />
+                        </div>
+
+                        <div className="pt-1">
+                          <Input
+                            label="Custom CSS Code"
+                            variant="compact"
+                            value={activeElement.custom_css || ''}
+                            onChange={e => updateProp({ custom_css: e.target.value })}
+                            placeholder="e.g. border-radius: 4px;"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </Modal>
+
+        {/* ── Column Properties Modal (Double-Click) ── */}
+        <Modal
+          isOpen={showColumnPropertiesModal}
+          onClose={() => setShowColumnPropertiesModal(false)}
+          title={selectedColumn ? `✏️ Column Properties: ${selectedColumn.custom_label || selectedColumn.column_name}` : '✏️ Column Properties'}
+          style={{ width: '40%', maxWidth: '40%' }}
+          footer={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowColumnPropertiesModal(false)}
+              style={{ backgroundColor: brand.primary }}
+            >
+              Apply Settings
+            </Button>
+          }
+        >
+          {selectedColumn && (
+            <div className="space-y-4 py-1">
+              <Input
+                label="Column Label / Text"
+                variant="compact"
+                value={selectedColumn.custom_label || ''}
+                onChange={e => updateColumnProperty(selectedColumn.column_id, { custom_label: e.target.value })}
+                placeholder={selectedColumn.column_name}
+              />
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <Input
+                  label="Width"
+                  variant="compact"
+                  value={selectedColumn.width || ''}
+                  onChange={e => updateColumnProperty(selectedColumn.column_id, { width: e.target.value })}
+                  placeholder="e.g. 10%, 120px"
+                />
+
+                <Select
+                  label="Alignment"
+                  variant="compact"
+                  value={selectedColumn.alignment || 'left'}
+                  onChange={e => updateColumnProperty(selectedColumn.column_id, { alignment: e.target.value as any })}
+                  options={[
+                    { value: 'left', label: 'Left' },
+                    { value: 'center', label: 'Center' },
+                    { value: 'right', label: 'Right' }
+                  ]}
+                />
+              </div>
+
+              <div className="flex items-center pt-2">
+                <Toggle
+                  checked={selectedColumn.is_visible}
+                  onChange={val => updateColumnProperty(selectedColumn.column_id, { is_visible: val })}
+                  label="Column Visibility"
+                  compact={true}
+                />
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* ── Section Properties Modal (Double-Click) ── */}
+        <Modal
+          isOpen={showSectionPropertiesModal}
+          onClose={() => setShowSectionPropertiesModal(false)}
+          title={selectedSectionId ? `✏️ Section Properties: ${allSections.find(s => s.section_id === selectedSectionId)?.section_name}` : '✏️ Section Properties'}
+          style={{ width: '40%', maxWidth: '40%' }}
+          footer={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowSectionPropertiesModal(false)}
+              style={{ backgroundColor: brand.primary }}
+            >
+              Apply Settings
+            </Button>
+          }
+        >
+          {(() => {
+            const secObj = allSections.find(s => s.section_id === selectedSectionId);
+            if (!secObj) return <p className="text-xs text-slate-400">No section selected.</p>;
+            return (
+              <div className="space-y-4 py-1">
+                <Input
+                  label="Section Name"
+                  variant="compact"
+                  value={secObj.section_name}
+                  onChange={e => updateSectionProperty(secObj.section_id, { section_name: e.target.value })}
+                />
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  <Input
+                    label="Spacing Below (px)"
+                    variant="compact"
+                    type="number"
+                    value={String(secObj.spacing ?? 0)}
+                    onChange={e => updateSectionProperty(secObj.section_id, { spacing: Math.max(0, parseInt(e.target.value) || 0) })}
+                  />
+
+                  <Select
+                    label="Layout"
+                    variant="compact"
+                    value={secObj.layout || 'grid'}
+                    onChange={e => updateSectionProperty(secObj.section_id, { layout: e.target.value as any })}
+                    options={[
+                      { value: 'grid', label: 'Grid' },
+                      { value: 'flex', label: 'Flexbox' },
+                      { value: 'row', label: 'Row Flow' }
+                    ]}
+                  />
+                </div>
+
+                <div className="flex items-center pt-2">
+                  <Toggle
+                    checked={secObj.is_visible}
+                    onChange={val => updateSectionProperty(secObj.section_id, { is_visible: val })}
+                    label="Section Visibility"
+                    compact={true}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </Modal>
 
       </div>
@@ -5006,6 +5218,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
               checked={form.is_default}
               onChange={val => setForm({ ...form, is_default: val })}
               label="Set as default template for this document type"
+              compact={true}
             />
           </div>
 
@@ -5014,6 +5227,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
               checked={form.is_active}
               onChange={val => setForm({ ...form, is_active: val })}
               label="Active"
+              compact={true}
             />
           </div>
         </div>
@@ -5061,6 +5275,14 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
         title="Delete Print Template?"
         itemName={deleteModal.name}
         warningText="Warning: Deleting this template will permanently clear all its visual coordinates and styling properties. This action cannot be undone."
+      />
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal(prev => ({ ...prev, isOpen: false }))}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant || "warning"}
       />
     </div>
   );

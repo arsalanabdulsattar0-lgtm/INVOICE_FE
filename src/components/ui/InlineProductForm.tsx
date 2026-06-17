@@ -67,6 +67,19 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   const { brand } = useTheme();
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'tax'>('general');
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.name?.trim()) {
+      errs.name = 'This field is required';
+    }
+    if (!formData.code?.trim()) {
+      errs.code = 'This field is required';
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const codeSetting = useMemo(() => {
     try {
@@ -160,6 +173,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   useEffect(() => {
     if (isOpen) {
       setActiveTab('general');
+      setFormErrors({});
       const activeCo = sessionStorage.getItem('active_company');
       const activeBr = sessionStorage.getItem('active_branch');
       const currentCoId = activeCo ? JSON.parse(activeCo).id : 'co1';
@@ -214,12 +228,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
   }, [isOpen, initialData]);
 
   const handleSave = () => {
-    if (!formData.name?.trim()) {
-      setAlertModal({ isOpen: true, title: 'Product name required', message: 'Please enter a product name before saving.' });
-      return;
-    }
-    if (!formData.code?.trim()) {
-      setAlertModal({ isOpen: true, title: 'Product code required', message: 'Please enter a product code before saving.' });
+    if (!validateForm()) {
+      setActiveTab('general');
       return;
     }
 
@@ -229,8 +239,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
 
       const newProduct: Product = {
         id: initialData?.id || crypto.randomUUID(),
-        name: formData.name,
-        code: formData.code,
+        name: formData.name || '',
+        code: formData.code || '',
         category_id: formData.category_id || '',
         brand_id: formData.brand_id || '',
         make_id: formData.make_id || '',
@@ -348,14 +358,7 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
 
   const handleNext = () => {
     if (activeTab === 'general') {
-      if (!formData.name?.trim()) {
-        setAlertModal({ isOpen: true, title: 'Product name required', message: 'Please enter a product name before proceeding to the next step.' });
-        return;
-      }
-      if (!formData.code?.trim()) {
-        setAlertModal({ isOpen: true, title: 'Product code required', message: 'Please enter a product code before proceeding to the next step.' });
-        return;
-      }
+      if (!validateForm()) return;
       setActiveTab('tax');
     } else if (activeTab === 'tax') {
       setActiveTab('pricing');
@@ -432,8 +435,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                   <button
                     type="button"
                     onClick={() => {
-                      if (!formData.name?.trim() || !formData.code?.trim()) {
-                        setAlertModal({ isOpen: true, title: 'Required fields missing', message: 'Please fill in the required fields (Name & Code) first.' });
+                      if (!validateForm()) {
+                        setActiveTab('general');
                         return;
                       }
                       setActiveTab('tax');
@@ -456,8 +459,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                   <button
                     type="button"
                     onClick={() => {
-                      if (!formData.name?.trim() || !formData.code?.trim()) {
-                        setAlertModal({ isOpen: true, title: 'Required fields missing', message: 'Please fill in the required fields (Name & Code) first.' });
+                      if (!validateForm()) {
+                        setActiveTab('general');
                         return;
                       }
                       setActiveTab('pricing');
@@ -487,8 +490,29 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                     <SectionHeader title="Basic Information" icon={Tag} />
                     <Card className="p-4 shadow-none" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Input variant="compact" label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Logic board pro v4" />
-                        <Input variant="compact" label="Product Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. PRD-0001" readOnly={codeSetting.mode === 'auto'} />
+                        <Input
+                          variant="compact"
+                          label="Product Name *"
+                          value={formData.name}
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value });
+                            if (e.target.value.trim()) setFormErrors(prev => ({ ...prev, name: '' }));
+                          }}
+                          error={formErrors.name}
+                          placeholder="e.g. Logic board pro v4"
+                        />
+                        <Input
+                          variant="compact"
+                          label="Product Code *"
+                          value={formData.code}
+                          onChange={(e) => {
+                            setFormData({ ...formData, code: e.target.value });
+                            if (e.target.value.trim()) setFormErrors(prev => ({ ...prev, code: '' }));
+                          }}
+                          error={formErrors.code}
+                          placeholder="e.g. PRD-0001"
+                          readOnly={codeSetting.mode === 'auto'}
+                        />
                         {docSettings['Unit Of Measure'] && (
                           <ComboBox variant="compact" label="UOM" value={formData.uom_id || ''} onChange={(val) => setFormData({ ...formData, uom_id: val })} options={ProductUOM} placeholder="Select UOM" />
                         )}
