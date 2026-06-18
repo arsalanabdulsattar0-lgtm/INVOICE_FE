@@ -466,15 +466,16 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-44 border border-slate-200">Number Format Type</th>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-48 border border-slate-200">Value</th>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-24 border border-slate-200">Separator</th>
-              <th className="px-4 py-2.5 text-center text-[10px] font-black text-slate-400 w-20 border border-slate-200">
-                <button
-                  type="button"
+              <th className="px-4 py-2 text-center text-[10px] font-black text-slate-400 w-20 border border-slate-200">
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={addRow}
-                  className="p-1 rounded text-white hover:opacity-90 border-none cursor-pointer flex items-center justify-center mx-auto transition-all"
+                  icon={Plus}
                   style={{ backgroundColor: brand.primary }}
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
+                  Add
+                </Button>
               </th>
             </tr>
           </thead>
@@ -687,7 +688,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       {activeTab === 'sales' ? (
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
           {/* Left Side Panel */}
-          <Card className="w-1/4 p-4 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
+          <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Screen Types</h4>
             <div className="space-y-1">
               {[
@@ -713,7 +714,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           </Card>
 
           {/* Right Side Settings Panel */}
-          <div className="w-3/4 flex flex-col h-full min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
             <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
               <DocumentSettingsModule
                 brand={brand}
@@ -726,7 +727,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       ) : activeTab === 'customer' ? (
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
           {/* Left Side Panel */}
-          <Card className="w-1/4 p-4 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
+          <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Partner Types</h4>
             <div className="space-y-1">
               {[
@@ -795,29 +796,6 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-700">Effective From</span>
-                  <div className="w-40">
-                    <Input
-                      variant="compact"
-                      type="date"
-                      value={effectiveFrom}
-                      onChange={(e) => setEffectiveFrom(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-700">Effective To</span>
-                  <div className="w-40">
-                    <Input
-                      variant="compact"
-                      type="date"
-                      value={effectiveTo}
-                      onChange={(e) => setEffectiveTo(e.target.value)}
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* Grid Table */}
@@ -826,9 +804,9 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
               </div>
 
               {/* Example + Toggle — column stacked, flush below table */}
-              <div className="flex flex-col gap-1 mt-0.5">
-                <div className="text-[13px] text-slate-700 font-bold">
-                  Example: <span className="font-mono text-sm text-slate-800 font-black ml-1">{livePreview}</span>
+              <div className="flex flex-col gap-1">
+                <div className="text-xs text-slate-500">
+                  Example: <span className="font-mono text-xs text-slate-600 ml-1">{livePreview}</span>
                 </div>
                 <div className="flex items-center gap-6">
                   <Toggle
@@ -884,7 +862,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
 
           {/* Left Side: Module Navigation */}
-          <Card className="w-1/4 p-4 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
+          <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Modules</h4>
             <div className="space-y-1">
               {TAB_MODULES[activeTab]?.map(mod => {
@@ -905,14 +883,14 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           </Card>
 
           {/* Right Side: Reusable Configuration Area */}
-          <Card className="w-3/4 flex flex-col border border-[#E2E8F0] shadow-sm bg-white overflow-hidden">
+          <Card className="flex-1 p-0 flex flex-col border border-[#E2E8F0] shadow-sm bg-white overflow-hidden">
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               <div className="space-y-5">
 
                 {/* Code Setup Guidelines box — 60% width */}
-                <div className="w-3/5 flex gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                <div className="w-[75%] flex gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
                   <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: brand.primary }} />
                   <div className="space-y-1.5">
                     <p className="text-[12px] font-black" style={{ color: brand.dark }}>Code setup guidelines</p>
@@ -930,68 +908,60 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                   </div>
                 </div>
 
-                {/* Form fields area */}
-                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-200 ${
-                  mode === 'manual' ? 'opacity-40 pointer-events-none select-none' : 'opacity-100'
-                }`}>
-                  <Input
-                    label="Prefix"
-                    variant="compact"
-                    value={prefixValue}
-                    onChange={(e) => setPrefixValue(e.target.value)}
-                    placeholder="e.g. SP-"
-                    disabled={mode === 'manual'}
-                  />
-                  <Input
-                    label="Start serial"
-                    variant="compact"
-                    value={serialValue}
-                    onChange={(e) => setSerialValue(e.target.value)}
-                    placeholder="e.g. 00001"
-                    disabled={mode === 'manual'}
+                {/* Form fields + Example + Toggle — grouped tightly */}
+                <div className="flex flex-col gap-1">
+                  {/* Fields */}
+                  <div className={`flex gap-3 transition-opacity duration-200 ${
+                    mode === 'manual' ? 'opacity-40 pointer-events-none select-none' : 'opacity-100'
+                  }`}>
+                    <div className="w-36">
+                      <Input
+                        label="Prefix"
+                        variant="compact"
+                        value={prefixValue}
+                        onChange={(e) => setPrefixValue(e.target.value)}
+                        placeholder="e.g. SP-"
+                        disabled={mode === 'manual'}
+                      />
+                    </div>
+                    <div className="w-36">
+                      <Input
+                        label="Start serial"
+                        variant="compact"
+                        value={serialValue}
+                        onChange={(e) => setSerialValue(e.target.value)}
+                        placeholder="e.g. 00001"
+                        disabled={mode === 'manual'}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Example */}
+                  <div className="text-xs text-slate-500">
+                    Example: <span className="font-mono text-xs text-slate-600 ml-1">{livePreview}</span>
+                  </div>
+
+                  {/* Allow Manual Entry toggle */}
+                  <Toggle
+                    checked={mode === 'manual'}
+                    onChange={(val) => setMode(val ? 'manual' : 'auto')}
+                    label="Allow Manual Entry"
+                    compact={true}
                   />
                 </div>
 
-                {/* Example + Auto Generate toggle row */}
-                <div className="flex items-center gap-6">
-                  <div className="text-xs text-slate-700 font-bold">
-                    Example: <span className="font-mono text-sm text-slate-800 font-black ml-1">{livePreview}</span>
-                  </div>
-                  <div className={''}>
-                    <Toggle
-                      checked={mode === 'auto'}
-                      onChange={(val) => setMode(val ? 'auto' : 'manual')}
-                      label="Auto Generate Code"
-                      compact={true}
-                    />
-                  </div>
-                </div>
-
-                {/* Tips box — 60% width */}
-                <div className="w-3/5 flex gap-3 p-4 rounded-xl border border-blue-100 bg-blue-50/60">
-                  <div className="shrink-0 mt-0.5 text-base leading-none">💡</div>
-                  <div className="space-y-1.5">
-                    <p className="text-[12px] font-black" style={{ color: brand.dark }}>Tips</p>
-                    <ul className="space-y-1">
-                      {[
-                        'Configure Prefix and Start Serial carefully.',
-                        'After the first transaction is created, these settings cannot be modified.',
-                        'Locked numbering helps prevent duplicate document codes.',
-                        'Verify the code format before going live.',
-                      ].map((tip) => (
-                        <li key={tip} className="flex items-start gap-1.5">
-                          <span className="text-[10px] font-black mt-0.5" style={{ color: brand.primary }}>•</span>
-                          <span className="text-[11px] font-normal text-slate-500 leading-relaxed">{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                {/* Tips box */}
+                <div className="w-[75%] flex items-center gap-2 px-4 py-3 rounded-xl border border-blue-100 bg-blue-50/60">
+                  <span className="text-sm leading-none shrink-0">💡</span>
+                  <span className="text-[11px] font-normal text-slate-500 leading-relaxed">
+                    <span className="font-medium text-slate-600">Tips: </span>After the first transaction is created, these settings cannot be modified.
+                  </span>
                 </div>
 
               </div>
             </div>
 
-            {/* Standard footer bar — same pattern as document tab */}
+            {/* Standard footer bar */}
             <div className="px-6 py-2.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex gap-2 items-center">
                 {savedMessage && (
