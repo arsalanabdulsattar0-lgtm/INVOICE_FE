@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, Check, List } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Check, List, Package } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
@@ -10,6 +10,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { seedCompanies } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { ProductSetupValuesDrawer } from './ProductSetupValuesDrawer';
+import { SectionCard } from '../../../components/ui/SectionCard';
 
 export interface ProductSetupType {
   id: string;
@@ -250,7 +251,14 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+      <SectionCard
+        title="Product Setup Settings"
+        icon={<Package className="w-3.5 h-3.5 text-white" />}
+        brand={brand}
+        scrollable
+        bodyClassName="space-y-6"
+      >
       
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
@@ -283,24 +291,6 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
         className="bg-white rounded-2xl border overflow-hidden"
         style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
       >
-        {/* Table header bar */}
-        <div
-          className="px-4 py-2.5 flex items-center justify-between text-white"
-          style={{ backgroundColor: brand.primary }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Product Setup Types</h3>
-            <span
-              className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ backgroundColor: brand.soft, color: brand.dark }}
-            >
-              {filteredTypes.length} records
-            </span>
-          </div>
-        </div>
-
-        {/* Table Area */}
         <ScrollArea height="290px">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 bg-white">
@@ -514,6 +504,7 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
         onSave={handleSaveDrawerValue}
         onDelete={handleDeleteDrawerValue}
       />
+      </SectionCard>
     </div>
   );
 };

@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Sun } from 'lucide-react';
+import { Check, Palette } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import type { ThemeType } from '../../../context/ThemeContext';
+import { SectionCard } from '../../../components/ui/SectionCard';
 
 interface AppearanceModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
@@ -47,7 +48,7 @@ export const AppearanceModule: React.FC<AppearanceModuleProps> = ({
           className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-white"
           style={{ backgroundColor: brand.primary }}
         >
-          <Check className="w-3 h-3 stroke-[3]" />
+          <Check className="w-3.5 h-3.5 stroke-[3]" />
         </motion.div>
       )}
       <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-20" style={{ backgroundColor: opt.colors[0] }} />
@@ -75,45 +76,47 @@ export const AppearanceModule: React.FC<AppearanceModuleProps> = ({
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Sun className="w-3.5 h-3.5" style={{ color: brand.primary }} />
-          <h4 className="text-xs font-bold tracking-widest" style={{ color: brand.textSecondary }}>
-            Color Themes
-          </h4>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {lightThemes.map(opt => (
-            <ThemeCard key={opt.id} opt={opt} isSelected={activeTheme === opt.id} />
-          ))}
-        </div>
-      </div>
-      <motion.div
-        key={activeTheme}
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl p-4 flex items-center gap-4"
-        style={{
-          background: `linear-gradient(135deg, ${brand.primary}18, ${brand.soft}40)`,
-          border: `1px solid ${brand.primary}30`,
-        }}
+    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+      <SectionCard
+        title="Appearance & Themes Settings"
+        icon={<Palette className="w-3.5 h-3.5 text-white" />}
+        brand={brand}
+        scrollable
+        bodyClassName="space-y-6"
       >
-        <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ backgroundColor: brand.primary }} />
         <div>
-          <p className="text-xs font-bold" style={{ color: brand.textPrimary }}>
-            Active Theme Applied ✓
-          </p>
-          <p className="text-[11px] mt-0.5" style={{ color: brand.textSecondary }}>
-            Primary: <strong>{brand.primary}</strong> &nbsp;·&nbsp; Surface: <strong>{brand.surface}</strong>
-          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {lightThemes.map(opt => (
+              <ThemeCard key={opt.id} opt={opt} isSelected={activeTheme === opt.id} />
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1.5 ml-auto">
-          {[brand.primary, brand.accent, brand.soft].map((c, i) => (
-            <div key={i} className="w-5 h-5 rounded-full border-2 border-white" style={{ backgroundColor: c }} />
-          ))}
-        </div>
-      </motion.div>
+        <motion.div
+          key={activeTheme}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-2xl p-4 flex items-center gap-4"
+          style={{
+            background: `linear-gradient(135deg, ${brand.primary}18, ${brand.soft}40)`,
+            border: `1px solid ${brand.primary}30`,
+          }}
+        >
+          <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ backgroundColor: brand.primary }} />
+          <div>
+            <p className="text-xs font-bold" style={{ color: brand.textPrimary }}>
+              Active Theme Applied ✓
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: brand.textSecondary }}>
+              Primary: <strong>{brand.primary}</strong> &nbsp;·&nbsp; Surface: <strong>{brand.surface}</strong>
+            </p>
+          </div>
+          <div className="flex gap-1.5 ml-auto">
+            {[brand.primary, brand.accent, brand.soft].map((c, i) => (
+              <div key={i} className="w-5 h-5 rounded-full border-2 border-white" style={{ backgroundColor: c }} />
+            ))}
+          </div>
+        </motion.div>
+      </SectionCard>
     </div>
   );
 };

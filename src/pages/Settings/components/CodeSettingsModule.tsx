@@ -7,7 +7,7 @@ import { seedCompanies, seedBranches } from '../../../utils/settingsData';
 import type { Company, Branch } from '../../../utils/settingsData';
 import { DocumentSettingsModule } from './DocumentSettingsModule';
 import {
-  Check, Plus, Trash2, ArrowUp, ArrowDown, AlertCircle, Settings2, Binary
+  Check, Plus, Trash2, ArrowUp, ArrowDown, AlertCircle, Settings2, Binary, User, Package
 } from 'lucide-react';
 import type {
   BranchCodeSettings, EntityCodeSetting
@@ -18,61 +18,62 @@ interface CodeSettingsModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
 }
 
-const MODULES = [
-  { id: 'sales', label: 'Sales' },
-  { id: 'purchase', label: 'Purchase' },
-  { id: 'customer', label: 'Customer' },
-  { id: 'supplier', label: 'Supplier' },
-  { id: 'inventory', label: 'Inventory' },
-  { id: 'employee', label: 'Employee' },
-  { id: 'financial', label: 'Financial' },
-  { id: 'branch', label: 'Branch' },
-  { id: 'company', label: 'Company' }
-] as const;
-
-const MODULE_TYPES: Record<string, { id: string; label: string }[]> = {
-  sales: [
-    { id: 'sale_invoice', label: 'Sale Invoice' },
-    { id: 'sale_return', label: 'Sale Return' },
-    { id: 'service_invoice', label: 'Service Invoice' },
-    { id: 'digital_invoice', label: 'Digital Invoice' },
-    { id: 'quotation', label: 'Quotation' },
-    { id: 'delivery_challan', label: 'Delivery Challan' },
-    { id: 'credit_note', label: 'Credit Note' },
-    { id: 'debit_note', label: 'Debit Note' },
-    { id: 'salesperson', label: 'Salesperson' }
+const TAB_MODULES = {
+  document: [
+    { id: 'sales', label: 'Sales' }
   ],
-  purchase: [
-    { id: 'purchase_order', label: 'Purchase Order' },
-    { id: 'purchase_return', label: 'Purchase Return' },
-    { id: 'purchase_invoice', label: 'Purchase Invoice' },
-    { id: 'grn', label: 'Goods Receive Note' }
+  setup: [
+    { id: 'salesperson', label: 'Salesperson' },
+    { id: 'department', label: 'Department' },
+    { id: 'warehouse', label: 'Warehouse' },
+    { id: 'customer', label: 'Customer' },
+    { id: 'product', label: 'Product' },
+    { id: 'branch', label: 'Branch' }
   ],
+  sales: [] as { id: string; label: string }[],
   customer: [
     { id: 'customer', label: 'Customer' }
   ],
-  supplier: [
-    { id: 'supplier', label: 'Supplier' }
-  ],
   inventory: [
-    { id: 'product', label: 'Product' },
-    { id: 'warehouse', label: 'Warehouse' },
-    { id: 'stock_adjustment', label: 'Stock Adjustment' }
+    { id: 'inventory', label: 'Inventory' }
+  ]
+} as const;
+
+interface TypeItem {
+  id: string;
+  label: string;
+  docType?: string;
+}
+
+const TAB_MODULE_TYPES: Record<string, TypeItem[]> = {
+  sales: [
+    { id: 'sale_invoice', label: 'Sale Invoice', docType: 'Sale Invoice' },
+    { id: 'sale_return', label: 'Sale Return', docType: 'Sale Return' },
+    { id: 'service_invoice', label: 'Service Invoice', docType: 'Service Invoice' },
+    { id: 'digital_invoice', label: 'Digital Invoice', docType: 'Digital Invoice' }
   ],
-  employee: [
-    { id: 'employee', label: 'Employee' },
+  salesperson: [
+    { id: 'salesperson', label: 'Salesperson' }
+  ],
+  department: [
     { id: 'department', label: 'Department' }
   ],
-  financial: [
-    { id: 'journal_voucher', label: 'Journal Voucher' },
-    { id: 'receipt_voucher', label: 'Receipt Voucher' },
-    { id: 'payment_voucher', label: 'Payment Voucher' }
+  warehouse: [
+    { id: 'warehouse', label: 'Warehouse' }
+  ],
+  customer: [
+    { id: 'customer', label: 'Customer', docType: 'Customer' }
+  ],
+  product: [
+    { id: 'product', label: 'Product', docType: 'Inventory' }
   ],
   branch: [
     { id: 'branch', label: 'Branch' }
   ],
-  company: [
-    { id: 'company', label: 'Company' }
+  inventory: [
+    { id: 'product', label: 'Product', docType: 'Inventory' },
+    { id: 'warehouse', label: 'Warehouse' },
+    { id: 'stock_adjustment', label: 'Stock Adjustment' }
   ]
 };
 
@@ -95,7 +96,7 @@ const getDefaultValueForType = (type: string, docType: string) => {
   const now = new Date();
   const currentYear = String(now.getFullYear());
   const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-  
+
   switch (type) {
     case 'Prefix':
       if (docType === 'sale_invoice') return 'SI';
@@ -135,9 +136,10 @@ const getDefaultValueForType = (type: string, docType: string) => {
 };
 
 export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand }) => {
-  const [activeTab, setActiveTab] = useState<'document' | 'setup'>('document');
+  const [activeTab, setActiveTab] = useState<'document' | 'setup' | 'sales' | 'customer' | 'inventory'>('document');
   const [activeModule, setActiveModule] = useState<string>('sales');
   const [activeType, setActiveType] = useState<string>('sale_invoice');
+  const [salesDocType, setSalesDocType] = useState<string>('Sale Invoice');
 
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
@@ -192,7 +194,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
     try {
       const activeCo = sessionStorage.getItem('active_company');
       const activeBr = sessionStorage.getItem('active_branch');
-      
+
       const currentCoId = activeCo ? JSON.parse(activeCo).id : (companies[0]?.id || '');
       setSelectedCompanyId(currentCoId);
 
@@ -234,7 +236,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
     if (setting.formatGrid && setting.formatGrid.length > 0) {
       return setting.formatGrid;
     }
-    
+
     const initialRows = [];
     if (setting.prefix) {
       initialRows.push({
@@ -244,7 +246,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         separator: setting.prefix.endsWith('-') ? '-' : ''
       });
     }
-    
+
     // Serial row
     initialRows.push({
       id: `row-std-serial-${typeKey}`,
@@ -252,19 +254,20 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       value: String(setting.nextNumber || 1).padStart(setting.padding || 5, '0'),
       separator: ''
     });
-    
+
     return initialRows;
   };
 
   // Sync state on type switch
   useEffect(() => {
+    if (!activeType) return;
     const setting = activeBranchSettings[activeType] || { mode: 'auto', prefix: '', nextNumber: 1, padding: 5 };
     setMode(setting.mode);
     setEffectiveFrom(setting.effectiveFrom || '');
     setEffectiveTo(setting.effectiveTo || '');
     setAllowManualEntry(!!setting.allowManualEntry);
     setSerialReset(setting.serialReset || 'None');
-    
+
     // Initialize grid
     const initialGrid = getInitialGridForEntity(activeType, setting);
     setGrid(initialGrid);
@@ -275,11 +278,11 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
     const newGrid = [...grid];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newGrid.length) return;
-    
+
     const temp = newGrid[index];
     newGrid[index] = newGrid[targetIndex];
     newGrid[targetIndex] = temp;
-    
+
     setGrid(newGrid);
   };
 
@@ -326,7 +329,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
   // Compile code preview
   const livePreview = useMemo(() => {
     if (mode === 'manual') return 'Manual Entry';
-    
+
     let result = '';
     grid.forEach(row => {
       result += (row.value || '') + (row.separator || '');
@@ -336,12 +339,12 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
 
   // Save changes
   const handleSaveSettings = () => {
-    if (!selectedCompanyId || !selectedBranchId) return;
+    if (!selectedCompanyId || !selectedBranchId || !activeType) return;
 
     const serialRow = grid.find(row => row.type === 'Serial');
     const padding = serialRow ? serialRow.value.length : 5;
     const nextNumber = serialRow ? (parseInt(serialRow.value.replace(/^0+/, '')) || 1) : 1;
-    
+
     const prefixParts = grid.filter(row => row.type !== 'Serial');
     let prefix = '';
     prefixParts.forEach(row => {
@@ -373,69 +376,141 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
 
     setSettings(newSettings);
     localStorage.setItem('code_generation_settings', JSON.stringify(newSettings));
-    
+
     setSavedMessage(true);
     const timer = setTimeout(() => setSavedMessage(false), 1200);
     return () => clearTimeout(timer);
   };
 
-  const availableTypes = useMemo(() => {
-    return MODULE_TYPES[activeModule] || [];
-  }, [activeModule]);
+  const handleTabSwitch = (tab: 'document' | 'setup' | 'sales' | 'customer' | 'inventory') => {
+    setActiveTab(tab);
+    if (tab === 'sales') return; // sales tab uses DocumentSettingsModule, no module switch needed
+
+    const modules = TAB_MODULES[tab];
+    if (modules && modules.length > 0) {
+      const firstModule = (modules as ReadonlyArray<{ id: string; label: string }>)[0].id;
+      setActiveModule(firstModule);
+      const types = TAB_MODULE_TYPES[firstModule];
+      if (types && types.length > 0) {
+        setActiveType(types[0].id);
+      }
+    }
+  };
+
+  const handleModuleSwitch = (moduleId: string) => {
+    setActiveModule(moduleId);
+    const types = TAB_MODULE_TYPES[moduleId];
+    if (types && types.length > 0) {
+      setActiveType(types[0].id);
+    }
+  };
+
+  const selectedTypeObj = useMemo(() => {
+    const list = TAB_MODULE_TYPES[activeModule] || [];
+    return list.find(t => t.id === activeType) || list[0] || null;
+  }, [activeModule, activeType]);
 
   return (
     <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden space-y-4 font-sans text-slate-700">
-      
+
       {/* ── Sub Tabs Switcher ── */}
       <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/50 backdrop-blur-sm self-start shrink-0">
         <button
-          onClick={() => setActiveTab('document')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${
-            activeTab === 'document' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-          }`}
+          onClick={() => handleTabSwitch('document')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${activeTab === 'document' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
           style={activeTab === 'document' ? { color: brand.primary } : undefined}
         >
           <Settings2 className="w-3.5 h-3.5" />
           Document Code Settings
         </button>
         <button
-          onClick={() => setActiveTab('setup')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${
-            activeTab === 'setup' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-          }`}
+          onClick={() => handleTabSwitch('setup')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${activeTab === 'setup' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
           style={activeTab === 'setup' ? { color: brand.primary } : undefined}
         >
           <Binary className="w-3.5 h-3.5" />
           Setup Code Settings
         </button>
+        <button
+          onClick={() => handleTabSwitch('sales')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${activeTab === 'sales' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          style={activeTab === 'sales' ? { color: brand.primary } : undefined}
+        >
+          <Settings2 className="w-3.5 h-3.5" />
+          Sales
+        </button>
+        <button
+          onClick={() => handleTabSwitch('customer')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${activeTab === 'customer' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          style={activeTab === 'customer' ? { color: brand.primary } : undefined}
+        >
+          <User className="w-3.5 h-3.5" />
+          Customer
+        </button>
+        <button
+          onClick={() => handleTabSwitch('inventory')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-black transition-all cursor-pointer border-none outline-none ${activeTab === 'inventory' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          style={activeTab === 'inventory' ? { color: brand.primary } : undefined}
+        >
+          <Package className="w-3.5 h-3.5" />
+          Inventory
+        </button>
       </div>
 
       {/* ── Tab Panels ── */}
-      {activeTab === 'document' ? (
+      {activeTab === 'sales' ? (
+        // Sales tab: Document Settings (visibility cards) with Screen Type dropdown
+        <div className="flex-grow flex flex-col gap-4 min-h-0 overflow-hidden">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-52">
+              <Select
+                label="Screen Type"
+                variant="compact"
+                value={salesDocType}
+                onChange={(e) => setSalesDocType(e.target.value)}
+                options={[
+                  { value: 'Sale Invoice', label: 'Sale Invoice' },
+                  { value: 'Sale Return', label: 'Sale Return' },
+                  { value: 'Service Invoice', label: 'Service Invoice' },
+                  { value: 'Digital Invoice', label: 'Digital Invoice' },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
+            <DocumentSettingsModule brand={brand} activeTab={salesDocType} onTabChange={setSalesDocType} hideTabs={true} />
+          </div>
+        </div>
+      ) : activeTab === 'customer' ? (
+        // Customer tab: Document Settings visibility cards for Customer (no dropdown needed)
         <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
-          <DocumentSettingsModule brand={brand} />
+          <DocumentSettingsModule brand={brand} activeTab="Customer" hideTabs={true} />
+        </div>
+      ) : activeTab === 'inventory' ? (
+        // Inventory tab: Document Settings visibility cards for Inventory (no dropdown needed)
+        <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
+          <DocumentSettingsModule brand={brand} activeTab="Inventory" hideTabs={true} />
         </div>
       ) : (
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
+
           {/* Left Side: Module Navigation */}
           <Card className="w-1/4 p-4 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Modules</h4>
             <div className="space-y-1">
-              {MODULES.map(mod => {
+              {TAB_MODULES[activeTab]?.map(mod => {
                 const isActive = activeModule === mod.id;
                 return (
                   <button
                     key={mod.id}
-                    onClick={() => {
-                      setActiveModule(mod.id);
-                      const types = MODULE_TYPES[mod.id] || [];
-                      if (types.length > 0) {
-                        setActiveType(types[0].id);
-                      }
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all border-none outline-none cursor-pointer ${
-                      isActive ? 'text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
+                    onClick={() => handleModuleSwitch(mod.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all border-none outline-none cursor-pointer ${isActive ? 'text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
                     style={isActive ? { backgroundColor: brand.primary } : undefined}
                   >
                     {mod.label}
@@ -446,231 +521,257 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           </Card>
 
           {/* Right Side: Reusable Configuration Area */}
-          <Card className="w-3/4 p-6 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm min-h-0">
+          <Card className="w-3/4 p-6 flex flex-col h-full border border-[#E2E8F0] shadow-sm min-h-0">
             <div className="space-y-6 flex flex-col h-full">
-              
+
               {/* Context selection & Type Selection (Fixed Row) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-4 shrink-0">
-                <Select
-                  label="Select Branch"
-                  variant="compact"
-                  value={selectedBranchId}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                  options={[
-                    { value: 'all', label: 'Overall Company (All Branches)' },
-                    ...availableBranches.map(b => ({ value: b.id, label: b.name }))
-                  ]}
-                />
-                <Select
-                  label="Document Type"
-                  variant="compact"
-                  value={activeType}
-                  onChange={(e) => setActiveType(e.target.value)}
-                  options={availableTypes.map(t => ({ value: t.id, label: t.label }))}
-                />
-                <div className="flex flex-col justify-end">
-                  <Toggle
-                    checked={mode === 'auto'}
-                    onChange={(val) => setMode(val ? 'auto' : 'manual')}
-                    label="Auto Generate Code"
-                    className="mb-1.5"
-                  />
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4 shrink-0">
+                <div>
+                  <h3 className="text-[13px] font-black text-slate-800">
+                    {selectedTypeObj?.label || 'Settings'} Settings
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Configure document layout fields visibility and numbering sequence rules.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <div className="w-48">
+                    <Select
+                      label="Select Branch"
+                      variant="compact"
+                      value={selectedBranchId}
+                      onChange={(e) => setSelectedBranchId(e.target.value)}
+                      options={[
+                        { value: 'all', label: 'Overall Company (All Branches)' },
+                        ...availableBranches.map(b => ({ value: b.id, label: b.name }))
+                      ]}
+                    />
+                  </div>
+                  {TAB_MODULE_TYPES[activeModule]?.length > 1 && (
+                    <div className="w-48">
+                      <Select
+                        label={activeTab === 'setup' ? "Document Type" : "Screen Type"}
+                        variant="compact"
+                        value={activeType}
+                        onChange={(e) => setActiveType(e.target.value)}
+                        options={TAB_MODULE_TYPES[activeModule].map(t => ({ value: t.id, label: t.label }))}
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center pt-5">
+                    <Toggle
+                      checked={mode === 'auto'}
+                      onChange={(val) => setMode(val ? 'auto' : 'manual')}
+                      label="Auto Generate Code"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Sub configurations */}
-              {mode === 'manual' ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-center">
-                  <AlertCircle className="w-8 h-8 text-slate-400 mb-2" />
-                  <h4 className="text-xs font-bold text-slate-700">Manual Code Entry</h4>
-                  <p className="text-[10px] text-slate-400 mt-1 max-w-[280px]">
-                    Numbering sequences are entered manually. Code generation rules are disabled for this type.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col min-h-0 space-y-6 overflow-y-auto custom-scrollbar pr-1 pb-4">
-                  
-                  {/* Format Grid Builder */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-xs font-black text-slate-700">Format Grid</h4>
-                      <Button
-                        variant="white"
-                        size="xs"
-                        icon={Plus}
-                        onClick={addRow}
-                        className="border border-slate-200"
-                      >
-                        Add Row
-                      </Button>
-                    </div>
+              {/* Inner Content Area - Scrollable */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-8 custom-scrollbar">
 
-                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-12">Sr#</th>
-                            <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-44">Format Type</th>
-                            <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-48">Value</th>
-                            <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-24">Separator</th>
-                            <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-28">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {grid.map((row, idx) => {
-                            const isSerial = row.type === 'Serial';
-                            const isAutoComputedValue = ['Year', 'Month', 'Department Code', 'Customer Code', 'Supplier Code', 'Product Code'].includes(row.type);
-                            return (
-                              <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/40">
-                                <td className="px-4 py-2 text-[12px] font-normal text-slate-600">{idx + 1}</td>
-                                <td className="px-4 py-2">
-                                  <Select
-                                    variant="compact"
-                                    value={row.type}
-                                    onChange={(e) => changeRowType(idx, e.target.value)}
-                                    options={FORMAT_TYPES}
-                                    className="w-full min-w-[140px]"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <Input
-                                    variant="compact"
-                                    value={row.value}
-                                    onChange={(e) => updateRowField(idx, 'value', e.target.value)}
-                                    disabled={isAutoComputedValue}
-                                    placeholder={isSerial ? 'e.g. 00001' : 'e.g. TEXT'}
-                                    className="w-full"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <Input
-                                    variant="compact"
-                                    value={row.separator}
-                                    onChange={(e) => updateRowField(idx, 'separator', e.target.value)}
-                                    placeholder="None"
-                                    disabled={isSerial}
-                                    maxLength={2}
-                                    className="w-full text-center"
-                                  />
-                                </td>
-                                <td className="px-4 py-2">
-                                  <div className="flex items-center gap-0.5">
-                                    <Button
-                                      variant="ghost"
-                                      size="xs"
-                                      icon={ArrowUp}
-                                      onClick={() => moveRow(idx, 'up')}
-                                      disabled={idx === 0}
-                                      className="hover:bg-slate-100"
-                                    />
-                                    <Button
-                                      variant="ghost"
-                                      size="xs"
-                                      icon={ArrowDown}
-                                      onClick={() => moveRow(idx, 'down')}
-                                      disabled={idx === grid.length - 1}
-                                      className="hover:bg-slate-100"
-                                    />
-                                    <Button
-                                      variant="ghost"
-                                      size="xs"
-                                      icon={Trash2}
-                                      onClick={() => deleteRow(idx)}
-                                      className="!text-red-500 hover:bg-red-50"
-                                    />
-                                  </div>
-                                </td>
+                {/* Code Settings */}
+                <div className="space-y-6">
+                  <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider border-b pb-1">
+                    Code Settings
+                  </h4>
+
+                  {mode === 'manual' ? (
+                    <div className="p-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-center">
+                      <AlertCircle className="w-8 h-8 text-slate-400 mb-2 mx-auto" />
+                      <h4 className="text-xs font-bold text-slate-700">Manual Code Entry</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 max-w-[280px] mx-auto">
+                        Numbering sequences are entered manually. Code generation rules are disabled for this type.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+
+                      {/* Format Grid Builder */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-black text-slate-700">Format Grid</h4>
+                          <Button
+                            variant="white"
+                            size="xs"
+                            icon={Plus}
+                            onClick={addRow}
+                            className="border border-slate-200"
+                          >
+                            Add Row
+                          </Button>
+                        </div>
+
+                        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-100">
+                                <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-12">Sr#</th>
+                                <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-44">Format Type</th>
+                                <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-48">Value</th>
+                                <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-24">Separator</th>
+                                <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-28">Actions</th>
                               </tr>
-                            );
-                          })}
-                          {grid.length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-slate-400 font-medium">
-                                No formatting rows configured. Add a row to begin.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Common Settings Builder */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-black text-slate-700">Common Settings</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Effective From"
-                        variant="compact"
-                        type="date"
-                        value={effectiveFrom}
-                        onChange={(e) => setEffectiveFrom(e.target.value)}
-                      />
-                      <Input
-                        label="Effective To"
-                        variant="compact"
-                        type="date"
-                        value={effectiveTo}
-                        onChange={(e) => setEffectiveTo(e.target.value)}
-                      />
-                      <Select
-                        label="Serial Reset"
-                        variant="compact"
-                        value={serialReset}
-                        onChange={(e) => setSerialReset(e.target.value as any)}
-                        options={[
-                          { value: 'None', label: 'None' },
-                          { value: 'Daily', label: 'Daily' },
-                          { value: 'Monthly', label: 'Monthly' },
-                          { value: 'Yearly', label: 'Yearly' }
-                        ]}
-                      />
-                      <div className="flex flex-col justify-end">
-                        <Toggle
-                          checked={allowManualEntry}
-                          onChange={(val) => setAllowManualEntry(val)}
-                          label="Allow Manual Entry override"
-                          className="mb-1.5"
-                        />
+                            </thead>
+                            <tbody>
+                              {grid.map((row, idx) => {
+                                const isSerial = row.type === 'Serial';
+                                const isAutoComputedValue = ['Year', 'Month', 'Department Code', 'Customer Code', 'Supplier Code', 'Product Code'].includes(row.type);
+                                return (
+                                  <tr key={row.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/40">
+                                    <td className="px-4 py-2 text-[12px] font-normal text-slate-600">{idx + 1}</td>
+                                    <td className="px-4 py-2">
+                                      <Select
+                                        variant="compact"
+                                        value={row.type}
+                                        onChange={(e) => changeRowType(idx, e.target.value)}
+                                        options={FORMAT_TYPES}
+                                        className="w-full min-w-[140px]"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <Input
+                                        variant="compact"
+                                        value={row.value}
+                                        onChange={(e) => updateRowField(idx, 'value', e.target.value)}
+                                        disabled={isAutoComputedValue}
+                                        placeholder={isSerial ? 'e.g. 00001' : 'e.g. TEXT'}
+                                        className="w-full"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <Input
+                                        variant="compact"
+                                        value={row.separator}
+                                        onChange={(e) => updateRowField(idx, 'separator', e.target.value)}
+                                        placeholder="None"
+                                        disabled={isSerial}
+                                        maxLength={2}
+                                        className="w-full text-center"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      <div className="flex items-center gap-0.5">
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          icon={ArrowUp}
+                                          onClick={() => moveRow(idx, 'up')}
+                                          disabled={idx === 0}
+                                          className="hover:bg-slate-100"
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          icon={ArrowDown}
+                                          onClick={() => moveRow(idx, 'down')}
+                                          disabled={idx === grid.length - 1}
+                                          className="hover:bg-slate-100"
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          icon={Trash2}
+                                          onClick={() => deleteRow(idx)}
+                                          className="!text-red-500 hover:bg-red-50"
+                                        />
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {grid.length === 0 && (
+                                <tr>
+                                  <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-slate-400 font-medium">
+                                    No formatting rows configured. Add a row to begin.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Live Preview Box */}
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400">Live Preview</span>
-                        <h3 className="text-sm font-black text-slate-800 tracking-wide mt-0.5">
-                          {livePreview || '—'}
-                        </h3>
-                      </div>
-                      <div className="flex gap-2">
-                        {savedMessage && (
-                          <div className="text-[10px] font-black text-emerald-600 flex items-center gap-1 animate-fade-in-out">
-                            <Check className="w-3.5 h-3.5" /> Settings Saved
+                      {/* Common Settings Builder */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-black text-slate-700">Common Settings</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input
+                            label="Effective From"
+                            variant="compact"
+                            type="date"
+                            value={effectiveFrom}
+                            onChange={(e) => setEffectiveFrom(e.target.value)}
+                          />
+                          <Input
+                            label="Effective To"
+                            variant="compact"
+                            type="date"
+                            value={effectiveTo}
+                            onChange={(e) => setEffectiveTo(e.target.value)}
+                          />
+                          <Select
+                            label="Serial Reset"
+                            variant="compact"
+                            value={serialReset}
+                            onChange={(e) => setSerialReset(e.target.value as any)}
+                            options={[
+                              { value: 'None', label: 'None' },
+                              { value: 'Daily', label: 'Daily' },
+                              { value: 'Monthly', label: 'Monthly' },
+                              { value: 'Yearly', label: 'Yearly' }
+                            ]}
+                          />
+                          <div className="flex flex-col justify-end">
+                            <Toggle
+                              checked={allowManualEntry}
+                              onChange={(val) => setAllowManualEntry(val)}
+                              label="Allow Manual Entry override"
+                              className="mb-1.5"
+                            />
                           </div>
-                        )}
-                        <Button
-                          variant="primary"
-                          size="md"
-                          onClick={handleSaveSettings}
-                          style={{ backgroundColor: brand.primary }}
-                        >
-                          Save Changes
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Sticky/Fixed Live Preview & Save Actions Footer */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 mt-auto">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400">Live Preview</span>
+                    <h3 className="text-sm font-black text-slate-800 tracking-wide mt-0.5">
+                      {livePreview || '—'}
+                    </h3>
+                  </div>
+                  <div className="flex gap-2">
+                    {savedMessage && (
+                      <div className="text-[10px] font-black text-emerald-600 flex items-center gap-1 animate-fade-in-out font-sans">
+                        <Check className="w-3.5 h-3.5" /> Settings Saved
+                      </div>
+                    )}
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={handleSaveSettings}
+                      style={{ backgroundColor: brand.primary }}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
 
             </div>
           </Card>
+
         </div>
       )}
-
     </div>
   );
 };

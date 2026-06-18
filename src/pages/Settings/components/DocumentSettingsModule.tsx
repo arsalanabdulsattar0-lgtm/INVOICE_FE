@@ -64,12 +64,12 @@ const DOC_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
 };
 
 const DEFAULT_FIELDS: Record<string, string[]> = {
-  'Sale Invoice':     ['Sales Person', 'Department', 'Due Date'],
-  'Service Invoice':  ['Sales Person', 'Department', 'Due Date'],
-  'Digital Invoice':  ['Sales Person', 'Department', 'Due Date'],
-  'Sale Return':      ['Sales Person', 'Department', 'Due Date'],
+  'Sale Invoice':    ['Sales Person', 'Department', 'Due Date'],
+  'Service Invoice': ['Sales Person', 'Department', 'Due Date'],
+  'Digital Invoice': ['Sales Person', 'Department', 'Due Date'],
+  'Sale Return':     ['Sales Person', 'Department', 'Due Date'],
   'Customer':  [],
-  'Inventory':  []
+  'Inventory': []
 };
 
 const DEFAULT_FOOTER: Record<string, string[]> = {
@@ -87,7 +87,7 @@ const DEFAULT_COLUMNS: Record<string, string[]> = {
   'Digital Invoice': ['Details', 'Discount', 'Tax', 'Further Tax'],
   'Sale Return':     ['Details', 'Discount', 'Tax', 'Further Tax'],
   'Customer':  [],
-  'Inventory':  []
+  'Inventory': []
 };
 
 const FIELD_DESCRIPTIONS: Record<string, string> = {
@@ -184,21 +184,8 @@ const FIELD_TYPE_OPTIONS = [
   { value: 'Dropdown', label: 'Dropdown' },
 ];
 
-const SECTION_OPTIONS = [
-  { value: 'header', label: 'Header Fields' },
-  { value: 'column', label: 'Items Table Columns' },
-  { value: 'footer', label: 'Footer Fields' },
-  { value: 'custom', label: 'Custom Sections' }
-];
 
-const WIDTH_OPTIONS = [
-  { value: '25%', label: '25% (1/4 Width)' },
-  { value: '33%', label: '33% (1/3 Width)' },
-  { value: '50%', label: '50% (1/2 Width)' },
-  { value: '66%', label: '66% (2/3 Width)' },
-  { value: '75%', label: '75% (3/4 Width)' },
-  { value: '100%', label: '100% (Full Width)' }
-];
+
 
 interface UnifiedField {
   id: string;
@@ -1008,14 +995,6 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
               onChange={e => setFormState({ ...formState, type: e.target.value })}
             />
 
-            <Select
-              label="Section *"
-              variant="compact"
-              options={SECTION_OPTIONS}
-              value={formState.section}
-              onChange={e => setFormState({ ...formState, section: e.target.value as any })}
-              disabled={true}
-            />
 
             <TextArea
               label="Description"
@@ -1055,13 +1034,6 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
               onChange={e => setFormState({ ...formState, defaultValue: e.target.value })}
             />
 
-            <Select
-              label="Width"
-              variant="compact"
-              options={WIDTH_OPTIONS}
-              value={formState.width}
-              onChange={e => setFormState({ ...formState, width: e.target.value })}
-            />
 
             <div className="pt-2 space-y-2.5">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b pb-1">Toggles</h4>

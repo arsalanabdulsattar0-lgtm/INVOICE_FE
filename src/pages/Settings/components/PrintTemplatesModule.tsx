@@ -4,7 +4,7 @@ import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
   ChevronLeft, ChevronRight, Copy, ArrowLeft,
   Move, Settings, ChevronDown, ChevronUp,
-  Download, Upload, FileText, Undo, Redo, Eye, EyeOff
+  Download, Upload, FileText, Undo, Redo, Eye, EyeOff, Printer
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -36,6 +36,7 @@ import {
 } from '../../../utils/templateApi';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
+import { SectionCard } from '../../../components/ui/SectionCard';
 
 const dummyContext = {
   row: {
@@ -4962,7 +4963,14 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
 
   // ─── List View ──────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5">
+    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+      <SectionCard
+        title="Print Templates Settings"
+        icon={<Printer className="w-3.5 h-3.5 text-white" />}
+        brand={brand}
+        scrollable
+        bodyClassName="space-y-5"
+      >
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <div className="w-64">
@@ -5027,22 +5035,6 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
         className="bg-white rounded-2xl border overflow-hidden"
         style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
       >
-        <div
-          className="px-4 py-2.5 flex items-center justify-between text-white"
-          style={{ backgroundColor: brand.primary }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Print Templates</h3>
-            <span
-              className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ backgroundColor: brand.soft, color: brand.dark }}
-            >
-              {filtered.length} layouts
-            </span>
-          </div>
-        </div>
-
         <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[700px]">
             <thead className="sticky top-0 z-10 bg-white">
@@ -5350,6 +5342,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
         message={alertModal.message}
         variant={alertModal.variant || "warning"}
       />
+      </SectionCard>
     </div>
   );
 };

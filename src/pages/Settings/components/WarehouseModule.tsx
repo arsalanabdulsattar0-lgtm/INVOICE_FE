@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Plus, Pencil, Trash2,
   Database, ChevronLeft, ChevronRight,
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, Warehouse as WarehouseIcon
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, ScrollArea } from '../../../components/ui/FormControls';
@@ -16,6 +16,7 @@ import type { Branch } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { WarehouseDrawer } from './WarehouseDrawer';
 import { incrementNextCode } from '../../../utils/codeSettingsHelper';
+import { SectionCard } from '../../../components/ui/SectionCard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -264,7 +265,14 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5">
+    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+      <SectionCard
+        title="Warehouse Settings"
+        icon={<WarehouseIcon className="w-3.5 h-3.5 text-white" />}
+        brand={brand}
+        scrollable
+        bodyClassName="space-y-5"
+      >
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -340,23 +348,6 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
         className="bg-white rounded-2xl border overflow-hidden"
         style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
       >
-        {/* Table header bar */}
-        <div
-          className="px-4 py-2.5 flex items-center justify-between text-white"
-          style={{ backgroundColor: brand.primary }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Warehouse List</h3>
-            <span
-              className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ backgroundColor: brand.soft, color: brand.dark }}
-            >
-              {filtered.length} records
-            </span>
-          </div>
-        </div>
-
         {/* Scrollable table with sticky headers */}
         <ScrollArea height="290px" className="w-full overflow-x-auto">
           <table className="w-full border-collapse min-w-[760px]">
@@ -553,6 +544,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
         itemName={deleteModal.name}
         warningText="This action cannot be undone and this warehouse will be permanently removed from the list."
       />
+      </SectionCard>
     </div>
   );
 };
