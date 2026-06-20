@@ -4,7 +4,7 @@ import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronRight,
-  CreditCard, ShieldCheck, Printer, QrCode
+  CreditCard, ShieldCheck, Printer, QrCode, ChevronDown
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getQRCodeSvgPath, formatExpiryDate } from '../../utils/qrCode';
@@ -16,6 +16,8 @@ import { ProductFilterDrawer } from '../../components/ui/ProductFilterDrawer';
 import { ActiveChip, InactiveChip } from '../../components/ui/Chip';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { seedPrintTemplates } from '../../utils/settingsData';
+import type { PrintTemplate } from '../../utils/settingsData';
 import {
   ProductCategory,
   ProductBrand,
@@ -75,12 +77,13 @@ export interface Product {
 
 interface Props {
   onAddProductClick: () => void;
+  onPrintList?: (list: any[], type: 'products' | 'business_partners' | 'invoices' | 'purchases', templateId?: string, isPdf?: boolean) => void;
 }
 
 type SortKey = 'name' | 'code' | 'price' | 'qty' | 'status' | 'category_id' | 'expiry_date';
 type SortDir = 'asc' | 'desc';
 
-const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
+const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const { brand } = useTheme();
 
   const docSettings = useMemo(() => {
@@ -177,8 +180,30 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
   const [viewingQrProduct, setViewingQrProduct] = useState<Product | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
+  const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const [templates] = useState<PrintTemplate[]>(() => {
+    try {
+      const stored = localStorage.getItem('print_templates');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const filtered = parsed.filter((t: any) => t.template_id);
+        if (filtered.length < seedPrintTemplates.length) {
+          const storedIds = new Set(filtered.map((t: any) => t.template_id));
+          const missing = seedPrintTemplates.filter(t => !storedIds.has(t.template_id));
+          const merged = [...filtered, ...missing];
+          localStorage.setItem('print_templates', JSON.stringify(merged));
+          return merged;
+        }
+        return parsed;
+      }
+      return seedPrintTemplates;
+    } catch {
+      return seedPrintTemplates;
+    }
+  });
 
   const sortRef = useRef<HTMLDivElement>(null);
+  const headerDropdownRef = useRef<HTMLDivElement>(null);
   const perPage = 15;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -191,12 +216,44 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
       if (openAction && !target.closest('.action-menu-container')) {
         setOpenAction(null);
       }
+      if (headerDropdownOpen && headerDropdownRef.current && !headerDropdownRef.current.contains(target)) {
+        setHeaderDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openAction]);
+  }, [openAction, headerDropdownOpen]);
+
+  const handleExport = () => {
+    try {
+      const headers = ['Product Code', 'Product Name', 'Category', 'Purchase Price', 'Sale Price', 'Stock Qty', 'Expiry Date'];
+      const rows = filteredProducts.map(p => [
+        p.id,
+        p.name,
+        getCategoryName(p.category_id),
+        p.cost || 0,
+        p.sale_price || 0,
+        p.opening_qty || 0,
+        p.expiry_date || ''
+      ]);
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode);
@@ -737,14 +794,78 @@ const ProductList: React.FC<Props> = ({ onAddProductClick }) => {
         subtitle={`${filteredProducts.length} products found · Last updated just now`}
         actions={
           <>
-            <Button
-              variant="white"
-              size="md"
-              icon={Printer}
-              onClick={() => window.print()}
-            >
-              Print
-            </Button>
+            {/* Print/Export Split Button */}
+            <div ref={headerDropdownRef} className="relative flex items-center border border-slate-200 rounded-lg bg-white shadow-sm hover:border-slate-300 transition-colors select-none header-dropdown-container">
+              <button
+                type="button"
+                onClick={() => {
+                  const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') || 
+                                  templates.find(t => t.is_active && t.document_type === 'Product List') || 
+                                  templates[0];
+                  const mapped = filteredProducts.map(p => ({
+                    ...p,
+                    purchase_price: p.cost,
+                    stock: p.opening_qty
+                  }));
+                  onPrintList?.(mapped, 'products', activeT?.template_id);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-none bg-transparent rounded-l-lg cursor-pointer h-9"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                Print
+              </button>
+              <div className="w-[1px] h-4 bg-slate-200" />
+              <button
+                type="button"
+                onClick={() => setHeaderDropdownOpen(!headerDropdownOpen)}
+                className="px-2 py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-none bg-transparent rounded-r-lg cursor-pointer flex items-center justify-center h-9"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <AnimatePresence>
+                {headerDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-10 z-50 bg-white rounded-xl border p-1.5 w-40 shadow-lg text-left"
+                    style={{ borderColor: '#E2E8F0' }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderDropdownOpen(false);
+                        const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') || 
+                                        templates.find(t => t.is_active && t.document_type === 'Product List') || 
+                                        templates[0];
+                        const mapped = filteredProducts.map(p => ({
+                          ...p,
+                          purchase_price: p.cost,
+                          stock: p.opening_qty
+                        }));
+                        onPrintList?.(mapped, 'products', activeT?.template_id, true);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      PDF Document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderDropdownOpen(false);
+                        handleExport();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Excel (CSV)
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <Button
               variant="white"
               size="md"

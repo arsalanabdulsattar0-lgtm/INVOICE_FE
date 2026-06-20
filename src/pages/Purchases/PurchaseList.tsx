@@ -5,7 +5,7 @@ import {
   FileText, CheckCircle, Clock, TrendingUp,
   ArrowUpDown, Printer, Trash2, Edit3,
   ChevronLeft, ChevronRight, SlidersHorizontal, X,
-  CreditCard, Package
+  CreditCard, Package, ChevronDown
 } from 'lucide-react';
 import { ScrollArea, Select, Input, TextArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
@@ -55,9 +55,10 @@ interface PurchaseListProps {
   setPurchaseItems: React.Dispatch<React.SetStateAction<Invoice[]>>;
   onPrintPurchase?: (inv: Invoice, templateId?: string) => void;
   onEditPurchase?: (id: string) => void;
+  onPrintList?: (list: any[], type: 'products' | 'business_partners' | 'invoices' | 'purchases', templateId?: string, isPdf?: boolean) => void;
 }
 
-const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems, setPurchaseItems, onPrintPurchase, onEditPurchase }) => {
+const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems, setPurchaseItems, onPrintPurchase, onEditPurchase, onPrintList }) => {
   const { brand } = useTheme();
 
   // ─── Stats Cards Data ─────────────────────────────────────────────────────────
@@ -126,6 +127,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
   const [previewInvoice, setPreviewInvoice] = useState<InvoiceData | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, title: '', message: '' });
+  const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
   const perPage = 15;
 
   const sortRef = useRef<HTMLDivElement>(null);
@@ -145,12 +147,15 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
       if (showPreviewPrintDropdown && !target.closest('.preview-print-dropdown-container')) {
         setShowPreviewPrintDropdown(false);
       }
+      if (headerDropdownOpen && !target.closest('.header-dropdown-container')) {
+        setHeaderDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openAction, activePrintRowId, showPreviewPrintDropdown]);
+  }, [openAction, activePrintRowId, showPreviewPrintDropdown, headerDropdownOpen]);
 
   const handleResetFilters = () => {
     setStatusFilter('All');
@@ -356,14 +361,64 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Button
-            variant="white"
-            size="md"
-            icon={Download}
-            onClick={handleExport}
-          >
-            Export
-          </Button>
+          {/* Print/Export Split Button */}
+          <div className="relative flex items-center border border-slate-200 rounded-lg bg-white shadow-sm hover:border-slate-300 transition-colors select-none header-dropdown-container">
+            <button
+              type="button"
+              onClick={() => {
+                const activeT = templates.find(t => t.is_active && t.document_type === 'Purchase List') || templates[0];
+                onPrintList?.(filtered, 'purchases', activeT?.template_id);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-none bg-transparent rounded-l-lg cursor-pointer h-9"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-500" />
+              Print
+            </button>
+            <div className="w-[1px] h-4 bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => setHeaderDropdownOpen(!headerDropdownOpen)}
+              className="px-2 py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-none bg-transparent rounded-r-lg cursor-pointer flex items-center justify-center h-9"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            <AnimatePresence>
+              {headerDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                  className="absolute right-0 top-10 z-50 bg-white rounded-xl border p-1.5 w-40 shadow-lg"
+                  style={{ borderColor: '#E2E8F0' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeaderDropdownOpen(false);
+                      const activeT = templates.find(t => t.is_active && t.document_type === 'Purchase List') || templates[0];
+                      onPrintList?.(filtered, 'purchases', activeT?.template_id, true);
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    PDF Document
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHeaderDropdownOpen(false);
+                      handleExport();
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Excel (CSV)
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
            <Button
             variant="white"
             size="md"

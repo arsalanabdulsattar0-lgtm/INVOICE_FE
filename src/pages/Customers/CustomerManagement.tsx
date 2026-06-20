@@ -4,7 +4,7 @@ import {
   Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   CheckCircle, Clock, ChevronLeft, ChevronRight,
-  User, ShieldCheck, MapPin, Globe, CreditCard, Printer, Save
+  User, ShieldCheck, MapPin, Globe, CreditCard, Printer, Save, ChevronDown
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, TextArea, ScrollArea, ComboBox, Select, Toggle } from '../../components/ui/FormControls';
@@ -19,6 +19,8 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { AlertModal } from '../../components/ui/AlertModal';
 import { Toast } from '../../components/ui/Toast';
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
+import { seedPrintTemplates } from '../../utils/settingsData';
+import type { PrintTemplate } from '../../utils/settingsData';
 
 // ---------------------------------------------------------------------------
 // Types â€“ reflect the backend model supplied by the user
@@ -57,9 +59,10 @@ export interface Customer {
 interface CustomerManagementProps {
   initialOpenCreate?: boolean;
   onViewChange?: (view: string) => void;
+  onPrintList?: (list: any[], type: 'products' | 'business_partners' | 'invoices' | 'purchases', templateId?: string, isPdf?: boolean) => void;
 }
 
-const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCreate, onViewChange }) => {
+const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCreate, onViewChange, onPrintList }) => {
   const { brand } = useTheme();
 
   const resolveSettingsForType = (type: 'Customer' | 'Supplier') => {
@@ -256,6 +259,29 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   };
 
   const sortRef = useRef<HTMLDivElement>(null);
+  const headerDropdownRef = useRef<HTMLDivElement>(null);
+  const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const [templates] = useState<PrintTemplate[]>(() => {
+    try {
+      const stored = localStorage.getItem('print_templates');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const filtered = parsed.filter((t: any) => t.template_id);
+        if (filtered.length < seedPrintTemplates.length) {
+          const storedIds = new Set(filtered.map((t: any) => t.template_id));
+          const missing = seedPrintTemplates.filter(t => !storedIds.has(t.template_id));
+          const merged = [...filtered, ...missing];
+          localStorage.setItem('print_templates', JSON.stringify(merged));
+          return merged;
+        }
+        return parsed;
+      }
+      return seedPrintTemplates;
+    } catch {
+      return seedPrintTemplates;
+    }
+  });
+
   const perPage = 15;
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
@@ -304,12 +330,15 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
       if (openAction && !target.closest('.action-menu-container')) {
         setOpenAction(null);
       }
+      if (headerDropdownOpen && !target.closest('.header-dropdown-container')) {
+        setHeaderDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openAction]);
+  }, [openAction, headerDropdownOpen]);
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode);
@@ -684,111 +713,50 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
     { key: 'opening_balance', label: 'Total Balance' },
   ];
 
-  // ── Print Handler ──
-  const handlePrint = () => {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    // Get company name from session
-    let companyName = 'Company';
+
+  const handleExport = () => {
     try {
-      const ac = sessionStorage.getItem('active_company');
-      if (ac) companyName = JSON.parse(ac).name || companyName;
-    } catch {}
-
-    // Title based on selected type
-    const typeLabel = selectedBpType === 'supplier' ? 'Supplier' : selectedBpType === 'customer' ? 'Customer' : 'Business Partner';
-    const reportTitle = `${typeLabel} Balances`;
-
-    // From / To codes
-    const fromCode = selectedFromBp !== 'all' ? selectedFromBp : (filteredCustomers.length > 0 ? (filteredCustomers[0].customer_id || filteredCustomers[0].id) : '');
-    const toCode   = selectedToBp !== 'all' ? selectedToBp : (filteredCustomers.length > 0 ? (filteredCustomers[filteredCustomers.length - 1].customer_id || filteredCustomers[filteredCustomers.length - 1].id) : '');
-
-    // Total balance
-    const totalBal = filteredCustomers.reduce((sum, c) => sum + (c.opening_balance || 0), 0);
-
-    const rows = filteredCustomers.map((c, i) => {
-      const code = c.customer_id || c.id || '';
-      const company = c.name || '';
-      const address = [c.address, c.city].filter(Boolean).join(', ');
-      const contact = (c as any).contact_person || '';
-      const phone = c.phone || c.mobile || '';
-      const creditLimit = (c.credit_limit || 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
-      const balance = (c.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-      const bg = i % 2 === 0 ? '' : 'background:#f9f9f9';
-      return `<tr style="${bg}">
-        <td>${code}</td>
-        <td>${company}</td>
-        <td>${address}</td>
-        <td>${contact}</td>
-        <td>${phone}</td>
-        <td style="text-align:right">${creditLimit}</td>
-        <td style="text-align:right">${balance}</td>
-      </tr>`;
-    }).join('');
-
-    const html = `<!DOCTYPE html><html><head><title>${reportTitle}</title><style>
-      * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 20px 30px; }
-      .header { text-align: center; margin-bottom: 10px; }
-      .header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-      .header h2 { font-size: 13px; font-weight: bold; margin-top: 2px; }
-      .meta { display: flex; justify-content: space-between; align-items: flex-start; margin: 10px 0 6px; }
-      .meta-left { font-size: 11px; }
-      .meta-left span { font-weight: bold; }
-      .meta-right { text-align: right; font-size: 11px; line-height: 1.6; }
-      .meta-right span { font-weight: bold; }
-      table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-      thead tr { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; }
-      thead th { padding: 5px 6px; font-size: 11px; font-weight: bold; text-align: left; }
-      thead th:nth-child(6), thead th:nth-child(7) { text-align: right; }
-      tbody td { padding: 4px 6px; font-size: 11px; vertical-align: top; }
-      .total-row td { border-top: 1.5px solid #000; font-weight: bold; padding: 5px 6px; text-align: right; }
-      .total-row td:first-child { text-align: left; }
-      @media print { body { padding: 10px 20px; } }
-    </style></head><body>
-      <div class="header">
-        <h1>${companyName}</h1>
-        <h2>${reportTitle}</h2>
-      </div>
-      <div class="meta">
-        <div class="meta-left">
-          <span>${typeLabel} From:</span> ${fromCode} &nbsp;&nbsp; To &nbsp; ${toCode}
-        </div>
-        <div class="meta-right">
-          <span>Date:</span> ${dateStr}<br/>
-          <span>Time:</span> ${timeStr}
-        </div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>${typeLabel} ID</th>
-            <th>Company</th>
-            <th>Address</th>
-            <th>Contact</th>
-            <th>Phone</th>
-            <th>Credit Limit</th>
-            <th>Balance</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td colspan="6"></td>
-            <td>${totalBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </body></html>`;
-
-    const win = window.open('', '_blank', 'width=900,height=700');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      setTimeout(() => win.print(), 500);
+      const headers = [
+        'Partner ID',
+        'Name',
+        'Type',
+        'Email',
+        'Phone',
+        'Mobile',
+        'City',
+        'Credit Limit',
+        'Balance',
+        'Tax Filer',
+        'Status'
+      ];
+      const rows = filteredCustomers.map(c => [
+        c.customer_id || c.id || '',
+        c.name || '',
+        c.bp_type === 'supplier' ? 'Supplier' : 'Customer',
+        c.email || '',
+        c.phone || '',
+        c.mobile || '',
+        c.city || '',
+        c.credit_limit || 0,
+        c.opening_balance || 0,
+        c.is_filer ? 'Filer' : 'Non-Filer',
+        c.is_active ? 'Active' : 'Inactive'
+      ]);
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `business_partners_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Export failed', e);
     }
   };
 
@@ -803,14 +771,68 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
         subtitle={`${filteredCustomers.length} business partners found · Last updated just now`}
         actions={
           <>
-            <Button
-              variant="white"
-              size="md"
-              icon={Printer}
-              onClick={handlePrint}
-            >
-              Print
-            </Button>
+            {/* Print/Export Split Button */}
+            <div ref={headerDropdownRef} className="relative flex items-center border border-slate-200 rounded-lg bg-white shadow-sm hover:border-slate-300 transition-colors select-none header-dropdown-container">
+              <button
+                type="button"
+                onClick={() => {
+                  const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Business Partner List') || 
+                                  templates.find(t => t.is_active && t.document_type === 'Business Partner List') || 
+                                  templates[0];
+                  onPrintList?.(filteredCustomers, 'business_partners', activeT?.template_id);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-none bg-transparent rounded-l-lg cursor-pointer h-9"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                Print
+              </button>
+              <div className="w-[1px] h-4 bg-slate-200" />
+              <button
+                type="button"
+                onClick={() => setHeaderDropdownOpen(!headerDropdownOpen)}
+                className="px-2 py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-none bg-transparent rounded-r-lg cursor-pointer flex items-center justify-center h-9"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              <AnimatePresence>
+                {headerDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    className="absolute right-0 top-10 z-50 bg-white rounded-xl border p-1.5 w-40 shadow-lg text-left"
+                    style={{ borderColor: '#E2E8F0' }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderDropdownOpen(false);
+                        const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Business Partner List') || 
+                                        templates.find(t => t.is_active && t.document_type === 'Business Partner List') || 
+                                        templates[0];
+                        onPrintList?.(filteredCustomers, 'business_partners', activeT?.template_id, true);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      PDF Document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHeaderDropdownOpen(false);
+                        handleExport();
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-[10px] font-bold hover:bg-slate-50 rounded-lg transition-all flex items-center gap-2 text-slate-700 cursor-pointer border-none bg-transparent"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Excel (CSV)
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <Button
               variant="white"
               size="md"

@@ -76,7 +76,10 @@ const DOCUMENT_TYPES = [
   'Quotation',
   'Delivery Note',
   'Credit Note',
-  'Debit Note'
+  'Debit Note',
+  'Product List',
+  'Business Partner List',
+  'Purchase List'
 ];
 
 const PAPER_SIZES = ['A4', 'Letter', 'Thermal', 'Custom'];
@@ -1932,15 +1935,45 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
               <tr className="border-b border-slate-300 text-slate-650 text-[7px]">
                 {visibleCols.map(col => {
                   let val = '-';
-                  if (col.column_name === 'Sr No') val = '1';
+                  if (col.column_name === 'Sr No' || col.column_name === 'Sr#') val = '1';
                   else if (col.column_name === 'Product Code') val = 'BC-001';
                   else if (col.column_name === 'Product Name') val = 'Sample Product';
                   else if (col.column_name === 'Description') val = 'Deliverables';
-                  else if (col.column_name === 'Quantity' || col.column_name === 'Qty') val = '1.00';
-                  else if (col.column_name === 'Rate' || col.column_name === 'Unit Price') val = '8,450.00';
+                  else if (col.column_name === 'Quantity' || col.column_name === 'Qty' || col.column_name === 'Return Quantity') val = '1.00';
+                  else if (col.column_name === 'Rate' || col.column_name === 'Unit Price' || col.column_name === 'Cost Price') val = '8,450.00';
+                  else if (col.column_name === 'Batch No') val = 'BATCH-001';
+                  else if (col.column_name === 'Unit') val = 'Bag';
                   else if (col.column_name === 'Discount') val = '0.00';
                   else if (col.column_name === 'Tax') val = '1,352.00';
                   else if (col.column_name === 'Amount') val = '9,802.00';
+                  else if (col.column_name === 'Category') val = 'Flavopure';
+                  else if (col.column_name === 'Purchase Price') val = 'Rs. 4,500.00';
+                  else if (col.column_name === 'Sale Price') val = 'Rs. 5,200.00';
+                  else if (col.column_name === 'Stock Qty') val = '120.00';
+                  else if (col.column_name === 'Expiry Date') val = '31-Dec-2027';
+                  else if (col.column_name === 'Code') val = 'BP-0001';
+                  else if (col.column_name === 'Name') val = 'Zeeshan Distributors';
+                  else if (col.column_name === 'Type') val = 'Supplier';
+                  else if (col.column_name === 'Phone Number') val = '0300-1234567';
+                  else if (col.column_name === 'City') val = 'Lahore';
+                  else if (col.column_name === 'Address') val = 'Gulberg III, Lahore';
+                  else if (col.column_name === 'Purchase No') val = 'PI-0001';
+                  else if (col.column_name === 'Supplier Name') val = 'Al-Madina Chemicals';
+                  else if (col.column_name === 'Supplier Code') val = 'SUP-0004';
+                  else if (col.column_name === 'Invoice No') val = 'INV-9923';
+                  else if (col.column_name === 'Purchase Date') val = '2026-06-15';
+                  else if (col.column_name === 'Due Date') val = '2026-07-15';
+                  else if (col.column_name === 'Branch') val = 'Lahore';
+                  else if (col.column_name === 'Warehouse') val = 'Main Warehouse';
+                  else if (col.column_name === 'Total Amount') val = '12,500.00';
+                  else if (col.column_name === 'Discount') val = '500.00';
+                  else if (col.column_name === 'Tax') val = '2,000.00';
+                  else if (col.column_name === 'Net Amount') val = '14,000.00';
+                  else if (col.column_name === 'Payment Status') val = 'Paid';
+                  else if (col.column_name === 'Status') val = 'Posted';
+                  else if (col.column_name === 'Remarks') val = 'Standard procurement';
+                  else if (col.column_name === 'Created By') val = 'Ahmed Raza';
+                  else if (col.column_name === 'Created Date') val = '2026-06-15';
                   else if (col.is_custom && col.formula_tokens && col.formula_tokens.length > 0) {
                     // Evaluate formula using dummy row context
                     try {

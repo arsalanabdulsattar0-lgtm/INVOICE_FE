@@ -599,9 +599,10 @@ const PurchaseInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onView
   );
 
   const getActiveDefaultTemplate = () => {
-    const normType = data.type === 'Sale Return' ? 'Sales Return' : 'Sales Invoice';
+    const normType = 'Purchase Invoice';
     return templates.find(t => t.is_default && t.is_active && t.document_type === normType) ||
            templates.find(t => t.is_active && t.document_type === normType) ||
+           templates.find(t => t.document_type === normType) ||
            templates[0];
   };
 
@@ -716,12 +717,9 @@ const PurchaseInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onView
 
             {/* Multi-Split Print & Export Buttons */}
             {(() => {
-              const isReturn = data.type === 'Sale Return';
               const splitButtonsConfig = [
-                { id: 'default', label: 'Print', templateId: activeT?.template_id || (isReturn ? 'srt-1' : 'si-1'), formatKey: activeFormat, isAvailable: !!activeT },
-                { id: 'retail', label: 'Retail Print', templateId: isReturn ? 'srt-1' : 'si-1', formatKey: 'retail', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-1' : 'si-1'))?.is_active },
-                { id: 'delivery', label: 'Delivery', templateId: isReturn ? 'srt-3' : 'si-3', formatKey: 'delivery', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-3' : 'si-3'))?.is_active },
-                { id: 'tax', label: 'Tax Invoice', templateId: isReturn ? 'srt-4' : 'si-4', formatKey: 'tax', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-4' : 'si-4'))?.is_active }
+                { id: 'default', label: 'Print', templateId: activeT?.template_id || 'pi-1', formatKey: activeFormat, isAvailable: !!activeT },
+                { id: 'retail', label: 'Standard Print', templateId: 'pi-1', formatKey: 'retail', isAvailable: templates.find(t => t.template_id === 'pi-1')?.is_active }
               ];
 
               return splitButtonsConfig

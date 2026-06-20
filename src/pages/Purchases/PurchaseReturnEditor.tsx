@@ -551,9 +551,10 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
   );
 
   const getActiveDefaultTemplate = () => {
-    const normType = (data.type === 'Sale Return' || data.type === 'Purchase Return') ? 'Sales Return' : 'Sales Invoice';
+    const normType = 'Purchase Return';
     return templates.find(t => t.is_default && t.is_active && t.document_type === normType) ||
            templates.find(t => t.is_active && t.document_type === normType) ||
+           templates.find(t => t.document_type === normType) ||
            templates[0];
   };
 
@@ -657,7 +658,8 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
             {/* Multi-Split Print & Export Buttons */}
             {(() => {
               const splitButtonsConfig = [
-                { id: 'default', label: 'Print', templateId: 'srt-1', formatKey: 'retail', isAvailable: !!activeT }
+                { id: 'default', label: 'Print', templateId: activeT?.template_id || 'pr-1', formatKey: 'retail', isAvailable: !!activeT },
+                { id: 'retail', label: 'Standard Print', templateId: 'pr-1', formatKey: 'retail', isAvailable: templates.find(t => t.template_id === 'pr-1')?.is_active }
               ];
 
               return splitButtonsConfig

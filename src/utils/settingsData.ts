@@ -550,19 +550,72 @@ export const seedPrintTemplates: PrintTemplate[] = [
     signature_enabled: true, watermark_enabled: false,
     terms_enabled: true, remarks_enabled: true,
   },
+
+  // ── Product List (1 template) ───────────────────────────────────────────────
+  {
+    template_id: 'pl-1', template_name: 'Standard Product List',
+    document_type: 'Product List', paper_size: 'A4', orientation: 'Portrait',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: false, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: false, remarks_enabled: true,
+  },
+
+  // ── Business Partner List (1 template) ──────────────────────────────────────
+  {
+    template_id: 'bpl-1', template_name: 'Standard Business Partner List',
+    document_type: 'Business Partner List', paper_size: 'A4', orientation: 'Landscape',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: false, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: false, remarks_enabled: true,
+  },
+
+  // ── Purchase List (1 template) ──────────────────────────────────────────────
+  {
+    template_id: 'pul-1', template_name: 'Standard Purchase List',
+    document_type: 'Purchase List', paper_size: 'A4', orientation: 'Landscape',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: false, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: false, remarks_enabled: true,
+  },
+
+  // ── Purchase Invoice (1 template) ──────────────────────────────────────────
+  {
+    template_id: 'pi-1', template_name: 'Standard Purchase Invoice',
+    document_type: 'Purchase Invoice', paper_size: 'A4', orientation: 'Portrait',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: true, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: true, remarks_enabled: true,
+  },
+
+  // ── Purchase Return (1 template) ───────────────────────────────────────────
+  {
+    template_id: 'pr-1', template_name: 'Standard Purchase Return',
+    document_type: 'Purchase Return', paper_size: 'A4', orientation: 'Portrait',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: true, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: true, remarks_enabled: true,
+  },
 ];
 
 
-export const getSeedTemplateSections = (templateId: string): PrintTemplateSection[] => [
-  { section_id: `sec-${templateId}-1`, template_id: templateId, section_name: 'Company Information', display_order: 1, is_visible: true },
-  { section_id: `sec-${templateId}-2`, template_id: templateId, section_name: 'Customer Information', display_order: 2, is_visible: true },
-  { section_id: `sec-${templateId}-3`, template_id: templateId, section_name: 'Invoice Information', display_order: 3, is_visible: true },
-  { section_id: `sec-${templateId}-4`, template_id: templateId, section_name: 'Product Table', display_order: 4, is_visible: true },
-  { section_id: `sec-${templateId}-5`, template_id: templateId, section_name: 'Custom Fields', display_order: 5, is_visible: true },
-  { section_id: `sec-${templateId}-6`, template_id: templateId, section_name: 'Totals', display_order: 6, is_visible: true },
-  { section_id: `sec-${templateId}-7`, template_id: templateId, section_name: 'Attachments', display_order: 7, is_visible: true },
-  { section_id: `sec-${templateId}-8`, template_id: templateId, section_name: 'Footer', display_order: 8, is_visible: true },
-];
+export const getSeedTemplateSections = (templateId: string): PrintTemplateSection[] => {
+  const isList = templateId.startsWith('pl-') || templateId.startsWith('bpl-') || templateId.startsWith('sl-') || templateId.startsWith('prl-') || templateId.includes('list') || templateId.startsWith('pul-');
+  return [
+    { section_id: `sec-${templateId}-1`, template_id: templateId, section_name: 'Company Information', display_order: 1, is_visible: true },
+    { section_id: `sec-${templateId}-2`, template_id: templateId, section_name: 'Customer Information', display_order: 2, is_visible: !isList },
+    { section_id: `sec-${templateId}-3`, template_id: templateId, section_name: 'Invoice Information', display_order: 3, is_visible: !isList },
+    { section_id: `sec-${templateId}-4`, template_id: templateId, section_name: 'Product Table', display_order: 4, is_visible: true },
+    { section_id: `sec-${templateId}-5`, template_id: templateId, section_name: 'Custom Fields', display_order: 5, is_visible: !isList },
+    { section_id: `sec-${templateId}-6`, template_id: templateId, section_name: 'Totals', display_order: 6, is_visible: !isList },
+    { section_id: `sec-${templateId}-7`, template_id: templateId, section_name: 'Attachments', display_order: 7, is_visible: false },
+    { section_id: `sec-${templateId}-8`, template_id: templateId, section_name: 'Footer', display_order: 8, is_visible: true },
+  ];
+};
 
 export const getInitialRowCol = (fieldName: string, sectionName: string, displayOrder: number): { row_position: number; column_position: number } => {
   if (sectionName === 'Company Information') {
@@ -693,7 +746,7 @@ export const getSeedTemplateFields = (templateId: string): PrintTemplateField[] 
 };
 
 export const getSeedTemplateColumns = (templateId: string): PrintTemplateColumn[] => {
-  const columns = [
+  let columns = [
     { column_name: 'Sr No', width: '6%', is_visible: true },
     { column_name: 'Product Code', width: '12%', is_visible: true },
     { column_name: 'Product Name', width: '20%', is_visible: true },
@@ -708,6 +761,78 @@ export const getSeedTemplateColumns = (templateId: string): PrintTemplateColumn[
     { column_name: 'Tax', width: '8%', is_visible: true },
     { column_name: 'Amount', width: '12%', is_visible: true },
   ];
+
+  if (templateId.startsWith('pl-') || templateId.includes('product') || templateId.includes('Product')) {
+    columns = [
+      { column_name: 'Sr No', width: '6%', is_visible: true },
+      { column_name: 'Product Code', width: '14%', is_visible: true },
+      { column_name: 'Product Name', width: '20%', is_visible: true },
+      { column_name: 'Category', width: '14%', is_visible: true },
+      { column_name: 'Purchase Price', width: '12%', is_visible: true },
+      { column_name: 'Sale Price', width: '12%', is_visible: true },
+      { column_name: 'Stock Qty', width: '10%', is_visible: true },
+      { column_name: 'Expiry Date', width: '12%', is_visible: true },
+    ];
+  } else if (templateId.startsWith('pi-') || templateId.includes('purchase-invoice') || templateId.includes('Purchase Invoice')) {
+    columns = [
+      { column_name: 'Sr#', width: '5%', is_visible: true },
+      { column_name: 'Product Code', width: '10%', is_visible: true },
+      { column_name: 'Product Name', width: '18%', is_visible: true },
+      { column_name: 'Batch No', width: '10%', is_visible: true },
+      { column_name: 'Expiry Date', width: '10%', is_visible: true },
+      { column_name: 'Quantity', width: '8%', is_visible: true },
+      { column_name: 'Unit', width: '7%', is_visible: true },
+      { column_name: 'Cost Price', width: '10%', is_visible: true },
+      { column_name: 'Discount', width: '8%', is_visible: true },
+      { column_name: 'Tax', width: '8%', is_visible: true },
+      { column_name: 'Amount', width: '11%', is_visible: true },
+    ];
+  } else if (templateId.startsWith('pr-') || templateId.includes('purchase-return') || templateId.includes('Purchase Return')) {
+    columns = [
+      { column_name: 'Sr#', width: '5%', is_visible: true },
+      { column_name: 'Product Code', width: '10%', is_visible: true },
+      { column_name: 'Product Name', width: '18%', is_visible: true },
+      { column_name: 'Batch No', width: '10%', is_visible: true },
+      { column_name: 'Expiry Date', width: '10%', is_visible: true },
+      { column_name: 'Return Quantity', width: '8%', is_visible: true },
+      { column_name: 'Unit', width: '7%', is_visible: true },
+      { column_name: 'Cost Price', width: '10%', is_visible: true },
+      { column_name: 'Discount', width: '8%', is_visible: true },
+      { column_name: 'Tax', width: '8%', is_visible: true },
+      { column_name: 'Amount', width: '11%', is_visible: true },
+    ];
+  } else if (templateId.startsWith('bpl-') || templateId.includes('business') || templateId.includes('Partner') || templateId.includes('Customer')) {
+    columns = [
+      { column_name: 'Sr No', width: '6%', is_visible: true },
+      { column_name: 'Code', width: '12%', is_visible: true },
+      { column_name: 'Name', width: '20%', is_visible: true },
+      { column_name: 'Type', width: '12%', is_visible: true },
+      { column_name: 'Phone Number', width: '14%', is_visible: true },
+      { column_name: 'City', width: '12%', is_visible: true },
+      { column_name: 'Address', width: '24%', is_visible: true },
+    ];
+  } else if (templateId.startsWith('pul-') || templateId.includes('purchase-list') || templateId.includes('Purchase List')) {
+    columns = [
+      { column_name: 'Sr No', width: '4%', is_visible: true },
+      { column_name: 'Purchase No', width: '8%', is_visible: true },
+      { column_name: 'Supplier Name', width: '10%', is_visible: true },
+      { column_name: 'Supplier Code', width: '8%', is_visible: true },
+      { column_name: 'Invoice No', width: '8%', is_visible: true },
+      { column_name: 'Purchase Date', width: '8%', is_visible: true },
+      { column_name: 'Due Date', width: '8%', is_visible: true },
+      { column_name: 'Branch', width: '6%', is_visible: true },
+      { column_name: 'Warehouse', width: '8%', is_visible: true },
+      { column_name: 'Total Amount', width: '6%', is_visible: true },
+      { column_name: 'Discount', width: '5%', is_visible: true },
+      { column_name: 'Tax', width: '5%', is_visible: true },
+      { column_name: 'Net Amount', width: '8%', is_visible: true },
+      { column_name: 'Payment Status', width: '6%', is_visible: true },
+      { column_name: 'Status', width: '6%', is_visible: true },
+      { column_name: 'Remarks', width: '8%', is_visible: false },
+      { column_name: 'Created By', width: '8%', is_visible: false },
+      { column_name: 'Created Date', width: '8%', is_visible: false },
+    ];
+  }
 
   return columns.map((col, index) => ({
     column_id: `col-${templateId}-${index + 1}`,

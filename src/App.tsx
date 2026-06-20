@@ -498,6 +498,7 @@ function App() {
   const [printFields, setPrintFields] = useState<PrintTemplateField[]>([]);
   const [printColumns, setPrintColumns] = useState<PrintTemplateColumn[]>([]);
   const [printCustomFields, setPrintCustomFields] = useState<PrintTemplateCustomField[]>([]);
+  const [printListData, setPrintListData] = useState<any[] | null>(null);
 
   const handleContextChange = (companyId: string, branchId: string, setAsDefault: boolean) => {
     const nextCo = companies.find((c: any) => c.id === companyId);
@@ -752,7 +753,9 @@ function App() {
     }
 
     if (!tId) {
-      const normType = inv.type === 'Sale Return' ? 'Sales Return' : 'Sales Invoice';
+      const normType = inv.type === 'Sale Return' ? 'Sales Return' : 
+                       inv.type === 'Purchase Return' ? 'Purchase Return' :
+                       inv.type === 'Purchase Invoice' ? 'Purchase Invoice' : 'Sales Invoice';
       const defaultTemplate = templates.find((t: any) => t.is_default && t.is_active && t.document_type === normType) ||
                               templates.find((t: any) => t.is_default && t.is_active) ||
                               templates[0];
@@ -839,6 +842,126 @@ function App() {
       setPrintColumns([]);
       setPrintCustomFields([]);
     }, 250);
+  };
+
+  const handlePrintList = (
+    listData: any[],
+    listType: 'products' | 'business_partners' | 'invoices' | 'purchases',
+    templateId?: string,
+    isPdf?: boolean
+  ) => {
+    let tId = templateId;
+    let templates: PrintTemplate[] = [];
+    try {
+      const stored = localStorage.getItem('print_templates');
+      templates = stored ? JSON.parse(stored) : seedPrintTemplates;
+    } catch {
+      templates = seedPrintTemplates;
+    }
+
+    const docType = listType === 'products' ? 'Product List' :
+                    listType === 'business_partners' ? 'Business Partner List' :
+                    listType === 'invoices' ? 'Sales Invoice' : 'Purchase Invoice';
+
+    if (!tId) {
+      const defaultTemplate = templates.find((t: any) => t.is_default && t.is_active && t.document_type === docType) ||
+                              templates.find((t: any) => t.is_active && t.document_type === docType) ||
+                              templates.find((t: any) => t.is_default && t.is_active) ||
+                              templates[0];
+      tId = defaultTemplate?.template_id;
+    }
+
+    const activeTemplate = templates.find(t => t.template_id === tId) || templates[0];
+    tId = activeTemplate?.template_id;
+
+    // Load Sections
+    let sections: PrintTemplateSection[] = [];
+    try {
+      const stored = localStorage.getItem('print_template_sections');
+      const allSections = stored ? JSON.parse(stored) : [];
+      sections = allSections.filter((s: any) => s.template_id === tId);
+      if (sections.length === 0) {
+        sections = getSeedTemplateSections(tId);
+      }
+    } catch {
+      sections = getSeedTemplateSections(tId);
+    }
+    sections.sort((a, b) => a.display_order - b.display_order);
+
+    // Load Columns
+    let columns: PrintTemplateColumn[] = [];
+    try {
+      const stored = localStorage.getItem('print_template_columns');
+      const allColumns = stored ? JSON.parse(stored) : [];
+      columns = allColumns.filter((c: any) => c.template_id === tId);
+      if (columns.length === 0) {
+        columns = getSeedTemplateColumns(tId);
+      }
+    } catch {
+      columns = getSeedTemplateColumns(tId);
+    }
+    columns.sort((a, b) => a.display_order - b.display_order);
+
+    setPrintTemplate(activeTemplate);
+    setPrintSections(sections);
+    setPrintColumns(columns);
+    setPrintListData(listData);
+
+    if (isPdf) {
+      setTimeout(() => {
+        const element = document.getElementById('list-print-container');
+        if (element) {
+          const opt = {
+            margin: 0,
+            filename: `${docType.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { 
+              unit: 'mm', 
+              format: activeTemplate.paper_size === 'Thermal' ? [80, 200] : 'a4', 
+              orientation: activeTemplate.orientation?.toLowerCase() || 'portrait' 
+            }
+          };
+
+          const runHtml2Pdf = () => {
+            (window as any).html2pdf().from(element).set(opt).save().then(() => {
+              setPrintListData(null);
+              setPrintTemplate(null);
+              setPrintSections([]);
+              setPrintColumns([]);
+            }).catch((err: any) => {
+              console.error("PDF generation failed:", err);
+              setPrintListData(null);
+              setPrintTemplate(null);
+              setPrintSections([]);
+              setPrintColumns([]);
+            });
+          };
+
+          if (!(window as any).html2pdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script.onload = runHtml2Pdf;
+            document.head.appendChild(script);
+          } else {
+            runHtml2Pdf();
+          }
+        } else {
+          setPrintListData(null);
+          setPrintTemplate(null);
+          setPrintSections([]);
+          setPrintColumns([]);
+        }
+      }, 300);
+    } else {
+      setTimeout(() => {
+        window.print();
+        setPrintListData(null);
+        setPrintTemplate(null);
+        setPrintSections([]);
+        setPrintColumns([]);
+      }, 250);
+    }
   };
 
 
@@ -1293,22 +1416,22 @@ function App() {
       case 'return-invoice':
         return <ReturnInvoiceEditor data={returnInvoice} onChange={setReturnInvoice} onSave={handleSaveReturnInvoice} onViewChange={handleViewChange} onPrint={handlePrintInvoice} />;
       case 'invoices':
-        return <InvoiceListModule invoiceItems={filteredInvoiceList} setInvoiceItems={setInvoiceList} onViewChange={handleViewChange} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} />;
+        return <InvoiceListModule invoiceItems={filteredInvoiceList} setInvoiceItems={setInvoiceList} onViewChange={handleViewChange} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} onPrintList={handlePrintList} />;
       case 'customers':
-        return <CustomerManagement onViewChange={handleViewChange} />;
+        return <CustomerManagement onViewChange={handleViewChange} onPrintList={handlePrintList} />;
       case 'add-customer':
-        return <CustomerManagement initialOpenCreate={true} onViewChange={handleViewChange} />;
+        return <CustomerManagement initialOpenCreate={true} onViewChange={handleViewChange} onPrintList={handlePrintList} />;
       case 'products':
         return <ProductList onAddProductClick={() => {
           setProductFormInitialData(undefined);
           setIsProductFormOpen(true);
-        }} />;
+        }} onPrintList={handlePrintList} />;
       case 'warehouses':
         return <WarehousesPage />;
       case 'product-batches':
         return <ProductBatchPage />;
       case 'purchases':
-        return <PurchaseList purchaseItems={filteredPurchaseList} setPurchaseItems={setPurchaseList} onViewChange={handleViewChange} onPrintPurchase={handlePrintInvoice} onEditPurchase={handleEditPurchase} />;
+        return <PurchaseList purchaseItems={filteredPurchaseList} setPurchaseItems={setPurchaseList} onViewChange={handleViewChange} onPrintPurchase={handlePrintInvoice} onEditPurchase={handleEditPurchase} onPrintList={handlePrintList} />;
       case 'add-purchase-invoice':
         return <PurchaseInvoiceEditor data={purchase} onChange={setPurchase} onSave={handleSavePurchase} onViewChange={handleViewChange} onPrint={handlePrintInvoice} />;
       case 'purchase-return':
@@ -1404,6 +1527,258 @@ function App() {
         onClose={() => setIsProductFormOpen(false)}
         initialData={productFormInitialData}
       />
+
+      {/* Hidden Printable List Area */}
+      {printListData && printTemplate && (() => {
+        const printOrientation = printTemplate?.orientation?.toLowerCase() || 'portrait';
+        const isLandscape = printOrientation === 'landscape';
+
+        const pageWidthVal = printTemplate?.paper_size === 'Thermal' ? '80mm' :
+                             printTemplate?.paper_size === 'Letter' ? (isLandscape ? '279mm' : '216mm') :
+                             printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_height || '297mm') : (printTemplate.paper_width || '210mm')) :
+                             (isLandscape ? '297mm' : '210mm'); // A4 default
+
+        const pageHeightVal = printTemplate?.paper_size === 'Thermal' ? 'auto' :
+                              printTemplate?.paper_size === 'Letter' ? (isLandscape ? '216mm' : '279mm') :
+                              printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_width || '210mm') : (printTemplate.paper_height || '297mm')) :
+                              (isLandscape ? '210mm' : '297mm'); // A4 default
+
+        const pageSizeRule = printTemplate?.paper_size === 'Thermal' ? '80mm auto' :
+                             `${pageWidthVal} ${pageHeightVal}`;
+
+        const companyDetails = (() => {
+          try {
+            const stored = localStorage.getItem('company_records');
+            if (stored) {
+              const list = JSON.parse(stored);
+              const activeCo = list.find((c: any) => c.is_active) || list[0];
+              if (activeCo) {
+                return {
+                  name: activeCo.name || 'Acme Corporation',
+                  address: activeCo.address3 ? `${activeCo.address3}${activeCo.city ? ', ' + activeCo.city : ''}` : 'Main Boulevard, Gulberg III, Lahore',
+                  phone: activeCo.phone || activeCo.mobile || '042-35711111',
+                  email: activeCo.email || 'info@acme.com',
+                  website: activeCo.website || 'www.acme.com',
+                  ntn: activeCo.ntn || '1234567-8',
+                  strn: activeCo.stn || '03-00-1234-567-89'
+                };
+              }
+            }
+          } catch {}
+          return {
+            name: 'Acme Corporation',
+            address: 'Main Boulevard, Gulberg III, Lahore',
+            phone: '042-35711111',
+            email: 'info@acme.com',
+            website: 'www.acme.com',
+            ntn: '1234567-8',
+            strn: '03-00-1234-567-89'
+          };
+        })();
+
+        return (
+          <div className="fixed inset-0 z-[9999] bg-white overflow-auto print-visible-only">
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media screen {
+                .print-visible-only { display: none !important; }
+              }
+              @media print {
+                body * { visibility: hidden !important; }
+                #list-print-container, #list-print-container * { visibility: visible !important; }
+                #list-print-container { 
+                  position: absolute !important; 
+                  left: 0 !important; 
+                  top: 0 !important; 
+                  width: ${pageWidthVal} !important; 
+                  max-width: ${pageWidthVal} !important;
+                  background: white !important; 
+                  color: black !important;
+                  padding: ${printTemplate?.paper_size === 'Thermal' ? '5mm' : '15mm'} !important;
+                  margin: 0 !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  display: block !important;
+                }
+              }
+              @page { size: ${pageSizeRule}; margin: 0; }
+            ` }} />
+            <div 
+              id="list-print-container" 
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                width: pageWidthVal,
+                minHeight: printTemplate?.paper_size === 'Thermal' ? 'auto' : pageHeightVal,
+                background: 'white',
+                color: '#1e293b',
+                margin: '0 auto',
+                boxSizing: 'border-box',
+                padding: printTemplate?.paper_size === 'Thermal' ? '5mm' : '15mm',
+              }}
+              className="space-y-6 font-sans text-xs bg-white text-black"
+            >
+              {/* 1. Company Header */}
+              {printSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
+                <div className="w-full flex justify-between items-start border-b pb-4 mb-2" style={{ borderColor: '#E2E8F0' }}>
+                  <div className="flex-grow">
+                    {printTemplate?.logo_url && printTemplate?.logo_size !== undefined && printTemplate.logo_size > 0 && (
+                      <img src={printTemplate.logo_url} alt="Logo" style={{ height: `${printTemplate.logo_size}px`, objectFit: 'contain', marginBottom: '8px' }} />
+                    )}
+                    <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">{companyDetails.name}</h2>
+                    <p className="text-slate-500 text-[10px] mt-0.5">{companyDetails.address}</p>
+                    <p className="text-slate-500 text-[10px]">Phone: {companyDetails.phone} | Email: {companyDetails.email}</p>
+                    {(companyDetails.ntn || companyDetails.strn) && (
+                      <p className="text-slate-600 text-[10px] font-bold mt-1">
+                        {companyDetails.ntn && `NTN: ${companyDetails.ntn}`}
+                        {companyDetails.ntn && companyDetails.strn && ' | '}
+                        {companyDetails.strn && `STRN: ${companyDetails.strn}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right text-[10px] text-slate-500 space-y-0.5">
+                    <p className="font-bold text-slate-700">Date: {new Date().toLocaleDateString('en-GB')}</p>
+                    <p>Records: {printListData.length}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Centered Document Title */}
+              <div className="w-full text-center my-4">
+                <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
+                  {printTemplate.document_type === 'Product List' ? 'Product Catalog' : 
+                   printTemplate.document_type === 'Business Partner List' ? 'Business Partner Directory' :
+                   printTemplate.document_type === 'Purchase List' ? 'Purchase Register' :
+                   printTemplate.document_type === 'Sales Invoice' ? 'Sales Invoice Register' : 'Purchase Register'}
+                </h1>
+              </div>
+
+              {/* 2. List Table */}
+              {printSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
+                <table className="w-full border-collapse border border-slate-200" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                  <thead>
+                    <tr className="bg-slate-50 border-b-2 border-slate-300 text-[11px] font-bold text-slate-700">
+                      {printColumns.filter(c => c.is_visible).map(c => (
+                        <th key={c.column_id} className="py-2.5 px-3 text-left font-black border border-slate-200" style={{ width: c.width, textAlign: c.alignment || 'left' }}>
+                          {c.custom_label || c.column_name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {printListData.map((item, idx) => (
+                      <tr key={idx} className="border-b border-slate-150 hover:bg-slate-50/50">
+                        {printColumns.filter(c => c.is_visible).map(c => {
+                          let val = '';
+                          const colName = c.column_name;
+                          if (printTemplate.document_type === 'Product List') {
+                            if (colName === 'Sr No') val = String(idx + 1);
+                            else if (colName === 'Product Code') val = item.id || '';
+                            else if (colName === 'Product Name') val = item.name || '';
+                            else if (colName === 'Category') val = item.category || '';
+                            else if (colName === 'Purchase Price') val = item.purchase_price ? `Rs. ${item.purchase_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-';
+                            else if (colName === 'Sale Price') val = item.sale_price ? `Rs. ${item.sale_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-';
+                            else if (colName === 'Stock Qty') val = item.stock != null ? String(item.stock) : '0';
+                            else if (colName === 'Expiry Date') val = item.expiry_date || '-';
+                          } else if (printTemplate.document_type === 'Business Partner List') {
+                            if (colName === 'Sr No') val = String(idx + 1);
+                            else if (colName === 'Code') val = item.customer_id || item.id || '';
+                            else if (colName === 'Name') val = item.name || '';
+                            else if (colName === 'Type') val = item.bp_type === 'supplier' ? 'Supplier' : 'Customer';
+                            else if (colName === 'Phone Number') val = item.phone || item.mobile || '-';
+                            else if (colName === 'City') val = item.city || '-';
+                            else if (colName === 'Address') val = item.address || '-';
+                          } else if (printTemplate.document_type === 'Purchase List') {
+                            let fullDetails: any = null;
+                            try {
+                              const storedDetail = localStorage.getItem(`invoice_detail_${item.id}`);
+                              if (storedDetail) {
+                                fullDetails = JSON.parse(storedDetail);
+                              }
+                            } catch {}
+
+                            const supplierCode = (() => {
+                              try {
+                                const storedCusts = localStorage.getItem('customer_list');
+                                if (storedCusts) {
+                                  const custs = JSON.parse(storedCusts);
+                                  const match = custs.find((c: any) => c.name === item.customer);
+                                  if (match) return match.customer_id || match.id || '';
+                                }
+                              } catch {}
+                              return '';
+                            })();
+
+                            const subtotal = fullDetails?.items?.reduce((sum: number, it: any) => sum + (it.quantity * it.price), 0) || 0;
+                            const discount = fullDetails?.discountAmount || 0;
+                            const tax = fullDetails?.items?.reduce((sum: number, it: any) => sum + (it.tax || 0) + (it.furtherTax || 0), 0) || 0;
+                            const netAmount = fullDetails?.items?.reduce((sum: number, it: any) => sum + (it.quantity * it.price) - it.discount + it.tax + (it.furtherTax || 0), 0) + (fullDetails?.shippingCharges || 0) + (fullDetails?.roundOff || 0) || item.rawAmount || 0;
+
+                            if (colName === 'Sr No') val = String(idx + 1);
+                            else if (colName === 'Purchase No') val = item.id || '';
+                            else if (colName === 'Supplier Name') val = item.customer || '';
+                            else if (colName === 'Supplier Code') val = supplierCode || '-';
+                            else if (colName === 'Invoice No') val = fullDetails?.reference || 'N/A';
+                            else if (colName === 'Purchase Date') val = item.issueDate || '';
+                            else if (colName === 'Due Date') val = item.dueDate || '';
+                            else if (colName === 'Branch') {
+                              val = 'Main';
+                              try {
+                                const activeCo = sessionStorage.getItem('active_company');
+                                if (activeCo) {
+                                  const parsedCo = JSON.parse(activeCo);
+                                  val = parsedCo.activeBranchName || 'Main';
+                                }
+                              } catch {}
+                            }
+                            else if (colName === 'Warehouse') val = fullDetails?.warehouse || 'Main Warehouse';
+                            else if (colName === 'Total Amount') val = subtotal ? `${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00';
+                            else if (colName === 'Discount') val = discount ? `${discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00';
+                            else if (colName === 'Tax') val = tax ? `${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00';
+                            else if (colName === 'Net Amount') val = netAmount ? `${netAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00';
+                            else if (colName === 'Payment Status') val = item.payment || 'Unpaid';
+                            else if (colName === 'Status') val = item.status || '';
+                            else if (colName === 'Remarks') val = fullDetails?.remarks || '-';
+                            else if (colName === 'Created By') val = fullDetails?.senderName || 'System';
+                            else if (colName === 'Created Date') val = item.issueDate || '';
+                          } else {
+                            if (colName === 'Sr No') val = String(idx + 1);
+                            else if (colName === 'Invoice No' || colName === 'Invoice ID' || colName === 'Purchase ID' || colName === 'Invoice No.') val = item.id || '';
+                            else if (colName === 'FBR Invoice Number') val = item.fbrInvoiceNumber || '-';
+                            else if (colName === 'Business Partner' || colName === 'Customer') val = item.customer || '';
+                            else if (colName === 'Issue Date' || colName === 'Issue date') val = item.issueDate || '';
+                            else if (colName === 'Due Date' || colName === 'Due date') val = item.dueDate || '';
+                            else if (colName === 'Amount' || colName === 'Amount (Rs.)') val = item.amount || '';
+                            else if (colName === 'Type') val = item.type || '';
+                            else if (colName === 'Status') val = item.status || '';
+                          }
+                          return (
+                            <td key={c.column_id} className="py-2.5 px-3 text-[10.5px] text-slate-800 border border-slate-200" style={{ textAlign: c.alignment || 'left' }}>
+                              {val}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* 3. Footer */}
+              {printSections.find(s => s.section_name === 'Footer' && s.is_visible) && (
+                <div className="flex justify-between items-center pt-6 border-t mt-8" style={{ borderColor: '#E2E8F0' }}>
+                  <div className="text-slate-400 text-[9px]">
+                    {printTemplate.remarks_enabled && <p>Report generated automatically on {new Date().toLocaleString()}.</p>}
+                  </div>
+                  {printTemplate.signature_enabled && (
+                    <div className="text-center w-40 border-t border-slate-300 pt-1.5 mt-4">
+                      <p className="font-bold text-slate-600 text-[10px]">Authorized Signature</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Hidden Printable Invoice Area */}
       {printInvoiceData && (() => {
@@ -1571,7 +1946,7 @@ function App() {
           if (item.field_name === 'Item Table') {
             const visibleCols = printColumns.filter((c: PrintTemplateColumn) => c.is_visible);
             const isNumericColumn = (name: string) => {
-              return ['Quantity', 'Qty', 'Rate', 'Unit Price', 'Discount', 'Tax', 'Amount'].includes(name);
+              return ['Quantity', 'Qty', 'Rate', 'Unit Price', 'Discount', 'Tax', 'Amount', 'Cost Price', 'Return Quantity'].includes(name);
             };
             return (
               <div className="overflow-hidden bg-white w-full">
@@ -1598,16 +1973,43 @@ function App() {
                               let val = '-';
                               const alignVal = col.alignment || (isNumericColumn(col.column_name) ? 'right' : 'left');
                               
-                              if (col.column_name === 'Sr No') val = (idx + 1).toString();
+                              if (col.column_name === 'Sr No' || col.column_name === 'Sr#') val = (idx + 1).toString();
                               else if (col.column_name === 'Product Code') val = item.productCode || '';
-                              else if (col.column_name === 'Product Name') val = 'Product/Service';
+                              else if (col.column_name === 'Product Name') {
+                                const productName = (() => {
+                                  try {
+                                    const storedProds = localStorage.getItem('products_list');
+                                    if (storedProds) {
+                                      const prods = JSON.parse(storedProds);
+                                      const match = prods.find((p: any) => p.code === item.productCode || p.id === item.productCode);
+                                      if (match) return match.name || '';
+                                    }
+                                  } catch {}
+                                  return item.description || 'Product/Service';
+                                })();
+                                val = productName;
+                              }
                               else if (col.column_name === 'Description') val = item.description || '';
-                              else if (col.column_name === 'Batch No') val = '-';
+                              else if (col.column_name === 'Batch No') val = item.batchNo || '-';
+                              else if (col.column_name === 'Expiry Date') {
+                                const expiryDate = (() => {
+                                  try {
+                                    const stored = localStorage.getItem('product_batches');
+                                    if (stored && item.batchNo) {
+                                      const batches = JSON.parse(stored);
+                                      const match = batches.find((b: any) => b.batch_no === item.batchNo);
+                                      if (match) return match.expiry_date || '';
+                                    }
+                                  } catch {}
+                                  return '';
+                                })();
+                                val = expiryDate || '-';
+                              }
                               else if (col.column_name === 'Serial No') val = '-';
                               else if (col.column_name === 'Warehouse') val = '-';
                               else if (col.column_name === 'Unit') val = item.unit || 'Unit';
-                              else if (col.column_name === 'Quantity' || col.column_name === 'Qty') val = item.quantity.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                              else if (col.column_name === 'Rate' || col.column_name === 'Unit Price') val = item.price.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                              else if (col.column_name === 'Quantity' || col.column_name === 'Qty' || col.column_name === 'Return Quantity') val = item.quantity.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                              else if (col.column_name === 'Rate' || col.column_name === 'Unit Price' || col.column_name === 'Cost Price') val = item.price.toLocaleString(undefined, { minimumFractionDigits: 2 });
                               else if (col.column_name === 'Discount') val = item.discount.toLocaleString(undefined, { minimumFractionDigits: 2 });
                               else if (col.column_name === 'Tax') val = item.tax.toLocaleString(undefined, { minimumFractionDigits: 2 });
                               else if (col.column_name === 'Amount') val = itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
@@ -1629,13 +2031,16 @@ function App() {
                           const rawStr = printInvoiceData?.amount?.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '') || '0';
                           const netPayable = parseFloat(rawStr) || 0;
                           
-                          if (col.column_name === 'Sr No') val = '1';
+                          if (col.column_name === 'Sr No' || col.column_name === 'Sr#') val = '1';
                           else if (col.column_name === 'Product Code') val = 'BC-001';
                           else if (col.column_name === 'Product Name') val = 'Services';
                           else if (col.column_name === 'Description') val = `${printInvoiceData?.type || 'Standard'} Services & Deliverables`;
-                          else if (col.column_name === 'Quantity' || col.column_name === 'Qty') val = '1.00';
-                          else if (col.column_name === 'Rate' || col.column_name === 'Unit Price') val = netPayable.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                          else if (col.column_name === 'Quantity' || col.column_name === 'Qty' || col.column_name === 'Return Quantity') val = '1.00';
+                          else if (col.column_name === 'Rate' || col.column_name === 'Unit Price' || col.column_name === 'Cost Price') val = netPayable.toLocaleString(undefined, { minimumFractionDigits: 2 });
                           else if (col.column_name === 'Amount') val = netPayable.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                          else if (col.column_name === 'Batch No') val = 'BATCH-001';
+                          else if (col.column_name === 'Expiry Date') val = '31-Dec-2027';
+                          else if (col.column_name === 'Unit') val = 'Unit';
                           
                           return (
                             <td key={col.column_id} className="py-2 px-3 border border-slate-300" style={{ textAlign: alignVal }}>
@@ -1789,28 +2194,29 @@ function App() {
             actualVal = 
               item.field_name === 'Company Name' ? companyDetails.name :
               item.field_name === 'Company Address' ? companyDetails.address :
-              item.field_name === 'Phone' ? companyDetails.phone :
+              item.field_name === 'Phone' || item.field_name === 'Phone Number' ? companyDetails.phone :
               item.field_name === 'Email' ? companyDetails.email :
               item.field_name === 'Website' ? companyDetails.website :
               item.field_name === 'NTN' ? companyDetails.ntn :
               item.field_name === 'STRN' || item.field_name === 'STN' || item.field_name === 'STN / STRN' ? companyDetails.strn :
-              item.field_name === 'Customer Name' ? (printInvoiceData?.customer || '') :
-              item.field_name === 'Customer Address' ? (customerDetails?.address || '') :
-              item.field_name === 'Mobile' ? (customerDetails?.phone || '') :
+              item.field_name === 'Customer Name' || item.field_name === 'Supplier Name' ? (printInvoiceData?.customer || '') :
+              item.field_name === 'Customer Address' || item.field_name === 'Address' ? (customerDetails?.address || '') :
+              item.field_name === 'Mobile' || item.field_name === 'Mobile Number' ? (customerDetails?.phone || '') :
               item.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
               item.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
               item.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
-              item.field_name === 'Customer Code' ? (customerDetails?.code || '') :
+              item.field_name === 'Customer Code' || item.field_name === 'Supplier Code' ? (customerDetails?.code || '') :
               item.field_name === 'Customer Email' ? customerDetails?.email || '' :
-              item.field_name === 'Invoice Number' ? (printInvoiceData?.id || '') :
-              item.field_name === 'Date' || item.field_name === 'Invoice Date' ? (printInvoiceData?.issueDate || '') :
+              item.field_name === 'Contact Person' ? ((customerDetails as any)?.contact_person || '') :
+              item.field_name === 'Invoice Number' || item.field_name === 'Purchase Invoice Number' || item.field_name === 'Purchase Return Number' ? (printInvoiceData?.id || '') :
+              item.field_name === 'Date' || item.field_name === 'Invoice Date' || item.field_name === 'Purchase Date' || item.field_name === 'Return Date' ? (printInvoiceData?.issueDate || '') :
               item.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
               item.field_name === 'Sales Person' ? salesPersonName :
               item.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
               item.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
               item.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
               item.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') :
-              item.field_name === 'Prepared By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
+              item.field_name === 'Prepared By' || item.field_name === 'Printed By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
               item.field_name === 'Received By' ? (printInvoiceFullData as any)?.receivedBy || 'Received By Client' :
               item.field_name === 'Remarks' ? ((printInvoiceFullData as any)?.remarks || `Payment term: ${printInvoiceData?.payment || ''}`) :
               item.field_name === 'Terms & Conditions' ? 'Payment is due within 30 days of issue. Balance subject to 2% late penalty.' : '';
