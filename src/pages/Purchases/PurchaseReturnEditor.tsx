@@ -783,8 +783,8 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
                     <div className="lg:col-span-5">
                       <ComboBox
                         variant="compact"
-                        label="Supplier *"
-                        placeholder="Search Supplier..."
+                        label="Business Partner *"
+                        placeholder="Search Business Partner..."
                         value={selectedCustomerId}
                         options={suppliers}
                         minQueryLength={3}
@@ -814,7 +814,7 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
                   )}
                   {docSettings.fields['Return Invoice No.'] && (
                     <div className="lg:col-span-2">
-                      <Input variant="compact" label="Return Invoice No." className="font-mono text-brand-primary"
+                      <Input variant="compact" label="Invoice No" className="font-mono text-brand-primary"
                         value={data.invoiceNumber} onChange={(e) => {
                           const val = e.target.value;
                           onChange({ 
@@ -864,11 +864,11 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
                     <div className="lg:col-span-2">
                       <Select
                         variant="compact"
-                        label="Sales Person"
+                        label="Purchaser"
                         value={data.salesPerson || ''}
                         onChange={(e) => onChange({ ...data, salesPerson: e.target.value })}
                         options={[
-                          { value: '', label: 'Select Sales Person' },
+                          { value: '', label: 'Select Purchaser' },
                           { value: 'SP001', label: 'SP001-Ahmed Ali' },
                           { value: 'SP002', label: 'SP002-Hassan Khan' },
                           { value: 'SP003', label: 'SP003-Usman Malik' },

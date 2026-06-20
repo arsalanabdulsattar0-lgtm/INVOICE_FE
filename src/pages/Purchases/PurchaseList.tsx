@@ -113,9 +113,8 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
 
   const getTemplatesForInvoice = (inv: Invoice) => {
     let normType: string;
-    if (inv.type === 'Sale Return') normType = 'Sales Return';
-    else if (inv.type === 'Service' || inv.type === 'Service Invoice') normType = 'Service Invoice';
-    else normType = 'Sales Invoice'; // 'Sale Invoice' and anything else
+    if (inv.type === 'Purchase Return' || inv.type === 'Sale Return') normType = 'Sales Return';
+    else normType = 'Sales Invoice';
     return templates.filter(t => t.is_active && t.document_type === normType);
   };
 
@@ -173,7 +172,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
 
   const handleExport = () => {
     try {
-      const headers = ['Invoice ID', 'Business Partner', 'Issue date', 'Due date', 'Amount (Rs.)', 'Type', 'Status'];
+      const headers = ['Purchase No', 'Business Partner', 'Issue date', 'Due date', 'Amount (Rs.)', 'Type', 'Status'];
       const rows = filtered.map(inv => [
         inv.id,
         inv.customer,
@@ -328,7 +327,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'id', label: 'Invoice ID' },
+    { key: 'id', label: 'Purchase No' },
     { key: 'fbrInvoiceNumber', label: 'FBR Invoice Number' },
     { key: 'customer', label: 'Business Partner Name' },
     { key: 'issueDate', label: 'Issue Date' },
@@ -433,10 +432,10 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
           style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Sale Records</h3>
+            <h3 className="text-[11px] font-black tracking-wide">Purchase Records</h3>
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
               style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filtered.length} sales
+              {filtered.length} purchases
             </span>
           </div>
 
@@ -447,7 +446,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Search invoices or partners..."
+                placeholder="Search purchases or business partners..."
                 className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
                 style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
@@ -507,7 +506,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                     {([
                       { label: 'Purchase No', key: 'id', width: 'w-[10%]' },
                       { label: 'FBR Number', key: 'fbrInvoiceNumber', width: 'w-[14%]' },
-                      { label: 'Supplier', key: 'customer', width: 'w-[18%]' },
+                      { label: 'Business Partner', key: 'customer', width: 'w-[18%]' },
                       { label: 'Issue Date', key: 'issueDate', width: 'w-[10%]' },
                       { label: 'Due Date', key: 'dueDate', width: 'w-[10%]' },
                       { label: 'Amount (Rs.)', key: 'amount', width: 'w-[10%]' },
@@ -656,7 +655,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                     <tr>
                       <td colSpan={9} className="py-16 text-center">
                         <FileText className="w-10 h-10 mx-auto mb-3 text-slate-200" />
-                        <p className="text-[13px] font-medium text-slate-400">No invoices found</p>
+                        <p className="text-[13px] font-medium text-slate-400">No purchases found</p>
                         <p className="text-[11px] text-slate-300 mt-1">Try adjusting your search or filters</p>
                       </td>
                     </tr>
@@ -753,8 +752,8 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Customer details */}
                         <div className="space-y-3">
-                          <Input variant="compact" label="Supplier Name" placeholder="Supplier Name" readOnly value={previewInvoice.customerName} />
-                          <TextArea label="Supplier Address" placeholder="Supplier Address" readOnly value={previewInvoice.customerAddress || ''} className="!rounded-lg text-[11px] py-1.5 px-3 h-14" />
+                          <Input variant="compact" label="Business Partner Name" placeholder="Business Partner Name" readOnly value={previewInvoice.customerName} />
+                          <TextArea label="Business Partner Address" placeholder="Business Partner Address" readOnly value={previewInvoice.customerAddress || ''} className="!rounded-lg text-[11px] py-1.5 px-3 h-14" />
                         </div>
                         {/* Sender details */}
                         <div className="space-y-3">
@@ -766,7 +765,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                       <div className={`grid grid-cols-2 sm:grid-cols-3 ${status === 'Posted' ? 'md:grid-cols-7' : 'md:grid-cols-6'} gap-4`}>
                         <Input variant="compact" label="Issue Date" placeholder="Issue Date" readOnly value={previewInvoice.date} />
                         <Input variant="compact" label="Due Date" placeholder="Due Date" readOnly value={previewInvoice.dueDate} />
-                        <Input variant="compact" label="Purchase ID" placeholder="Purchase ID" readOnly value={previewInvoice.invoiceNumber} />
+                        <Input variant="compact" label="Invoice No" placeholder="Invoice No" readOnly value={previewInvoice.invoiceNumber} />
                         <Input variant="compact" label="Purchase Type" placeholder="Purchase Type" readOnly value={previewInvoice.type} />
                         <Input variant="compact" label="Reference" placeholder="Reference" readOnly value={previewInvoice.reference || 'N/A'} />
                         <Input variant="compact" label="Subject" placeholder="Subject" readOnly value={previewInvoice.subject || 'Services Rendered'} />
@@ -1013,10 +1012,10 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
         <div className="space-y-4">
           <Select
             variant="compact"
-            label="Supplier"
+            label="Business Partner"
             value={tempCustomerFilter}
             onChange={(e) => setTempCustomerFilter(e.target.value)}
-            options={uniqueSuppliers.map(c => ({ value: c, label: c === 'All' ? 'All Suppliers' : c }))}
+            options={uniqueSuppliers.map(c => ({ value: c, label: c === 'All' ? 'All Business Partners' : c }))}
           />
 
           <Input

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Download, Eye, Plus,
@@ -45,24 +45,89 @@ interface InvoiceListProps {
 const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, setInvoiceItems, onPrintInvoice, onEditInvoice }) => {
   const { brand } = useTheme();
 
-  // ─── Stats Cards Data ─────────────────────────────────────────────────────────
-  const postedCount = invoiceItems.filter(i => i.status === 'Posted').length;
-  const unpostedCount = invoiceItems.filter(i => i.status === 'Unposted').length;
-  const postedSum = invoiceItems.filter(i => i.status === 'Posted').reduce((sum, i) => sum + (i.rawAmount || 0), 0);
-  const unpostedSum = invoiceItems.filter(i => i.status === 'Unposted').reduce((sum, i) => sum + (i.rawAmount || 0), 0);
-
-  const stats = [
-    { label: 'Total Invoices', value: String(invoiceItems.length), sub: 'Overall volume', icon: FileText, color: brand.primary, bg: brand.surface },
-    { label: 'Posted', value: String(postedCount), sub: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} volume`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
-    { label: 'Unposted', value: String(unpostedCount), sub: `Rs. ${unpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} waiting`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
-    { label: 'Total Revenue', value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: 'From posted invoices', icon: TrendingUp, color: brand.primary, bg: brand.surface },
-  ];
-
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [customerFilter, setCustomerFilter] = useState<string>('All');
   const [saleInvNoFilter, setSaleInvNoFilter] = useState<string>('');
+
+  const terms = useMemo(() => {
+    switch (typeFilter) {
+      case 'Sale Invoice':
+        return {
+          title: 'Sale Invoice List',
+          records: 'Sale Invoice Records',
+          countLabel: 'sale invoices',
+          idLabel: 'Invoice No',
+          noFilterLabel: 'Sale Inv No',
+          noPlaceholder: 'Search by invoice number...',
+          createBtnLabel: 'Sale Invoice',
+          statsLabel: 'Sale Invoices'
+        };
+      case 'Sale Return':
+        return {
+          title: 'Sale Return List',
+          records: 'Sale Return Records',
+          countLabel: 'sale returns',
+          idLabel: 'Invoice No',
+          noFilterLabel: 'Sale Return No',
+          noPlaceholder: 'Search by return number...',
+          createBtnLabel: 'Sale Return',
+          statsLabel: 'Sale Returns'
+        };
+      case 'Service Invoice':
+        return {
+          title: 'Service Invoice List',
+          records: 'Service Invoice Records',
+          countLabel: 'service invoices',
+          idLabel: 'Invoice No',
+          noFilterLabel: 'Service Inv No',
+          noPlaceholder: 'Search by service invoice number...',
+          createBtnLabel: 'Service Invoice',
+          statsLabel: 'Service Invoices'
+        };
+      case 'Digital Invoice':
+        return {
+          title: 'Digital Invoice List',
+          records: 'Digital Invoice Records',
+          countLabel: 'digital invoices',
+          idLabel: 'Invoice No',
+          noFilterLabel: 'Digital Inv No',
+          noPlaceholder: 'Search by digital invoice number...',
+          createBtnLabel: 'Digital Invoice',
+          statsLabel: 'Digital Invoices'
+        };
+      default:
+        return {
+          title: 'Sale List',
+          records: 'Sale Records',
+          countLabel: 'sales',
+          idLabel: 'Invoice No',
+          noFilterLabel: 'Invoice No',
+          noPlaceholder: 'Search by invoice number...',
+          createBtnLabel: 'Invoice',
+          statsLabel: 'Invoices'
+        };
+    }
+  }, [typeFilter]);
+
+  const typeFilteredItems = useMemo(() => {
+    return typeFilter === 'All' 
+      ? invoiceItems 
+      : invoiceItems.filter((i: Invoice) => i.type === typeFilter);
+  }, [invoiceItems, typeFilter]);
+
+  const postedCount = typeFilteredItems.filter((i: Invoice) => i.status === 'Posted').length;
+  const unpostedCount = typeFilteredItems.filter((i: Invoice) => i.status === 'Unposted').length;
+  const postedSum = typeFilteredItems.filter((i: Invoice) => i.status === 'Posted').reduce((sum: number, i: Invoice) => sum + (i.rawAmount || 0), 0);
+  const unpostedSum = typeFilteredItems.filter((i: Invoice) => i.status === 'Unposted').reduce((sum: number, i: Invoice) => sum + (i.rawAmount || 0), 0);
+
+  const stats = useMemo(() => [
+    { label: `Total ${terms.statsLabel}`, value: String(typeFilteredItems.length), sub: 'Overall volume', icon: FileText, color: brand.primary, bg: brand.surface },
+    { label: 'Posted', value: String(postedCount), sub: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} volume`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
+    { label: 'Unposted', value: String(unpostedCount), sub: `Rs. ${unpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} waiting`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
+    { label: 'Total Revenue', value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `From posted ${terms.countLabel}`, icon: TrendingUp, color: brand.primary, bg: brand.surface },
+  ], [typeFilteredItems, terms, postedCount, unpostedCount, postedSum, unpostedSum, brand]);
   const [tempStatusFilter, setTempStatusFilter] = useState<InvoiceStatus | 'All'>('All');
   const [tempTypeFilter, setTempTypeFilter] = useState<string>('All');
   const [tempCustomerFilter, setTempCustomerFilter] = useState<string>('All');
@@ -98,9 +163,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const getTemplatesForInvoice = (inv: Invoice) => {
     let normType: string;
-    if (inv.type === 'Sale Return') normType = 'Sales Return';
-    else if (inv.type === 'Service' || inv.type === 'Service Invoice') normType = 'Service Invoice';
-    else normType = 'Sales Invoice'; // 'Sale Invoice' and anything else
+    if (inv.type === 'Sale Return' || inv.type === 'Purchase Return') normType = 'Sales Return';
+    else normType = 'Sales Invoice';
     return templates.filter(t => t.is_active && t.document_type === normType);
   };
 
@@ -158,7 +222,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const handleExport = () => {
     try {
-      const headers = ['Invoice ID', 'Business Partner', 'Issue date', 'Due date', 'Amount (Rs.)', 'Type', 'Status'];
+      const headers = ['Invoice No', 'Business Partner', 'Issue date', 'Due date', 'Amount (Rs.)', 'Type', 'Status'];
       const rows = filtered.map(inv => [
         inv.id,
         inv.customer,
@@ -313,7 +377,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'id', label: 'Invoice ID' },
+    { key: 'id', label: 'Invoice No' },
     { key: 'fbrInvoiceNumber', label: 'FBR Invoice Number' },
     { key: 'customer', label: 'Business Partner Name' },
     { key: 'issueDate', label: 'Issue Date' },
@@ -336,9 +400,9 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>Sale List</h1>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: brand.dark }}>{terms.title}</h1>
           <p className="text-[12px] font-medium text-slate-400 mt-0.5">
-            {filtered.length} sales found · Last updated just now
+            {filtered.length} {terms.countLabel} found · Last updated just now
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -370,20 +434,25 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
             )}
           </Button>
           <Button
-            onClick={() => onViewChange?.('add-invoice-v4')}
+            onClick={() => {
+              if (typeFilter === 'Service Invoice') onViewChange?.('add-service-invoice' as any);
+              else if (typeFilter === 'Digital Invoice') onViewChange?.('add-digital-invoice' as any);
+              else if (typeFilter === 'Sale Return') onViewChange?.('return-invoice' as any);
+              else onViewChange?.('add-sale-invoice' as any);
+            }}
             variant="primary"
             size="md"
             icon={Plus}
             className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
           >
-            Create Invoice
+            Create {terms.createBtnLabel}
           </Button>
         </div>
       </motion.div>
 
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+        {stats.map((stat: any, i: number) => (
           <motion.div key={stat.label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
@@ -418,10 +487,10 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
           style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <h3 className="text-[11px] font-black tracking-wide">Sale Records</h3>
+            <h3 className="text-[11px] font-black tracking-wide">{terms.records}</h3>
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
               style={{ backgroundColor: brand.soft, color: brand.dark }}>
-              {filtered.length} sales
+              {filtered.length} {terms.countLabel}
             </span>
           </div>
 
@@ -432,7 +501,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
               <input
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                placeholder="Search invoices or partners..."
+                placeholder={`Search ${terms.countLabel} or partners...`}
                 className="h-7 pl-7 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52"
                 style={{ background: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
@@ -490,7 +559,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr className="border-b border-[#E2E8F0]">
                     {([
-                      { label: 'Invoice ID', key: 'id', width: 'w-[10%]' },
+                      { label: terms.idLabel, key: 'id', width: 'w-[10%]' },
                       { label: 'FBR Invoice Number', key: 'fbrInvoiceNumber', width: 'w-[14%]' },
                       { label: 'Business Partner', key: 'customer', width: 'w-[18%]' },
                       { label: 'Issue Date', key: 'issueDate', width: 'w-[10%]' },
@@ -641,7 +710,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                     <tr>
                       <td colSpan={9} className="py-16 text-center">
                         <FileText className="w-10 h-10 mx-auto mb-3 text-slate-200" />
-                        <p className="text-[13px] font-medium text-slate-400">No invoices found</p>
+                        <p className="text-[13px] font-medium text-slate-400">No {terms.countLabel} found</p>
                         <p className="text-[11px] text-slate-300 mt-1">Try adjusting your search or filters</p>
                       </td>
                     </tr>
@@ -751,7 +820,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                       <div className={`grid grid-cols-2 sm:grid-cols-3 ${status === 'Posted' ? 'md:grid-cols-7' : 'md:grid-cols-6'} gap-4`}>
                         <Input variant="compact" label="Issue Date" placeholder="Issue Date" readOnly value={previewInvoice.date} />
                         <Input variant="compact" label="Due Date" placeholder="Due Date" readOnly value={previewInvoice.dueDate} />
-                        <Input variant="compact" label="Invoice ID" placeholder="Invoice ID" readOnly value={previewInvoice.invoiceNumber} />
+                        <Input variant="compact" label={terms.idLabel} placeholder={terms.idLabel} readOnly value={previewInvoice.invoiceNumber} />
                         <Input variant="compact" label="Invoice Type" placeholder="Invoice Type" readOnly value={previewInvoice.type} />
                         <Input variant="compact" label="Reference" placeholder="Reference" readOnly value={previewInvoice.reference || 'N/A'} />
                         <Input variant="compact" label="Subject" placeholder="Subject" readOnly value={previewInvoice.subject || 'Services Rendered'} />
@@ -1006,8 +1075,8 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
           <Input
             variant="compact"
-            label="Sale Inv No"
-            placeholder="Search by invoice number..."
+            label={terms.noFilterLabel}
+            placeholder={terms.noPlaceholder}
             value={tempSaleInvNoFilter}
             onChange={(e) => setTempSaleInvNoFilter(e.target.value)}
           />

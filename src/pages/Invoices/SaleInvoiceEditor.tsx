@@ -638,7 +638,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
           style={{ borderColor: '#E2E8F0' }}>
           <div className="space-y-1">
             <h1 className="text-2xl font-black tracking-tight flex items-center gap-4 text-brand-dark">
-              Sales Invoice
+              {data.type || 'Sales Invoice'}
               <span className="h-8 w-[1px] bg-brand-dark-20" />
               <div className="flex flex-col">
                 <span className="font-medium text-base opacity-40 leading-tight">#{data.invoiceNumber}</span>
@@ -677,11 +677,12 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
             {/* Multi-Split Print & Export Buttons */}
             {(() => {
               const isReturn = data.type === 'Sale Return';
+              const isDigitalOrService = data.type === 'Digital Invoice' || data.type === 'Service Invoice';
               const splitButtonsConfig = [
                 { id: 'default', label: 'Print', templateId: activeT?.template_id || (isReturn ? 'srt-1' : 'si-1'), formatKey: activeFormat, isAvailable: !!activeT },
-                { id: 'retail', label: 'Retail Print', templateId: isReturn ? 'srt-1' : 'si-1', formatKey: 'retail', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-1' : 'si-1'))?.is_active },
-                { id: 'delivery', label: 'Delivery', templateId: isReturn ? 'srt-3' : 'si-3', formatKey: 'delivery', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-3' : 'si-3'))?.is_active },
-                { id: 'tax', label: 'Tax Invoice', templateId: isReturn ? 'srt-4' : 'si-4', formatKey: 'tax', isAvailable: templates.find(t => t.template_id === (isReturn ? 'srt-4' : 'si-4'))?.is_active }
+                { id: 'retail', label: 'Retail Print', templateId: isReturn ? 'srt-1' : 'si-1', formatKey: 'retail', isAvailable: !isDigitalOrService && templates.find(t => t.template_id === (isReturn ? 'srt-1' : 'si-1'))?.is_active },
+                { id: 'delivery', label: 'Delivery', templateId: isReturn ? 'srt-3' : 'si-3', formatKey: 'delivery', isAvailable: !isDigitalOrService && templates.find(t => t.template_id === (isReturn ? 'srt-3' : 'si-3'))?.is_active },
+                { id: 'tax', label: 'Tax Invoice', templateId: isReturn ? 'srt-4' : 'si-4', formatKey: 'tax', isAvailable: !isDigitalOrService && templates.find(t => t.template_id === (isReturn ? 'srt-4' : 'si-4'))?.is_active }
               ];
 
               return splitButtonsConfig
@@ -838,7 +839,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                   )}
                   {docSettings.fields['Invoice ID'] && (
                     <div className="lg:col-span-2">
-                      <Input variant="compact" label="Invoice ID" className="font-mono text-brand-primary"
+                      <Input variant="compact" label="Invoice No" className="font-mono text-brand-primary"
                         value={data.invoiceNumber} onChange={(e) => {
                           const val = e.target.value;
                           onChange({ 
@@ -884,7 +885,7 @@ const InvoiceEditorV4: React.FC<Props> = ({ data, onChange, onSave, onViewChange
                       <Input
                         variant="compact"
                         label="Invoice Type"
-                        value="Sale Invoice"
+                        value={data.type || 'Sale Invoice'}
                         readOnly
                       />
                     </div>
