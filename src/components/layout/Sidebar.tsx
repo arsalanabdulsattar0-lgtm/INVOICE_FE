@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
+  LayoutDashboard,
   FileText,
   Users,
   Settings,
@@ -62,7 +63,7 @@ const Sidebar: React.FC<Props> = ({
   }
 
   const menuItems = [
-    // { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     {
       id: 'customers',
       label: 'Business Partners',
