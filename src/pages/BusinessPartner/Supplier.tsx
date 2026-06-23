@@ -211,7 +211,7 @@ const SupplierComponent: React.FC = () => {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v8');
+      const seededFlag = localStorage.getItem('customers_seeded_v9');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);

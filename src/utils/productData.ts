@@ -1,5 +1,5 @@
 export const ProductCategory = [
-  { id: 'cat-1', name: 'Electronics' },
+  { id: 'cat-1', name: 'Flavour' },
   { id: 'cat-2', name: 'Hardware' },
   { id: 'cat-3', name: 'Cabling' },
   { id: 'cat-4', name: 'Networking' },

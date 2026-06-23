@@ -825,7 +825,6 @@ const PurchaseInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onView
                         placeholder="Search Business Partner..."
                         value={selectedCustomerId}
                         options={suppliers}
-                        minQueryLength={3}
                         error={errors.customer}
                         onChange={(id) => {
                           setSelectedCustomerId(id);

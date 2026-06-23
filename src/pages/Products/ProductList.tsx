@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
-  FileText, CheckCircle, AlertCircle, ChevronLeft, ChevronRight,
+  FileText, CheckCircle, ChevronLeft, ChevronRight,
   CreditCard, ShieldCheck, Printer, QrCode, ChevronDown
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,7 +13,8 @@ import Card from '../../components/ui/Card';
 import { ScrollArea, Input } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
 import { ProductFilterDrawer } from '../../components/ui/ProductFilterDrawer';
-import { ActiveChip, InactiveChip } from '../../components/ui/Chip';
+import { ActiveChip } from '../../components/ui/Chip';
+import { TrendingDown } from 'lucide-react';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
@@ -150,7 +151,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const [priceValue, setPriceValue] = useState<string>('');
   const [stockOperator, setStockOperator] = useState<string>('all');
   const [stockValue, setStockValue] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'Inactive'>('All');
+  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'LowStock'>('All');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
   const [fromProductId, setFromProductId] = useState<string>('All');
   const [toProductId, setToProductId] = useState<string>('All');
@@ -279,7 +280,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const loadProducts = () => {
     try {
       const stored = localStorage.getItem('products_list');
-      const seededFlag = localStorage.getItem('products_seeded_v7');
+      const seededFlag = localStorage.getItem('products_seeded_v8');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setProducts(parsed);
@@ -287,22 +288,22 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         // Seed 30 sample enterprise products
         const seededProducts: Product[] = Array.from({ length: 30 }, (_, i) => ({
           id: crypto.randomUUID(),
-          name: i === 0 ? 'Droop Shoulder T-shirt'
-            : i === 1 ? 'T-shirt Slim-fit'
-              : i === 2 ? 'Winter Hoodie'
-                : i === 3 ? 'Casual Hoodie'
-                  : i === 4 ? 'Printed Hoodie'
-                    : i === 5 ? 'Hoodie Slim-fit'
-                      : i === 6 ? 'Winter Sweet Hoodie'
-                        : i === 7 ? 'Olives Hoodie'
+          name: i === 0 ? 'Watermelon Ice Flavour'
+            : i === 1 ? 'Mango Peach Flavour'
+              : i === 2 ? 'Blueberry Mint Flavour'
+                : i === 3 ? 'Strawberry Kiwi Flavour'
+                  : i === 4 ? 'Grape Aloe Flavour'
+                    : i === 5 ? 'Cool Mint Flavour'
+                      : i === 6 ? 'Lychee Ice Flavour'
+                        : i === 7 ? 'Double Apple Flavour'
                           : i === 8 ? 'Paracetamol 500mg'
-                            : `Enterprise Product ${i + 1}`,
+                            : `Flavour Product ${i + 1}`,
           code: i === 8 ? 'PRD-0001' : `GD${36457 + i}`,
           expiry_date: i === 8 ? '31-Dec-2027'
             : i % 3 === 0 ? '30-Jun-2028'
               : i % 3 === 1 ? '31-Dec-2026'
                 : '15-Aug-2027',
-          category_id: `cat-${(i % 6) + 1}`,
+          category_id: i === 8 ? 'cat-6' : 'cat-1',
           brand_id: `br-${(i % 6) + 1}`,
           make_id: `mk-${(i % 5) + 1}`,
           model_id: `md-${(i % 5) + 1}`,
@@ -340,7 +341,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
 
         setProducts(seededProducts);
         localStorage.setItem('products_list', JSON.stringify(seededProducts));
-        localStorage.setItem('products_seeded_v7', 'true');
+        localStorage.setItem('products_seeded_v8', 'true');
         window.dispatchEvent(new CustomEvent('ai-sync-data'));
       }
     } catch (e) {
@@ -459,7 +460,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
       const matchStatus =
         selectedStatus === 'All' ||
         (selectedStatus === 'Active' && p.is_active) ||
-        (selectedStatus === 'Inactive' && !p.is_active);
+        (selectedStatus === 'LowStock' && (p.opening_qty || 0) < (p.low_stock_level || 0));
 
       let matchPrice = true;
       if (priceOperator !== 'all' && priceValue !== '') {
@@ -530,13 +531,13 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const totalProducts = products.length;
   const totalSalesProducts = products.filter(p => p.sale_price > 0 && p.is_active).length;
   const availableProducts = products.filter(p => p.opening_qty > 0).length;
-  const returnProducts = products.filter(p => !p.is_active).length;
+  const lowStockProducts = products.filter(p => (p.opening_qty || 0) < (p.low_stock_level || 0)).length;
 
   const stats = [
-    { label: 'Total Products', value: totalProducts.toString(), sub: `${totalProducts} catalog items`, icon: FileText, color: brand.primary, bg: brand.surface },
-    { label: 'Active Products', value: totalSalesProducts.toString(), sub: `${totalProducts > 0 ? ((totalSalesProducts / totalProducts) * 100).toFixed(0) : 0}% of catalog`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
-    { label: 'In Stock Items', value: availableProducts.toString(), sub: `${availableProducts} items active`, icon: Box, color: '#C2410C', bg: '#FFF7ED' },
-    { label: 'Inactive / Return', value: returnProducts.toString(), sub: 'Requires review', icon: AlertCircle, color: '#BE123C', bg: '#FFF1F2' },
+    { label: 'Total Products', value: totalProducts.toString(), sub: `${totalProducts} catalog items`, icon: FileText, color: brand.primary, bg: brand.surface, filter: 'All' as const },
+    { label: 'Active Products', value: totalSalesProducts.toString(), sub: `${totalProducts > 0 ? ((totalSalesProducts / totalProducts) * 100).toFixed(0) : 0}% of catalog`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4', filter: 'Active' as const },
+    { label: 'In Stock Items', value: availableProducts.toString(), sub: `${availableProducts} items available`, icon: Box, color: '#C2410C', bg: '#FFF7ED', filter: 'All' as const },
+    { label: 'Low Stock', value: lowStockProducts.toString(), sub: 'Below reorder level', icon: TrendingDown, color: '#BE123C', bg: '#FFF1F2', filter: 'LowStock' as const },
   ];
 
   const sortOptions: { key: SortKey; label: string }[] = [
@@ -894,14 +895,17 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
 
       {/* ── Stats Cards (InvoiceList Style) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 print-hidden">
-        {stats.map((stat, i) => (
+        {stats.map((stat, i) => {
+          const isActive = selectedStatus === stat.filter && stat.filter !== 'All';
+          return (
           <motion.div key={stat.label}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
           >
             <Card
-              className="p-4 transition-all group cursor-default"
-              style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
+              className={`p-4 transition-all group cursor-pointer select-none ${isActive ? 'ring-2' : ''}`}
+              style={{ borderColor: isActive ? stat.color : '#E2E8F0', boxShadow: 'none' }}
+              onClick={() => { setSelectedStatus(stat.filter); setCurrentPage(1); }}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -916,7 +920,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
               </div>
             </Card>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Table Card (InvoiceList Style) ── */}
@@ -1166,9 +1171,11 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                               {/* Status */}
                               {docSettings.columns['Status'] && (
                                 <td className="px-4 py-3">
-                                  {product.is_active
-                                    ? <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(product.id)} />
-                                    : <InactiveChip label="Inactive" size="md" onClick={() => handleToggleActive(product.id)} />
+                                  {(product.opening_qty || 0) < (product.low_stock_level || 0)
+                                    ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
+                                        <TrendingDown className="w-3 h-3" /> Low Stock
+                                      </span>
+                                    : <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(product.id)} />
                                   }
                                 </td>
                               )}
@@ -1236,7 +1243,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-2 mb-1.5">
                                 <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wider">{product.code}</span>
-                                {!product.is_active && <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-red-50 text-red-500 tracking-wider">Inactive</span>}
+                                {(product.opening_qty || 0) < (product.low_stock_level || 0) && <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-red-50 text-red-500 tracking-wider flex items-center gap-0.5"><TrendingDown className="w-2.5 h-2.5" />Low Stock</span>}
                               </div>
 
                               <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>

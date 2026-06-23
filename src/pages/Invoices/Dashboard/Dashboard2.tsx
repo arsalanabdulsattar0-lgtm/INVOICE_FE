@@ -1,9 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { Download, SlidersHorizontal, ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
-
-import { Button } from '../../../components/ui/Button';
+import { ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface InvoiceItem {
   id: string; customer: string; customerInitials: string; customerColor: string;
@@ -137,32 +135,47 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
   );
 
   return (
-    <div style={{ fontFamily:"'Inter','Segoe UI',sans-serif", background:'#F4F7FD', minHeight:'100vh', padding:'20px 24px', color:'#0f172a' }}>
+    <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#f8fafc", minHeight: "100vh", color: "#111827" }}>
+      <div style={{ padding: "20px 28px", maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px" }}>
 
-      {/* ── Header ── */}
-      <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}}
-        style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:22, flexWrap:'wrap', gap:10 }}>
-        <div>
-          <h1 style={{ fontSize:24, fontWeight:900, margin:0, letterSpacing:'-0.5px' }}>Dashboard</h1>
-          <p style={{ fontSize:12, color:'#94a3b8', margin:'4px 0 0', fontWeight:500 }}>Hero's your overview of your business sales.</p>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-          <div style={{ display:'flex', background:'rgba(148,163,184,0.15)', padding:2, borderRadius:10, border:'1px solid rgba(148,163,184,0.2)' }}>
-            {[{id:'dashboard',label:'Default'},{id:'dashboard1',label:'AI Insights'},{id:'dashboard2',label:'Business Overview'}].map(t => {
-              const a = t.id === 'dashboard2';
-              return (
-                <button key={t.id} onClick={() => onViewChange?.(t.id)} style={{
-                  padding:'5px 12px', borderRadius:8, border:'none', fontSize:11, fontWeight:700, cursor:'pointer',
-                  background: a?'#fff':'transparent', color: a?'#0f172a':'#64748b',
-                  boxShadow: a?'0 1px 4px rgba(0,0,0,0.10)':'none', transition:'all 0.15s',
-                }}>{t.label}</button>
-              );
-            })}
+        {/* Page Header with switcher */}
+        <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}}
+          className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight" style={{ color: '#0f172a', margin:0 }}>
+              Dashboard
+            </h1>
+            <p className="text-[12px] font-medium text-slate-400 mt-0.5" style={{ margin:'4px 0 0' }}>
+              Here's your overview of your business sales.
+            </p>
           </div>
-          <Button variant="white" size="md" icon={Download}>Export</Button>
-          <Button variant="white" size="md" icon={SlidersHorizontal}>Filter</Button>
-        </div>
-      </motion.div>
+
+          <div className="flex items-center gap-3">
+            {/* Dashboard Version Switcher */}
+            <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
+              {[
+                { id: 'dashboard', label: 'Default' },
+                { id: 'dashboard1', label: 'Inventory Operations Dashboard' },
+                // { id: 'dashboard2', label: 'Business overview' },
+              ].map(t => {
+                const isActive = t.id === 'dashboard2';
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => onViewChange?.(t.id)}
+                    className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
 
       {/* ── Row 1: 4 Stat Cards ── */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:16 }}>
@@ -485,6 +498,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
         </div>
       </motion.div>
 
+    </div>
     </div>
   );
 }

@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
-  CheckCircle, Clock, ChevronLeft, ChevronRight,
-  User, ShieldCheck, MapPin, Globe, CreditCard, Printer, Save, ChevronDown
+  CheckCircle, ChevronLeft, ChevronRight,
+  User, ShieldCheck, MapPin, Globe, CreditCard, Printer, Save, ChevronDown,
+  ArrowUpRight
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, TextArea, ScrollArea, ComboBox, Select, Toggle } from '../../components/ui/FormControls';
@@ -358,7 +359,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v8');
+      const seededFlag = localStorage.getItem('customers_seeded_v9');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);
@@ -366,6 +367,38 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
         // Seed 30 sample customers
         let customerSeq = 1;
         let supplierSeq = 1;
+        const sampleNames = [
+          'Al-Farooq Traders',
+          'BlueRitt Technologies',
+          'Acme Corp',
+          'Global Solutions',
+          'Zeeshan Distributors',
+          'Starlight Media',
+          'Apex Digital Studio',
+          'Nexus Systems',
+          'Ahmed Traders',
+          'Pinnacle Ventures',
+          'Quantum Analytics',
+          'Vortex Enterprises',
+          'Haji Sons',
+          'Horizon Media',
+          'Titan Industrial',
+          'Nebula Software',
+          'Siddique Brothers',
+          'Nova Creative',
+          'Alpha Logistics',
+          'Spectra Design',
+          'Karamat Foods',
+          'Summit Partners',
+          'Infinity Group',
+          'Zenith Agency',
+          'Madina Enterprises',
+          'Catalyst Ventures',
+          'Quantum Crest',
+          'Aurora Media',
+          'Bismillah Traders',
+          'Lunar Interactive'
+        ];
         const sample: Customer[] = Array.from({ length: 30 }, (_, i) => {
           const isSupplier = i % 4 === 0;
           const customer_id = isSupplier
@@ -374,12 +407,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
           return {
             id: crypto.randomUUID(),
             customer_id,
-            name: i === 0 ? 'BlueRitt Technologies'
-              : i === 1 ? 'Acme Corp'
-                : i === 2 ? 'Global Solutions'
-                  : i === 3 ? 'Starlight Media'
-                    : i === 4 ? 'Ahmed Traders'
-                      : `Customer Account ${i + 1}`,
+            name: sampleNames[i],
             email: i === 0 ? 'billing@blueritt.com'
               : i === 1 ? 'finance@acme.com'
                 : i === 2 ? 'hello@globalsol.com'
@@ -411,7 +439,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
         });
         setCustomers(sample);
         persist(sample);
-        localStorage.setItem('customers_seeded_v8', 'true');
+        localStorage.setItem('customers_seeded_v9', 'true');
       }
     } catch { /* ignore */ }
   }, []);
@@ -695,13 +723,18 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   // KPI Calculations
   const totalCount = customers.length;
   const filersCount = customers.filter(c => c.is_filer).length;
-  const walkinCount = customers.filter(c => c.is_walkin).length;
+  const totalReceivables = customers
+    .filter(c => (c.bp_type || 'customer') === 'customer')
+    .reduce((acc, c) => acc + (c.opening_balance || 0), 0);
+  const totalPayables = customers
+    .filter(c => c.bp_type === 'supplier')
+    .reduce((acc, c) => acc + (c.opening_balance || 0), 0);
   const totalBalance = customers.reduce((acc, c) => acc + (c.opening_balance || 0), 0);
 
   const stats = [
     { label: 'Total Business Partners', value: totalCount.toString(), sub: `${totalCount} business partner database`, icon: User, color: brand.primary, bg: brand.surface },
     { label: 'Tax Filers', value: filersCount.toString(), sub: `${totalCount > 0 ? ((filersCount / totalCount) * 100).toFixed(0) : 0}% of business partner base`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
-    { label: 'Walk-in Accounts', value: walkinCount.toString(), sub: `${walkinCount} retail accounts`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
+    { label: 'Receivables & Payables', value: `Rs. ${totalReceivables.toLocaleString()}`, sub: `Payable: Rs. ${totalPayables.toLocaleString()}`, icon: ArrowUpRight, color: '#16A34A', bg: '#DCFCE7' },
     { label: 'Total Balance', value: `Rs. ${totalBalance.toLocaleString()}`, sub: 'Total outstanding balance', icon: CreditCard, color: '#BE123C', bg: '#FFF1F2' },
   ];
 

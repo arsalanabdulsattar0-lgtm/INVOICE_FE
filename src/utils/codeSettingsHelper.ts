@@ -59,6 +59,7 @@ export interface BranchCodeSettings {
   receipt_voucher: EntityCodeSetting;
   payment_voucher: EntityCodeSetting;
   company: EntityCodeSetting;
+  bp_adjustment: EntityCodeSetting;
 
   product_category: EntityCodeSetting;
   product_brand: EntityCodeSetting;
@@ -96,6 +97,7 @@ export const DEFAULT_ENTITY_SETTINGS: Record<string, EntityCodeSetting> = {
   receipt_voucher: { mode: 'auto', prefix: 'RV-', nextNumber: 1, padding: 5 },
   payment_voucher: { mode: 'auto', prefix: 'PV-', nextNumber: 1, padding: 5 },
   company: { mode: 'auto', prefix: 'CO-', nextNumber: 1, padding: 5 },
+  bp_adjustment: { mode: 'auto', prefix: 'BPA-', nextNumber: 1, padding: 5 },
 
   product_category: { mode: 'auto', prefix: 'CAT-', nextNumber: 1, padding: 5 },
   product_brand: { mode: 'auto', prefix: 'BRD-', nextNumber: 1, padding: 5 },

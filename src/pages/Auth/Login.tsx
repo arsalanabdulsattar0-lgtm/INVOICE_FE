@@ -124,7 +124,7 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
             >
               I
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-800">InvoiceFlow</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-800">Inventory Tracking System</span>
           </div>
 
           {/* Standard Themed Login Card */}
@@ -251,7 +251,7 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
                 <div className="text-center mb-5">
                   <h2 className="text-[26px] font-extrabold text-slate-800 tracking-tight mb-1">Welcome Back</h2>
                   <p className="text-xs font-semibold text-slate-500">
-                    Login to manage your business with InvoiceFlow ERP.
+                    Login to manage your business with Inventory Tracking System.
                   </p>
                 </div>
 

@@ -71,7 +71,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
     { label: 'Total Purchases', value: String(purchaseItems.length), sub: 'Overall volume', icon: FileText, color: brand.primary, bg: brand.surface },
     { label: 'Posted', value: String(postedCount), sub: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} volume`, icon: CheckCircle, color: '#15803D', bg: '#F0FDF4' },
     { label: 'Unposted', value: String(unpostedCount), sub: `Rs. ${unpostedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })} waiting`, icon: Clock, color: '#C2410C', bg: '#FFF7ED' },
-    { label: 'Total Expense', value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: 'From posted purchases', icon: TrendingUp, color: brand.primary, bg: brand.surface },
+    { label: 'Purchase Value', value: `Rs. ${postedSum.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: 'From posted purchases', icon: TrendingUp, color: brand.primary, bg: brand.surface },
   ];
 
   const [search, setSearch] = useState('');
@@ -114,8 +114,8 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
 
   const getTemplatesForInvoice = (inv: Invoice) => {
     let normType: string;
-    if (inv.type === 'Purchase Return' || inv.type === 'Sale Return') normType = 'Sales Return';
-    else normType = 'Sales Invoice';
+    if (inv.type === 'Purchase Return') normType = 'Purchase Return';
+    else normType = 'Purchase Invoice';
     return templates.filter(t => t.is_active && t.document_type === normType);
   };
 
@@ -349,7 +349,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
   );
 
   return (
-    <div className="min-h-full p-6 space-y-5" style={{ background: '#F4F7FD' }}>
+    <div className="h-full p-6 flex flex-col gap-5" style={{ background: '#F4F7FD', minHeight: 'calc(100vh - 70px)' }}>
 
       {/* ── Page Header ── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
@@ -479,7 +479,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
 
       {/* ── Table Card ── */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-        className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-none"
+        className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-none flex-1 flex flex-col"
         style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
 
         {/* ── Solid Header Bar (reference image style) ── */}
@@ -548,13 +548,13 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
         <AnimatePresence mode="popLayout">
           <motion.div
             key={`${statusFilter}-${typeFilter}-${sortKey}-${sortDir}-${currentPage}-${search}`}
-            className="overflow-x-auto"
+            className="overflow-x-auto flex-1 flex flex-col h-0"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
           >
-            <ScrollArea className="w-full max-w-full overflow-x-hidden" maxHeight="340px" style={{ overscrollBehavior: 'contain', overflowX: 'hidden' }}>
+            <ScrollArea className="w-full max-w-full overflow-x-hidden flex-1" style={{ overscrollBehavior: 'contain', overflowX: 'hidden' }}>
               <table className="w-full table-layout-fixed">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr className="border-b border-[#E2E8F0]">
@@ -722,12 +722,12 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
         </AnimatePresence>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between"
-            style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
-            <p className="text-[11px] font-medium text-black">
-              Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length}
-            </p>
+        <div className="mt-auto px-4 py-3 border-t flex items-center justify-between"
+          style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
+          <p className="text-[11px] font-medium text-black">
+            Showing {filtered.length === 0 ? 0 : (currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length}
+          </p>
+          {totalPages > 1 && (
             <div className="flex items-center gap-1">
               <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
@@ -746,8 +746,8 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                 variant="white" size="xs" icon={ChevronRight}
                 className="w-8 h-8 px-0" />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </motion.div>
 
       {/* Click outside is handled by document click listener */}

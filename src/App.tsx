@@ -16,7 +16,8 @@ import InvoiceListModule from './pages/Invoices/InvoiceList';
 import PurchaseList from './pages/Purchases/PurchaseList';
 import PurchaseInvoiceEditor from './pages/Purchases/PurchaseInvoiceEditor';
 import PurchaseReturnEditor from './pages/Purchases/PurchaseReturnEditor';
-import CustomerManagement from './pages/Customers/CustomerManagement';
+import CustomerManagement from './pages/BusinessPartner/CustomerManagement';
+import { BPLedgerForm } from './pages/BusinessPartner/BPLedgerForm';
 import Settings from './pages/Settings/Settings';
 import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
@@ -25,6 +26,9 @@ import WarehousesPage from './pages/Products/Warehouses';
 import { ProductBatchPage } from './pages/Products/ProductBatchPage';
 import InlineProductForm from './components/ui/InlineProductForm';
 import { AlertModal } from './components/ui/AlertModal';
+import type { BPAdjustment, BPAdjustmentData } from './types/types';
+import { BPAdjustmentEditor } from './pages/BusinessPartner/BPAdjustmentEditor';
+import { StockAdjustmentEditor } from './pages/Products/StockAdjustmentEditor';
 
 // Static imports for types / initial data only
 import { initialInvoices } from './pages/Invoices/invoiceTypes';
@@ -66,11 +70,11 @@ const parseCustomCss = (cssString?: string): React.CSSProperties => {
   return styles;
 };
 
-type View = 'dashboard' | 'dashboard1' | 'dashboard2' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'products' | 'warehouses' | 'product-batches' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
+type View = 'dashboard' | 'dashboard1' | 'dashboard2' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
 
 const initialPurchases: Invoice[] = [
   {
-    id: 'PI-00001',
+    id: 'PI-99991',
     customer: 'Al-Farooq Traders',
     customerInitials: 'AF',
     customerColor: '#10B981',
@@ -83,10 +87,10 @@ const initialPurchases: Invoice[] = [
     type: 'Purchase Invoice',
     companyId: 'co1',
     branchId: 'br-1',
-    fbrInvoiceNumber: 'FBR-PI-00001'
+    fbrInvoiceNumber: 'FBR-PI-99991'
   },
   {
-    id: 'PRTN-00002',
+    id: 'PRTN-99992',
     customer: 'Zeeshan Distributors',
     customerInitials: 'ZD',
     customerColor: '#F59E0B',
@@ -481,6 +485,34 @@ function App() {
     try { localStorage.setItem('purchase_list', JSON.stringify(purchaseList)); } catch { /* ignore */ }
   }, [purchaseList]);
 
+  const [bpAdjustmentList, setBpAdjustmentList] = useState<BPAdjustment[]>(() => {
+    try {
+      const stored = localStorage.getItem('bp_adjustments');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+  const [bpAdjustment, setBpAdjustment] = useState<BPAdjustmentData>(() => ({
+    adjustmentNumber: 'BPA-00001',
+    date: new Date().toISOString().split('T')[0],
+    partnerType: 'customer',
+    partnerId: '',
+    partnerName: '',
+    voucherNo: 'BPA-00001',
+    ref: '',
+    narration: '',
+    voucherType: 'Adjustment',
+    items: [],
+    status: 'Unposted'
+  }));
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bp_adjustments', JSON.stringify(bpAdjustmentList));
+    } catch {}
+  }, [bpAdjustmentList]);
+
   // Save default invoice data to localStorage if not present
   useEffect(() => {
     try {
@@ -617,7 +649,7 @@ function App() {
             >
               I
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-800">InvoiceFlow</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-800">Inventory Tracking System</span>
           </div>
 
           <Card
@@ -1345,6 +1377,94 @@ function App() {
       alert('Failed to load purchase data!');
     }
   };
+  const handleSaveBPAdjustment = (data: BPAdjustmentData) => {
+    const debitTotal = data.items.reduce((sum, item) => sum + (Number(item.debit) || 0), 0);
+    const creditTotal = data.items.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
+
+    const existing = bpAdjustmentList.find(x => x.id === data.adjustmentNumber);
+    const status = data.status || 'Unposted';
+
+    if (existing && existing.status === 'Posted') {
+      try {
+        const oldDetailStored = localStorage.getItem(`bp_adjustment_detail_${data.adjustmentNumber}`);
+        if (oldDetailStored) {
+          const oldDetail = JSON.parse(oldDetailStored) as BPAdjustmentData;
+          const plistRaw = localStorage.getItem('customer_list');
+          if (plistRaw) {
+            const plist = JSON.parse(plistRaw);
+            oldDetail.items.forEach(row => {
+              const partner = plist.find((p: any) => (p.customer_id || p.id) === row.partnerId || p.name === row.partnerId);
+              if (partner) {
+                if ((partner.bp_type || existing.partnerType) === 'customer') {
+                  partner.opening_balance = (partner.opening_balance || 0) - (row.debit - row.credit);
+                } else {
+                  partner.opening_balance = (partner.opening_balance || 0) - (row.credit - row.debit);
+                }
+              }
+            });
+            localStorage.setItem('customer_list', JSON.stringify(plist));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to reverse old balances', e);
+      }
+    }
+
+    if (status === 'Posted') {
+      try {
+        const plistRaw = localStorage.getItem('customer_list');
+        if (plistRaw) {
+          const plist = JSON.parse(plistRaw);
+          data.items.forEach(row => {
+            const partner = plist.find((p: any) => (p.customer_id || p.id) === row.partnerId || p.name === row.partnerId);
+            if (partner) {
+              if ((partner.bp_type || data.partnerType) === 'customer') {
+                partner.opening_balance = (partner.opening_balance || 0) + (row.debit - row.credit);
+              } else {
+                partner.opening_balance = (partner.opening_balance || 0) + (row.credit - row.debit);
+              }
+            }
+          });
+          localStorage.setItem('customer_list', JSON.stringify(plist));
+        }
+      } catch (e) {
+        console.error('Failed to apply new balances', e);
+      }
+    }
+
+    const updatedAdj: BPAdjustment = {
+      id: data.adjustmentNumber,
+      date: data.date,
+      partnerType: data.partnerType,
+      partnerId: data.partnerId,
+      partnerName: data.partnerName,
+      voucherNo: data.voucherNo,
+      ref: data.ref,
+      debitTotal,
+      creditTotal,
+      narration: data.narration,
+      status,
+      companyId: activeCompany?.id || 'co1',
+      branchId: activeBranch?.id || 'br-1'
+    };
+
+    localStorage.setItem(`bp_adjustment_detail_${updatedAdj.id}`, JSON.stringify(data));
+
+    setBpAdjustmentList(prev => {
+      const exists = prev.some(x => x.id === updatedAdj.id);
+      if (exists) {
+        return prev.map(x => x.id === updatedAdj.id ? updatedAdj : x);
+      } else {
+        const companyId = activeCompany?.id || 'co1';
+        const branchId = activeBranch?.id || 'br-1';
+        const settings = getCodeSettingsForBranch(companyId, branchId).bp_adjustment;
+        if (settings.mode === 'auto') {
+          incrementNextCode('bp_adjustment', companyId, branchId);
+        }
+        return [updatedAdj, ...prev];
+      }
+    });
+  };
 
   const handleViewChange = (v: string) => {
     const companyId = activeCompany?.id || 'co1';
@@ -1392,6 +1512,25 @@ function App() {
         : '';
       setPurchaseReturn(emptyInvoiceData('Purchase Return', nextId || 'PRTN-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('purchase-return');
+    } else if (v === 'bp-adjustments' || v === 'add-bp-adjustment') {
+      const settings = getCodeSettingsForBranch(companyId, branchId).bp_adjustment;
+      const nextId = settings.mode === 'auto'
+        ? generateNextCode('bp_adjustment', companyId, branchId)
+        : '';
+      setBpAdjustment({
+        adjustmentNumber: nextId || 'BPA-' + Math.floor(1000 + Math.random() * 9000),
+        date: new Date().toISOString().split('T')[0],
+        partnerType: 'customer',
+        partnerId: '',
+        partnerName: '',
+        voucherNo: nextId || 'BPA-' + Math.floor(1000 + Math.random() * 9000),
+        ref: '',
+        narration: '',
+        voucherType: 'Adjustment',
+        items: [],
+        status: 'Posted'
+      });
+      setActiveView('bp-adjustments');
     } else {
       setActiveView(v as View);
     }
@@ -1419,6 +1558,18 @@ function App() {
         return <InvoiceListModule invoiceItems={filteredInvoiceList} setInvoiceItems={setInvoiceList} onViewChange={handleViewChange} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} onPrintList={handlePrintList} />;
       case 'customers':
         return <CustomerManagement onViewChange={handleViewChange} onPrintList={handlePrintList} />;
+      case 'bp-ledger':
+        return <BPLedgerForm />;
+      case 'bp-adjustments':
+      case 'add-bp-adjustment':
+        return (
+          <BPAdjustmentEditor
+            data={bpAdjustment}
+            onChange={setBpAdjustment}
+            onSave={handleSaveBPAdjustment}
+            onViewChange={handleViewChange}
+          />
+        );
       case 'add-customer':
         return <CustomerManagement initialOpenCreate={true} onViewChange={handleViewChange} onPrintList={handlePrintList} />;
       case 'products':
@@ -1430,6 +1581,8 @@ function App() {
         return <WarehousesPage />;
       case 'product-batches':
         return <ProductBatchPage />;
+      case 'stock-adjustments':
+        return <StockAdjustmentEditor onViewChange={handleViewChange} />;
       case 'purchases':
         return <PurchaseList purchaseItems={filteredPurchaseList} setPurchaseItems={setPurchaseList} onViewChange={handleViewChange} onPrintPurchase={handlePrintInvoice} onEditPurchase={handleEditPurchase} onPrintList={handlePrintList} />;
       case 'add-purchase-invoice':
@@ -1658,7 +1811,12 @@ function App() {
                     <tr className="bg-slate-50 border-b-2 border-slate-300 text-[11px] font-bold text-slate-700">
                       {printColumns.filter(c => c.is_visible).map(c => (
                         <th key={c.column_id} className="py-2.5 px-3 text-left font-black border border-slate-200" style={{ width: c.width, textAlign: c.alignment || 'left' }}>
-                          {c.custom_label || c.column_name}
+                          {(() => {
+                            let dl = c.custom_label || c.column_name;
+                            if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                            if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                            return dl;
+                          })()}
                         </th>
                       ))}
                     </tr>
@@ -1888,7 +2046,7 @@ function App() {
             // Try to find salesperson via customer assignment
             const custName = printInvoiceData?.customer;
             if (custName) {
-              const storedCustomers = localStorage.getItem('customers');
+              const storedCustomers = localStorage.getItem('customer_list');
               const customersList = storedCustomers ? JSON.parse(storedCustomers) : [];
               const customer = customersList.find((c: any) => c.name === custName) || sampleCustomers.find((c: any) => c.name === custName);
               
@@ -2642,15 +2800,16 @@ function App() {
                         if (!actualVal && f.field_name !== 'Remarks' && f.field_name !== 'Terms & Conditions') return null;
 
                         let displayLabel = f.custom_label || f.field_name;
+                        if (displayLabel === 'Customer Name' || displayLabel === 'Supplier Name') displayLabel = 'Business Partner Name';
+                        else if (displayLabel === 'Customer Address' || displayLabel === 'Supplier Address') displayLabel = 'Business Partner Address';
+                        else if (displayLabel === 'Customer NTN' || displayLabel === 'Supplier NTN') displayLabel = 'Business Partner NTN';
+                        else if (displayLabel === 'Customer STRN' || displayLabel === 'Supplier STRN') displayLabel = 'Business Partner STRN';
+                        else if (displayLabel === 'Customer CNIC' || displayLabel === 'Supplier CNIC') displayLabel = 'Business Partner CNIC';
+                        else if (displayLabel === 'Customer Code' || displayLabel === 'Supplier Code') displayLabel = 'Business Partner Code';
+                        else if (displayLabel === 'Customer Email' || displayLabel === 'Supplier Email') displayLabel = 'Business Partner Email';
+
                         if (['Purchase Invoice', 'Purchase Return'].includes(printInvoiceData?.type || '')) {
-                          if (displayLabel === 'Customer Name') displayLabel = 'Supplier Name';
-                          else if (displayLabel === 'Customer Address') displayLabel = 'Supplier Address';
-                          else if (displayLabel === 'Customer NTN') displayLabel = 'Supplier NTN';
-                          else if (displayLabel === 'Customer STRN') displayLabel = 'Supplier STRN';
-                          else if (displayLabel === 'Customer CNIC') displayLabel = 'Supplier CNIC';
-                          else if (displayLabel === 'Customer Code') displayLabel = 'Supplier Code';
-                          else if (displayLabel === 'Customer Email') displayLabel = 'Supplier Email';
-                          else if (displayLabel === 'Invoice Number') displayLabel = 'Purchase Number';
+                          if (displayLabel === 'Invoice Number') displayLabel = 'Purchase Number';
                           else if (displayLabel === 'Invoice Date') displayLabel = 'Purchase Date';
                           else if (displayLabel === 'FBR Invoice Number') displayLabel = 'FBR Number';
                         }
@@ -2882,7 +3041,7 @@ function App() {
                             }}
                           >
                             <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left">
-                              Customer Details
+                              Business Partner Details
                             </div>
                             <div className="space-y-1.5">
                               {(() => {
@@ -2947,7 +3106,19 @@ function App() {
                                         visibility: isVisible ? undefined : 'hidden',
                                       }}
                                     >
-                                      <strong className="text-slate-500 mr-2 shrink-0" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>{item.custom_label || item.field_name}:</strong>
+                                      <strong className="text-slate-500 mr-2 shrink-0" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>
+                                        {(() => {
+                                          let dl = item.custom_label || item.field_name;
+                                          if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                                          if (dl === 'Customer Address' || dl === 'Supplier Address') return 'Business Partner Address';
+                                          if (dl === 'Customer NTN' || dl === 'Supplier NTN') return 'Business Partner NTN';
+                                          if (dl === 'Customer STRN' || dl === 'Supplier STRN') return 'Business Partner STRN';
+                                          if (dl === 'Customer CNIC' || dl === 'Supplier CNIC') return 'Business Partner CNIC';
+                                          if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                                          if (dl === 'Customer Email' || dl === 'Supplier Email') return 'Business Partner Email';
+                                          return dl;
+                                        })()}:
+                                      </strong>
                                       <span className="text-slate-800 text-right break-words max-w-[65%]" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{actualVal}</span>
                                     </div>
                                   );

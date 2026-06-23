@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
   FileText,
   Users,
   Settings,
@@ -15,6 +14,7 @@ import {
   Warehouse,
   ShoppingCart,
   Binary,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import SidebarNavButton from './SidebarNavButton';
@@ -62,7 +62,7 @@ const Sidebar: React.FC<Props> = ({
   }
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    // { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     {
       id: 'customers',
       label: 'Business Partners',
@@ -70,6 +70,8 @@ const Sidebar: React.FC<Props> = ({
       isParent: true,
       subItems: [
         { id: 'customers', label: 'Business Partner List', icon: List },
+        { id: 'bp-ledger', label: 'Business Partner Ledger', icon: FileText },
+        { id: 'bp-adjustments', label: 'Business Partner Adjustment', icon: SlidersHorizontal }
       ]
     },
     {
@@ -78,9 +80,10 @@ const Sidebar: React.FC<Props> = ({
       icon: Box,
       isParent: true,
       subItems: [
-        { id: 'products',    label: 'Product List', icon: List },
-        { id: 'warehouses',  label: 'Product Warehouses',   icon: Warehouse },
-        { id: 'product-batches', label: 'Product Batch', icon: Binary },
+        { id: 'products', label: 'Product List', icon: List },
+        { id: 'warehouses', label: 'Product Warehouses', icon: Warehouse },
+        { id: 'product-batches', label: 'Product Batches', icon: Binary },
+        { id: 'stock-adjustments', label: 'Stock Adjustment', icon: SlidersHorizontal },
       ]
     },
     {
@@ -89,9 +92,9 @@ const Sidebar: React.FC<Props> = ({
       icon: ShoppingCart,
       isParent: true,
       subItems: [
-        { id: 'purchases',             label: 'Purchase List',    icon: FileText },
-        { id: 'add-purchase-invoice',  label: 'Purchase Invoice', icon: FilePlus },
-        { id: 'purchase-return',       label: 'Purchase Return',  icon: Undo2 }
+        { id: 'purchases', label: 'Purchase List', icon: FileText },
+        { id: 'add-purchase-invoice', label: 'Purchase Invoice', icon: FilePlus },
+        { id: 'purchase-return', label: 'Purchase Return', icon: Undo2 }
       ]
     },
     {
@@ -114,7 +117,12 @@ const Sidebar: React.FC<Props> = ({
     activeView === 'return-invoice' ||
     activeView === 'add-invoice-v4';
 
-  const isBpActive = activeView === 'customers' || activeView === 'add-customer';
+  const isBpActive =
+    activeView === 'customers' ||
+    activeView === 'add-customer' ||
+    activeView === 'bp-ledger' ||
+    activeView === 'bp-adjustments' ||
+    activeView === 'add-bp-adjustment';
   const isProductsActive = activeView === 'products' || activeView === 'warehouses' || activeView === 'product-batches';
   const isPurchaseActive = activeView === 'purchases' || activeView === 'add-purchase-invoice' || activeView === 'purchase-return';
 
@@ -220,10 +228,10 @@ const Sidebar: React.FC<Props> = ({
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-md font-bold tracking-tight truncate transition-colors duration-300"
+            className="text-md font-bold tracking-tight whitespace-normal break-words leading-tight transition-colors duration-300"
             style={{ color: brand.textPrimary }}
           >
-            InvoiceFlow
+            Inventory Tracking System
           </motion.span>
         )}
       </div>
@@ -232,7 +240,7 @@ const Sidebar: React.FC<Props> = ({
       <nav className={`flex-grow ${isCurrentlyCollapsed ? 'px-1.5' : 'px-2.5'} space-y-1 py-4 overflow-y-auto custom-scrollbar`}>
         {menuItems.map((item) => {
           if (item.isParent) {
-            const isBpParent      = item.id === 'customers';
+            const isBpParent = item.id === 'customers';
             const isProductParent = item.id === 'products';
             const isPurchaseParent = item.id === 'purchases';
 
@@ -243,8 +251,8 @@ const Sidebar: React.FC<Props> = ({
                 : isPurchaseParent
                   ? isPurchaseActive
                   : (activeView === 'invoices' ||
-                     activeView === 'return-invoice' ||
-                     activeView === 'add-invoice-v4');
+                    activeView === 'return-invoice' ||
+                    activeView === 'add-invoice-v4');
 
             const isExpanded = isBpParent
               ? bpExpanded
@@ -302,14 +310,17 @@ const Sidebar: React.FC<Props> = ({
                 isExpanded={isExpanded}
                 onToggleExpand={toggleExpand}
                 isSubItemActive={(subId) => {
-                  if (isBpParent)      return activeView === subId;
+                  if (isBpParent) {
+                    if (subId === 'bp-adjustments') return activeView === 'bp-adjustments' || activeView === 'add-bp-adjustment';
+                    return activeView === subId;
+                  }
                   if (isProductParent) return activeView === subId;
                   if (isPurchaseParent) return activeView === subId;
-                  if (subId === 'invoices')             return activeView === 'invoices';
-                  if (subId === 'return-invoice')       return activeView === 'return-invoice';
-                  if (subId === 'add-sale-invoice')     return activeView === 'add-invoice-v4' && (invoiceType === 'Sale Invoice' || !invoiceType || (invoiceType !== 'Service Invoice' && invoiceType !== 'Digital Invoice'));
-                  if (subId === 'add-service-invoice')  return activeView === 'add-invoice-v4' && invoiceType === 'Service Invoice';
-                  if (subId === 'add-digital-invoice')  return activeView === 'add-invoice-v4' && invoiceType === 'Digital Invoice';
+                  if (subId === 'invoices') return activeView === 'invoices';
+                  if (subId === 'return-invoice') return activeView === 'return-invoice';
+                  if (subId === 'add-sale-invoice') return activeView === 'add-invoice-v4' && (invoiceType === 'Sale Invoice' || !invoiceType || (invoiceType !== 'Service Invoice' && invoiceType !== 'Digital Invoice'));
+                  if (subId === 'add-service-invoice') return activeView === 'add-invoice-v4' && invoiceType === 'Service Invoice';
+                  if (subId === 'add-digital-invoice') return activeView === 'add-invoice-v4' && invoiceType === 'Digital Invoice';
                   return false;
                 }}
               />
@@ -369,7 +380,7 @@ const Sidebar: React.FC<Props> = ({
                     const defCo = localStorage.getItem('default_company_id');
                     const defBr = localStorage.getItem('default_branch_id');
                     setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
-                  } catch {}
+                  } catch { }
                 }
                 setShowPopover(!showPopover);
               }}
@@ -404,7 +415,7 @@ const Sidebar: React.FC<Props> = ({
                       const defCo = localStorage.getItem('default_company_id');
                       const defBr = localStorage.getItem('default_branch_id');
                       setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
-                    } catch {}
+                    } catch { }
                   }
                   setShowPopover(!showPopover);
                 }}
@@ -445,7 +456,7 @@ const Sidebar: React.FC<Props> = ({
                       const defCo = localStorage.getItem('default_company_id');
                       const defBr = localStorage.getItem('default_branch_id');
                       setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
-                    } catch {}
+                    } catch { }
                   }
                   setShowPopover(!showPopover);
                 }}
@@ -461,11 +472,11 @@ const Sidebar: React.FC<Props> = ({
           {showPopover && (
             <>
               {/* Backdrop to close click outside */}
-              <div 
-                className="fixed inset-0 z-40 cursor-default" 
+              <div
+                className="fixed inset-0 z-40 cursor-default"
                 onClick={() => setShowPopover(false)}
               />
-              
+
               {/* Context Selector Popover */}
               <div
                 className="fixed z-50 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 flex flex-col space-y-4"

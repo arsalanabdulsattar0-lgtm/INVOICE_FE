@@ -280,8 +280,8 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
             <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
               {[
                 { id: 'dashboard', label: 'Default' },
-                { id: 'dashboard1', label: 'AI insights' },
-                { id: 'dashboard2', label: 'Business overview' },
+                { id: 'dashboard1', label: 'Inventory Operations Dashboard' },
+                // { id: 'dashboard2', label: 'Business overview' },
               ].map(t => {
                 const isActive = t.id === 'dashboard';
                 return (

@@ -4,7 +4,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input, ScrollArea } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
-import { Plus, Pencil, X, ChevronRight, Binary } from 'lucide-react';
+import { Plus, Pencil, X, ChevronRight, Binary, Paperclip } from 'lucide-react';
 import type { Product } from './ProductList';
 
 interface ProductBatch {
@@ -14,6 +14,8 @@ interface ProductBatch {
   batch_no: string;
   expiry_date: string;
   is_active: boolean;
+  attachment_name?: string;
+  attachment_url?: string;
 }
 
 interface ProductBatchModalProps {
@@ -70,7 +72,9 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
     productId: '',
     batchNo: '',
     expiryDate: '',
-    isActive: true
+    isActive: true,
+    attachmentName: '',
+    attachmentUrl: ''
   });
 
   // Quick product add states
@@ -136,7 +140,9 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
       productId: selectedProductId || products[0]?.id || '',
       batchNo: '',
       expiryDate: new Date().toISOString().split('T')[0],
-      isActive: true
+      isActive: true,
+      attachmentName: '',
+      attachmentUrl: ''
     });
     setShowFormModal(true);
   };
@@ -148,7 +154,9 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
       productId: activeBatch.product_id,
       batchNo: activeBatch.batch_no,
       expiryDate: activeBatch.expiry_date,
-      isActive: activeBatch.is_active
+      isActive: activeBatch.is_active,
+      attachmentName: activeBatch.attachment_name || '',
+      attachmentUrl: activeBatch.attachment_url || ''
     });
     setShowFormModal(true);
   };
@@ -167,7 +175,9 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
         product_name: productName,
         batch_no: formData.batchNo.trim(),
         expiry_date: formData.expiryDate,
-        is_active: formData.isActive
+        is_active: formData.isActive,
+        attachment_name: formData.attachmentName,
+        attachment_url: formData.attachmentUrl
       };
       updated = [...batches, newBatch];
       setSelectedBatchId(newBatch.id);
@@ -180,15 +190,23 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               product_name: productName,
               batch_no: formData.batchNo.trim(),
               expiry_date: formData.expiryDate,
-              is_active: formData.isActive
+              is_active: formData.isActive,
+              attachment_name: formData.attachmentName,
+              attachment_url: formData.attachmentUrl
             }
           : b
       );
     }
 
-    setBatches(updated);
-    localStorage.setItem('product_batches', JSON.stringify(updated));
-    setShowFormModal(false);
+    try {
+      localStorage.setItem('product_batches', JSON.stringify(updated));
+      setBatches(updated);
+      setShowFormModal(false);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to save batch. The attached file might be too large. Please remove the attachment or try a smaller file (limit ~4MB).');
+      return;
+    }
 
     // Sync to warehouses list stock batches if needed
     try {
@@ -348,9 +366,10 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                 <tr className="border-b border-slate-100">
                   <th className="w-10 px-2 py-2.5 text-center border-b border-slate-150"></th>
                   <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[35%]">Product Name</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[25%]">Batch No.</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[20%]">Expiry Date</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[20%]">Status</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[20%]">Batch No.</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[15%]">Expiry Date</th>
+                  <th className="px-2 py-2.5 text-center text-[10px] font-black text-slate-400 w-[10%]">File</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[15%]">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -380,6 +399,22 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                         <td className="px-4 py-2 text-[12px] font-semibold text-slate-800 font-mono">{b.batch_no}</td>
                         <td className="px-4 py-2 text-[12px] font-semibold text-slate-650 font-mono">
                           {formatDateForDisplay(b.expiry_date)}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          {b.attachment_name ? (
+                            <a
+                              href={b.attachment_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center p-1.5 rounded-lg bg-sky-50 text-[#009bf2] hover:bg-sky-100 transition-colors"
+                              title={b.attachment_name}
+                            >
+                              <Paperclip className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-2">
                           <span
@@ -412,7 +447,7 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white rounded-[20px] w-full max-w-[340px] h-[260px] border border-slate-200 overflow-hidden relative shadow-xl font-sans flex flex-col"
+              className="bg-white rounded-[20px] w-full max-w-[340px] h-[310px] border border-slate-200 overflow-hidden relative shadow-xl font-sans flex flex-col"
             >
               {/* Inner Modal Header */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white flex-shrink-0">
@@ -428,7 +463,7 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               </div>
 
               {/* Inner Modal Body */}
-              <div className="px-5 py-4 space-y-3 flex-grow overflow-hidden">
+              <div className="px-5 py-4 space-y-3 flex-grow overflow-y-auto">
                 {/* Batch No */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-bold text-slate-700">Batch No.</label>
@@ -450,6 +485,51 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                     onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
                     className="w-full h-8.5 px-3.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 outline-none focus:border-[#009bf2] focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer"
                   />
+                </div>
+
+                {/* Attachment */}
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-700">Attachment Details</label>
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-2 h-8.5 px-3.5 rounded-full border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
+                      <Binary className="w-3.5 h-3.5 group-hover:text-[#009bf2]" />
+                      <span className="truncate max-w-[150px]">
+                        {formData.attachmentName || 'Attach File'}
+                      </span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 1.5 * 1024 * 1024) {
+                              alert('File is too large! For this local demo, please attach files smaller than 1.5MB to avoid storage limits.');
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData(prev => ({
+                                ...prev,
+                                attachmentName: file.name,
+                                attachmentUrl: reader.result as string
+                              }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                    {formData.attachmentName && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
+                        className="p-1.5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                        title="Remove Attachment"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

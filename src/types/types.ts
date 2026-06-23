@@ -58,3 +58,78 @@ export interface InvoiceData {
   fbrInvoiceNumber?: string;
   status?: InvoiceStatus;
 }
+
+export interface BPAdjustment {
+  id: string;
+  date: string;
+  partnerType: 'customer' | 'supplier';
+  partnerId: string;
+  partnerName: string;
+  voucherNo: string;
+  ref: string;
+  debitTotal: number;
+  creditTotal: number;
+  narration: string;
+  status: 'Posted' | 'Unposted';
+  companyId: string;
+  branchId: string;
+}
+
+export interface BPAdjustmentDetailRow {
+  partnerId: string;
+  date: string;
+  voucherNo: string;
+  ref: string;
+  glCode: string;
+  narration: string;
+  analysisCode: string;
+  deptCode: string;
+  debit: number;
+  credit: number;
+  taxId: string;
+  taxAmt: number;
+  voucherType: string;
+}
+
+export interface BPAdjustmentData {
+  adjustmentNumber: string;
+  date: string;
+  partnerType: 'customer' | 'supplier';
+  partnerId: string;
+  partnerName: string;
+  voucherNo: string;
+  ref: string;
+  narration: string;
+  voucherType: string;
+  items: BPAdjustmentDetailRow[];
+  status?: 'Posted' | 'Unposted';
+}
+
+export interface StockAdjustmentDetailRow {
+  productId: string;
+  productName: string;
+  unit: string;
+  date: string;
+  detail: string;
+  qtyIn: number;
+  qtyOut: number;
+  batchNo?: string;
+  unitPrice: number;
+  amount: number;
+  locId: string;
+}
+
+export interface StockAdjustmentData {
+  adjustmentNumber: string;
+  adjustmentType: string;
+  customerId: string;
+  customerName: string;
+  srNo: string;
+  reference?: string;
+  serialNosOut: string;
+  serialNosIn: string;
+  includeInTaxRecord: boolean;
+  items: StockAdjustmentDetailRow[];
+  status?: 'Posted' | 'Unposted';
+}
+

@@ -334,7 +334,7 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
 
   const uniqueCustomers = (() => {
     try {
-      const stored = localStorage.getItem('customers');
+      const stored = localStorage.getItem('customer_list');
       const list = stored ? JSON.parse(stored) : [];
       const registryNames = list.map((c: any) => c.name);
       const allNames = new Set([

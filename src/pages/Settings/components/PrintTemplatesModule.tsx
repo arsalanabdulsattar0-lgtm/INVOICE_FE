@@ -1926,7 +1926,12 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                       setShowColumnPropertiesModal(true);
                     }}
                   >
-                    {col.custom_label || col.column_name}
+                    {(() => {
+                      let dl = col.custom_label || col.column_name;
+                      if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                      if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                      return dl;
+                    })()}
                   </th>
                 ))}
               </tr>
@@ -2604,7 +2609,12 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                           setShowColumnPropertiesModal(true);
                                         }}
                                       >
-                                        {col.custom_label || col.column_name}
+                                        {(() => {
+                                          let dl = col.custom_label || col.column_name;
+                                          if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                                          if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                                          return dl;
+                                        })()}
                                       </th>
                                     ))}
                                   </tr>
@@ -2815,7 +2825,20 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                 />
                               ) : (
                                 <div className="inline-flex items-center flex-wrap" onDoubleClick={(e) => handleDoubleClick(e, f.field_id, f.custom_label || f.field_name)}>
-                                  <strong className="text-slate-400 mr-1" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{f.custom_label || f.field_name}: </strong>
+                                  <strong className="text-slate-400 mr-1" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>
+                                    {(() => {
+                                      let dl = f.custom_label || f.field_name;
+                                      if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                                      if (dl === 'Customer Address' || dl === 'Supplier Address') return 'Business Partner Address';
+                                      if (dl === 'Customer NTN' || dl === 'Supplier NTN') return 'Business Partner NTN';
+                                      if (dl === 'Customer STRN' || dl === 'Supplier STRN') return 'Business Partner STRN';
+                                      if (dl === 'Customer CNIC' || dl === 'Supplier CNIC') return 'Business Partner CNIC';
+                                      if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                                      if (dl === 'Customer Email' || dl === 'Supplier Email') return 'Business Partner Email';
+                                      return dl;
+                                    })()}
+                                    : 
+                                  </strong>
                                   <span className="text-slate-700" style={{ color: f.color || undefined, fontWeight: f.is_bold ? 'bold' : 'normal' }}>{sampleVal}</span>
                                 </div>
                               )}
@@ -3259,7 +3282,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                               }}
                             >
                               <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left text-[9px]">
-                                Customer Details
+                                Business Partner Details
                               </div>
                               <div className="space-y-1.5">
                                 {(() => {
@@ -3556,7 +3579,17 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={`font-semibold truncate ${item.is_visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
-                            {item.custom_label || item.field_name}
+                            {(() => {
+                              let dl = item.custom_label || item.field_name;
+                              if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                              if (dl === 'Customer Address' || dl === 'Supplier Address') return 'Business Partner Address';
+                              if (dl === 'Customer NTN' || dl === 'Supplier NTN') return 'Business Partner NTN';
+                              if (dl === 'Customer STRN' || dl === 'Supplier STRN') return 'Business Partner STRN';
+                              if (dl === 'Customer CNIC' || dl === 'Supplier CNIC') return 'Business Partner CNIC';
+                              if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                              if (dl === 'Customer Email' || dl === 'Supplier Email') return 'Business Partner Email';
+                              return dl;
+                            })()}
                           </span>
                           {item.isCustom && (
                             <span className="text-[8px] px-1 bg-slate-100 border text-slate-500 rounded font-normal capitalize">
@@ -3712,7 +3745,12 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                           <div className="flex items-center gap-2 min-w-0 flex-grow">
                             <Move className="w-3.5 h-3.5 text-slate-400 cursor-grab shrink-0" />
                             <span className={`font-semibold truncate ${col.is_visible ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
-                              {col.custom_label || col.column_name}
+                              {(() => {
+                                let dl = col.custom_label || col.column_name;
+                                if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                                if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                                return dl;
+                              })()}
                             </span>
                           </div>
 
@@ -3882,7 +3920,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                   {/* Left Column */}
                   <div>
                     {renderAccordionSection('📂 Company Information', 'company', companyData.matchCount, companyData.totalCount, companyData.node)}
-                    {renderAccordionSection('📂 Customer Information', 'customer', customerData.matchCount, customerData.totalCount, customerData.node)}
+                    {renderAccordionSection('📂 Business Partner Info', 'customer', customerData.matchCount, customerData.totalCount, customerData.node)}
                     {renderAccordionSection('📂 Invoice Information', 'invoice', invoiceData.matchCount, invoiceData.totalCount, invoiceData.node)}
                     {renderAccordionSection('📊 Table Columns', 'columns', columnsData.matchCount, columnsData.totalCount, columnsData.node)}
                   </div>

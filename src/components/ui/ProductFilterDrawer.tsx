@@ -29,8 +29,8 @@ interface ProductFilterDrawerProps {
   stockValue: string;
   setStockValue: (val: string) => void;
   // Status
-  selectedStatus: 'All' | 'Active' | 'Inactive';
-  setSelectedStatus: (val: 'All' | 'Active' | 'Inactive') => void;
+  selectedStatus: 'All' | 'Active' | 'LowStock';
+  setSelectedStatus: (val: 'All' | 'Active' | 'LowStock') => void;
   // Supplier
   selectedSupplier: string;
   setSelectedSupplier: (val: string) => void;
@@ -261,7 +261,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
           options={[
             { value: 'All', label: 'All Statuses' },
             { value: 'Active', label: 'Active' },
-            { value: 'Inactive', label: 'Inactive' },
+            { value: 'LowStock', label: 'Low Stock' },
           ]}
         />
       </div>

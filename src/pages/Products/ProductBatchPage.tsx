@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Binary, Search, Plus, Pencil, Trash2, Check, AlertCircle, Box
+  Binary, Search, Plus, Pencil, Trash2, Check, AlertCircle, Box, Paperclip
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, ScrollArea, Toggle } from '../../components/ui/FormControls';
@@ -19,6 +19,8 @@ interface ProductBatch {
   batch_no: string;
   expiry_date: string;
   is_active: boolean;
+  attachment_name?: string;
+  attachment_url?: string;
 }
 
 const DEFAULT_BATCHES: ProductBatch[] = [
@@ -62,7 +64,9 @@ export const ProductBatchPage: React.FC = () => {
     productId: '',
     batchNo: '',
     expiryDate: '',
-    isActive: true
+    isActive: true,
+    attachmentName: '',
+    attachmentUrl: ''
   });
 
   // Sorting state
@@ -169,7 +173,9 @@ export const ProductBatchPage: React.FC = () => {
       productId: products[0]?.id || '',
       batchNo: '',
       expiryDate: new Date().toISOString().split('T')[0],
-      isActive: true
+      isActive: true,
+      attachmentName: '',
+      attachmentUrl: ''
     });
     setShowFormModal(true);
   };
@@ -181,7 +187,9 @@ export const ProductBatchPage: React.FC = () => {
       productId: b.product_id,
       batchNo: b.batch_no,
       expiryDate: b.expiry_date,
-      isActive: b.is_active
+      isActive: b.is_active,
+      attachmentName: b.attachment_name || '',
+      attachmentUrl: b.attachment_url || ''
     });
     setShowFormModal(true);
   };
@@ -207,7 +215,7 @@ export const ProductBatchPage: React.FC = () => {
   };
 
   const handleSaveBatch = () => {
-    if (!formData.productId || !formData.batchNo.trim()) return;
+    if (!formData.batchNo.trim()) return;
 
     const matchedProduct = products.find(p => p.id === formData.productId);
     const productName = matchedProduct ? matchedProduct.name : 'Unknown Product';
@@ -220,7 +228,9 @@ export const ProductBatchPage: React.FC = () => {
         product_name: productName,
         batch_no: formData.batchNo.trim(),
         expiry_date: formData.expiryDate,
-        is_active: formData.isActive
+        is_active: formData.isActive,
+        attachment_name: formData.attachmentName,
+        attachment_url: formData.attachmentUrl
       };
       updated = [...batches, newBatch];
     } else {
@@ -232,15 +242,23 @@ export const ProductBatchPage: React.FC = () => {
               product_name: productName,
               batch_no: formData.batchNo.trim(),
               expiry_date: formData.expiryDate,
-              is_active: formData.isActive
+              is_active: formData.isActive,
+              attachment_name: formData.attachmentName,
+              attachment_url: formData.attachmentUrl
             }
           : b
       );
     }
 
-    setBatches(updated);
-    localStorage.setItem('product_batches', JSON.stringify(updated));
-    setShowFormModal(false);
+    try {
+      localStorage.setItem('product_batches', JSON.stringify(updated));
+      setBatches(updated);
+      setShowFormModal(false);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to save batch. The attached file might be too large. Please remove the attachment or try a smaller file (limit ~4MB).');
+      return;
+    }
 
     // Sync to warehouses list stock batches if needed
     try {
@@ -388,9 +406,10 @@ export const ProductBatchPage: React.FC = () => {
                 {([
                   { label: 'Product Name', key: 'product_name', width: 'w-[40%]' },
                   { label: 'Batch No.', key: 'batch_no', width: 'w-[20%]' },
-                  { label: 'Expiry Date', key: 'expiry_date', width: 'w-[20%]' },
+                  { label: 'Expiry Date', key: 'expiry_date', width: 'w-[15%]' },
+                  { label: 'File', key: 'file_attachment', width: 'w-[10%]' },
                   { label: 'Status', key: 'is_active', width: 'w-[10%]' },
-                  { label: 'Actions', key: '', width: 'w-[10%]' }
+                  { label: 'Actions', key: 'actions', width: 'w-[10%]' }
                 ] as { label: string; key: string; width: string }[]).map(h => (
                   <TableHeader
                     key={h.label}
@@ -430,6 +449,22 @@ export const ProductBatchPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 font-semibold text-[12px] text-slate-800 font-mono">
                       {formatDateForDisplay(b.expiry_date)}
+                    </td>
+                    <td className="px-4 py-3 text-[12px]">
+                      {b.attachment_name ? (
+                        <a
+                          href={b.attachment_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center justify-center p-1.5 rounded-lg bg-sky-50 text-[#009bf2] hover:bg-sky-100 transition-colors"
+                          title={b.attachment_name}
+                        >
+                          <Paperclip className="w-3.5 h-3.5" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-300 ml-2">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[12px]">
                       <span
@@ -489,7 +524,7 @@ export const ProductBatchPage: React.FC = () => {
                   size="md"
                   icon={Check}
                   onClick={handleSaveBatch}
-                  disabled={!formData.productId || !formData.batchNo.trim()}
+                  disabled={!formData.batchNo.trim()}
                   style={{ backgroundColor: brand.primary }}
                 >
                   {formMode === 'add' ? 'Save Batch' : 'Update Batch'}
@@ -515,6 +550,49 @@ export const ProductBatchPage: React.FC = () => {
                   value={formData.expiryDate}
                   onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
                 />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700">Attachment Details</label>
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
+                    <Binary className="w-4 h-4 group-hover:text-[#009bf2]" />
+                    <span className="truncate max-w-[200px]">
+                      {formData.attachmentName || 'Attach File'}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 1.5 * 1024 * 1024) {
+                            alert('File is too large! For this local demo, please attach files smaller than 1.5MB to avoid storage limits.');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({
+                              ...prev,
+                              attachmentName: file.name,
+                              attachmentUrl: reader.result as string
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  {formData.attachmentName && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
+                      className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                      title="Remove Attachment"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="col-span-2 flex items-center pt-2">
                 <Toggle

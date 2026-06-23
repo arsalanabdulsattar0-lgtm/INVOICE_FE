@@ -600,6 +600,16 @@ export const seedPrintTemplates: PrintTemplate[] = [
     signature_enabled: true, watermark_enabled: false,
     terms_enabled: true, remarks_enabled: true,
   },
+
+  // ── BP Ledger (1 template) ──────────────────────────────────────────────────
+  {
+    template_id: 'bpledger-1', template_name: 'Business Partner Ledger (Detailed)',
+    document_type: 'BP Ledger', paper_size: 'A4', orientation: 'Portrait',
+    is_default: true, is_active: true,
+    logo_size: 80, qr_enabled: false, barcode_enabled: false,
+    signature_enabled: true, watermark_enabled: false,
+    terms_enabled: false, remarks_enabled: false,
+  },
 ];
 
 
@@ -815,8 +825,8 @@ export const getSeedTemplateColumns = (templateId: string): PrintTemplateColumn[
     columns = [
       { column_name: 'Sr No', width: '4%', is_visible: true },
       { column_name: 'Purchase No', width: '8%', is_visible: true },
-      { column_name: 'Supplier Name', width: '10%', is_visible: true },
       { column_name: 'Supplier Code', width: '8%', is_visible: true },
+      { column_name: 'Supplier Name', width: '10%', is_visible: true },
       { column_name: 'Invoice No', width: '8%', is_visible: true },
       { column_name: 'Purchase Date', width: '8%', is_visible: true },
       { column_name: 'Due Date', width: '8%', is_visible: true },
