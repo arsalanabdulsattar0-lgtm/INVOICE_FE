@@ -359,7 +359,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v17');
+      const seededFlag = localStorage.getItem('customers_seeded_v18');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);
@@ -376,8 +376,8 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
             website: '',
             is_walkin: false,
             is_filer: true,
-            credit_limit: 0,
-            opening_balance: 0,
+            credit_limit: (i % 5 + 1) * 10000,
+            opening_balance: (i % 10 + 1) * 1500,
             opening_date: '',
             payment_term_days: 0,
             discount_percent: 0,
@@ -396,7 +396,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
         });
         setCustomers(sample);
         persist(sample);
-        localStorage.setItem('customers_seeded_v17', 'true');
+        localStorage.setItem('customers_seeded_v18', 'true');
       }
     } catch { /* ignore */ }
   }, []);
