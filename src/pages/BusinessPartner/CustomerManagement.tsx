@@ -359,12 +359,12 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v18');
+      const seededFlag = localStorage.getItem('customers_seeded_v19');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);
       } else {
-        const sample: Customer[] = Array.from({ length: 5000 }, (_, i) => {
+        const sample: Customer[] = Array.from({ length: 50 }, (_, i) => {
           const isSupplier = i % 4 === 0;
           return {
             id: `${i}`,
@@ -396,7 +396,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
         });
         setCustomers(sample);
         persist(sample);
-        localStorage.setItem('customers_seeded_v18', 'true');
+        localStorage.setItem('customers_seeded_v19', 'true');
       }
     } catch { /* ignore */ }
   }, []);
