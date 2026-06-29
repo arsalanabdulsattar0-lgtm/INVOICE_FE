@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { usePermissions } from '../../../context/PermissionContext';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { Invoice } from '../invoiceTypes';
@@ -9,6 +10,14 @@ interface Dashboard1Props {
 }
 
 const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
+  const { isFunctionEnabled } = usePermissions();
+  const companyIdToUse = (() => {
+    try {
+      const stored = localStorage.getItem('invoice_settings');
+      if (stored) return JSON.parse(stored).company?.id || 'co1';
+    } catch {}
+    return 'co1';
+  })();
 
   const sparkline1 = useMemo(() => [{v: 10}, {v: 15}, {v: 12}, {v: 20}, {v: 18}, {v: 25}, {v: 30}], []);
   const sparkline2 = useMemo(() => [{v: 5}, {v: 8}, {v: 12}, {v: 10}, {v: 15}, {v: 22}, {v: 20}], []);
@@ -135,12 +144,11 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
 
           <div className="flex items-center gap-3">
             {/* Dashboard Version Switcher */}
-            <div className="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/50">
+            <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
               {[
-                { id: 'dashboard', label: 'Default' },
-                { id: 'dashboard1', label: 'Inventory Operations Dashboard' },
-                // { id: 'dashboard2', label: 'Business overview' },
-              ].map(t => {
+                { id: 'dashboard', label: 'Default', fnId: 'default_dashboard' },
+                { id: 'dashboard1', label: 'Inventory Operations Dashboard', fnId: 'inventory_dashboard' },
+              ].filter(t => isFunctionEnabled(companyIdToUse, t.fnId as any)).map(t => {
                 const isActive = t.id === 'dashboard1';
                 return (
                   <button

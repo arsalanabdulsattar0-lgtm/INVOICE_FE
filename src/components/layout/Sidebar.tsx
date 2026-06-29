@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import SidebarNavButton from './SidebarNavButton';
+import { usePermissions, type ModuleId } from '../../context/PermissionContext';
 
 interface Props {
   activeView: string;
@@ -51,13 +52,16 @@ const Sidebar: React.FC<Props> = ({
   branches = [],
   onContextChange
 }) => {
-  const { brand } = useTheme();
+  const { brand, showSalesModule } = useTheme();
   const [showPopover, setShowPopover] = React.useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
   const [selectedBranchId, setSelectedBranchId] = React.useState('');
   const [setAsDefault, setSetAsDefault] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
   const isCurrentlyCollapsed = isCollapsed;
+  const { isModuleEnabled, isFunctionEnabled } = usePermissions();
+  const companyIdToUse = currentCompany?.id || 'co1'; // Default to first seed company if null
+
   if (isHovered && false) {
     console.log(isHovered);
   }
@@ -111,7 +115,51 @@ const Sidebar: React.FC<Props> = ({
         { id: 'add-digital-invoice', label: 'Digital Invoice', icon: FilePlus }
       ]
     },
-  ];
+  ].map(item => {
+    if (!item.subItems) return item;
+    return {
+      ...item,
+      subItems: item.subItems.filter(sub => {
+        // Map sidebar sub-item IDs to the new FunctionIds
+        const functionIdMap: Record<string, import('../../context/PermissionContext').FunctionId> = {
+          'customers': 'bp_list',
+          'bp-ledger': 'bp_ledger',
+          'bp-adjustments': 'bp_adjustments',
+          'products': 'product_list',
+          'warehouses': 'warehouses',
+          'product-batches': 'product_batches',
+          'stock-adjustments': 'stock_adjustments',
+          'purchases': 'purchase_list',
+          'add-purchase-invoice': 'add_purchase_invoice',
+          'purchase-return': 'purchase_return',
+          'invoices': 'sale_list',
+          'add-sale-invoice': 'add_sale_invoice',
+          'return-invoice': 'return_invoice',
+          'add-service-invoice': 'add_service_invoice',
+          'add-digital-invoice': 'add_digital_invoice'
+        };
+        const fnId = functionIdMap[sub.id];
+        return fnId ? isFunctionEnabled(companyIdToUse, fnId) : true;
+      })
+    };
+  }).filter(item => {
+    // Legacy theme toggle
+    if (item.id === 'sales' && !showSalesModule) return false;
+    
+    // Super Admin Permission Check
+    const moduleId = item.id as ModuleId;
+    // Map custom sidebar ids to ModuleIds if needed
+    let mappedModuleId: ModuleId = moduleId;
+    if (item.id === 'sales') mappedModuleId = 'sales';
+    if (item.id === 'purchases') mappedModuleId = 'purchases';
+    if (item.id === 'customers') mappedModuleId = 'customers';
+    if (item.id === 'products') mappedModuleId = 'products';
+    if (item.id === 'settings') mappedModuleId = 'settings';
+    if (item.id === 'dashboard') mappedModuleId = 'dashboard';
+    if (item.id === 'help') mappedModuleId = 'help';
+    
+    return isModuleEnabled(companyIdToUse, mappedModuleId);
+  });
 
   const isSalesActive =
     activeView === 'invoices' ||

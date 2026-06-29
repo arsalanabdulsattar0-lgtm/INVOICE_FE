@@ -16,6 +16,7 @@ export const AppearanceModule: React.FC<AppearanceModuleProps> = ({
   activeTheme,
   setTheme,
 }) => {
+  const { showSalesModule, setShowSalesModule } = useTheme();
   const lightThemes: { id: ThemeType; name: string; desc: string; colors: string[] }[] = [
     { id: 'sky', name: 'Sky Blue', desc: 'Crisp sky blue & refreshing aqua tones', colors: ['#0EA5E9', '#BAE6FD', '#F97316'] },
     { id: 'violet', name: 'Soft Violet', desc: 'Elegant violet & dreamy soft purple', colors: ['#7C3AED', '#DDD6FE', '#F59E0B'] },
@@ -116,6 +117,30 @@ export const AppearanceModule: React.FC<AppearanceModuleProps> = ({
             ))}
           </div>
         </motion.div>
+
+        {/* Sidebar Customization */}
+        <div className="pt-4 mt-6 border-t border-[#E2E8F0]">
+          <h3 className="text-sm font-bold text-slate-800 mb-4">Sidebar Layout Customization</h3>
+          
+          <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
+            <div>
+              <h4 className="font-bold text-sm text-slate-800">Sale Module Visibility</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Show or hide the Sales module from the left sidebar navigation.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={showSalesModule} 
+                onChange={e => setShowSalesModule(e.target.checked)} 
+              />
+              <div 
+                className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"
+                style={showSalesModule ? { backgroundColor: brand.primary } : {}}
+              ></div>
+            </label>
+          </div>
+        </div>
       </SectionCard>
     </div>
   );

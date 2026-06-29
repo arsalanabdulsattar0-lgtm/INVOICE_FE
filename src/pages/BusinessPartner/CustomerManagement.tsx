@@ -359,87 +359,44 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v9');
+      const seededFlag = localStorage.getItem('customers_seeded_v17');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);
       } else {
-        // Seed 30 sample customers
-        let customerSeq = 1;
-        let supplierSeq = 1;
-        const sampleNames = [
-          'Al-Farooq Traders',
-          'BlueRitt Technologies',
-          'Acme Corp',
-          'Global Solutions',
-          'Zeeshan Distributors',
-          'Starlight Media',
-          'Apex Digital Studio',
-          'Nexus Systems',
-          'Ahmed Traders',
-          'Pinnacle Ventures',
-          'Quantum Analytics',
-          'Vortex Enterprises',
-          'Haji Sons',
-          'Horizon Media',
-          'Titan Industrial',
-          'Nebula Software',
-          'Siddique Brothers',
-          'Nova Creative',
-          'Alpha Logistics',
-          'Spectra Design',
-          'Karamat Foods',
-          'Summit Partners',
-          'Infinity Group',
-          'Zenith Agency',
-          'Madina Enterprises',
-          'Catalyst Ventures',
-          'Quantum Crest',
-          'Aurora Media',
-          'Bismillah Traders',
-          'Lunar Interactive'
-        ];
-        const sample: Customer[] = Array.from({ length: 30 }, (_, i) => {
+        const sample: Customer[] = Array.from({ length: 5000 }, (_, i) => {
           const isSupplier = i % 4 === 0;
-          const customer_id = isSupplier
-            ? `SUP-${String(supplierSeq++).padStart(4, '0')}`
-            : `BP-${String(customerSeq++).padStart(4, '0')}`;
           return {
-            id: crypto.randomUUID(),
-            customer_id,
-            name: sampleNames[i],
-            email: i === 0 ? 'billing@blueritt.com'
-              : i === 1 ? 'finance@acme.com'
-                : i === 2 ? 'hello@globalsol.com'
-                  : i === 3 ? 'accounts@starlight.io'
-                    : i === 4 ? 'ahmed@traders.com'
-                      : `customer${i + 1}@example.com`,
-            phone: `+1 555 010${i.toString().padStart(2, '0')}`,
-            mobile: `+92 300 020${i.toString().padStart(2, '0')}`,
-            website: `www.customer${i + 1}.com`,
-            is_walkin: i % 4 === 3,
-            is_filer: i % 3 === 0,
-            credit_limit: 1000 + (i * 500),
-            opening_balance: i % 5 === 0 ? (i * 120) : 0,
-            opening_date: new Date().toISOString().split('T')[0],
-            payment_term_days: 30,
-            discount_percent: i % 4 === 1 ? 5 : 0,
-            address: `Office Suite ${100 + i}, Tech Park Boulevard`,
-            city: i % 3 === 0 ? 'Karachi' : i % 3 === 1 ? 'Lahore' : 'Islamabad',
-            province: i % 3 === 0 ? 'Sindh' : i % 3 === 1 ? 'Punjab' : 'Federal',
-            country: 'Pakistan',
-            ntn: i % 2 === 0 ? `NTN-${854721 + i}` : '',
-            stn: i % 3 === 0 ? `STN-${369852 + i}` : '',
-            cnic: `42101-${1234567 + i}-1`,
-            wht_type: i % 3 === 0 ? 'Active' : 'Exempt',
-            is_active: i % 3 !== 2,
-            sales_person_id: `sp-${(i % 5) + 1}`,
+            id: `${i}`,
+            customer_id: `BP-${i}`,
+            name: `Business Partner ${i}`,
+            email: '',
+            phone: '',
+            mobile: '',
+            website: '',
+            is_walkin: false,
+            is_filer: true,
+            credit_limit: 0,
+            opening_balance: 0,
+            opening_date: '',
+            payment_term_days: 0,
+            discount_percent: 0,
+            address: '',
+            city: '',
+            province: '',
+            country: '',
+            ntn: '',
+            stn: '',
+            cnic: '',
+            wht_type: '',
+            is_active: true,
+            sales_person_id: '',
             bp_type: isSupplier ? 'supplier' : 'customer',
           };
         });
         setCustomers(sample);
         persist(sample);
-        localStorage.setItem('customers_seeded_v9', 'true');
+        localStorage.setItem('customers_seeded_v17', 'true');
       }
     } catch { /* ignore */ }
   }, []);
@@ -717,8 +674,8 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
     return result;
   }, [customers, search, selectedFilerStatus, selectedWalkinStatus, selectedActiveStatus, selectedSalesPerson, selectedBpType, selectedFromBp, selectedToBp, sortKey, sortDir]);
 
-  const totalPages = Math.ceil(filteredCustomers.length / perPage);
-  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * perPage, currentPage * perPage);
+  const totalPages = 1;
+  const paginatedCustomers = filteredCustomers;
 
   // KPI Calculations
   const totalCount = customers.length;

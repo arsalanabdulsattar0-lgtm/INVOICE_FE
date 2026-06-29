@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, CreditCard, Palette, Receipt, Users, Building2, Shield, Package, Warehouse, Printer,
+  User, CreditCard, Palette, Receipt, Users, Building2, Shield, Package, Warehouse,
   ChevronDown, Settings2, X, Binary, FolderOpen
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,7 +16,6 @@ import { CompanyModule } from './components/CompanyModule';
 import { UserManagementModule } from './components/UserManagementModule';
 import { ProductSetupModule } from './components/ProductSetupModule';
 import { WarehouseModule } from './components/WarehouseModule';
-import { PrintTemplatesModule } from './components/PrintTemplatesModule';
 import { CodeSettingsModule } from './components/CodeSettingsModule';
 import { DepartmentModule } from './components/DepartmentModule';
 
@@ -44,7 +43,6 @@ const Settings: React.FC = () => {
     { id: 'code-settings',   title: 'Code Settings',     desc: 'Manage document fields visibility, auto/manual numbering sequences, and formatting grids.', icon: Binary },
     { id: 'product',         title: 'Product Setup',     desc: 'Configure product setup types, serial prefixes, and lookup values.',        icon: Package },
     { id: 'warehouse',       title: 'Warehouse',         desc: 'Manage warehouses, storage locations and inventory distribution.',          icon: Warehouse },
-    { id: 'print-templates', title: 'Print Templates',   desc: 'Create and manage customizable print layouts for invoices and documents.',  icon: Printer },
     { id: 'department',      title: 'Department Settings', desc: 'Manage departments used throughout the ERP system.', icon: FolderOpen },
   ];
 
@@ -59,7 +57,6 @@ const Settings: React.FC = () => {
       case 'users':           return <UserManagementModule brand={brand} />;
       case 'product':         return <ProductSetupModule brand={brand} />;
       case 'warehouse':       return <WarehouseModule brand={brand} />;
-      case 'print-templates': return <PrintTemplatesModule brand={brand} />;
       case 'code-settings':   return <CodeSettingsModule brand={brand} onClose={() => setActiveSection(null)} />;
       case 'department':      return <DepartmentModule brand={brand} />;
       default:                return null;

@@ -2424,7 +2424,7 @@ function App() {
                   <div key={rowNum} className="grid grid-cols-12 gap-x-4 gap-y-2 w-full items-start">
                     {rowItems.map(item => {
                       let defaultWidth = 100;
-                      if (sectionName === 'Customer Information') defaultWidth = 50;
+                      if (sectionName === 'Business Partner Information') defaultWidth = 50;
                       else if (sectionName === 'Invoice Information') defaultWidth = 33;
                       else if (sectionName === 'Totals') defaultWidth = 100;
 
@@ -3030,7 +3030,7 @@ function App() {
                           </div>
                         ) : <div />}
 
-                        {printSections.find(s => s.section_name === 'Customer Information' && s.is_visible) ? (
+                        {printSections.find(s => s.section_name === 'Business Partner Information' && s.is_visible) ? (
                           <div 
                             className="rounded p-3 flex flex-col justify-start text-[10px]"
                             style={{ 
@@ -3045,8 +3045,8 @@ function App() {
                             </div>
                             <div className="space-y-1.5">
                               {(() => {
-                                const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Customer Information');
-                                const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Customer Information');
+                                const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Business Partner Information');
+                                const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Business Partner Information');
                                 const combined = [
                                   ...secFields.map(f => ({ ...f, isCustom: false as const })),
                                   ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))

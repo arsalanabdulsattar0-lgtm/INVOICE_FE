@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { usePermissions } from "../../../context/PermissionContext";
 import { motion } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
@@ -22,7 +23,14 @@ const COUNTRIES = [
 ];
 
 export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Props) {
-
+  const { isFunctionEnabled } = usePermissions();
+  const companyIdToUse = (() => {
+    try {
+      const stored = localStorage.getItem('invoice_settings');
+      if (stored) return JSON.parse(stored).company?.id || 'co1';
+    } catch {}
+    return 'co1';
+  })();
 
   /* ── load data ── */
   const inv = useMemo(() => {
@@ -154,10 +162,10 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
             {/* Dashboard Version Switcher */}
             <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
               {[
-                { id: 'dashboard', label: 'Default' },
-                { id: 'dashboard1', label: 'Inventory Operations Dashboard' },
+                { id: 'dashboard', label: 'Default', fnId: 'default_dashboard' },
+                { id: 'dashboard1', label: 'Inventory Operations Dashboard', fnId: 'inventory_dashboard' },
                 // { id: 'dashboard2', label: 'Business overview' },
-              ].map(t => {
+              ].filter(t => isFunctionEnabled(companyIdToUse, t.fnId as any)).map(t => {
                 const isActive = t.id === 'dashboard2';
                 return (
                   <button

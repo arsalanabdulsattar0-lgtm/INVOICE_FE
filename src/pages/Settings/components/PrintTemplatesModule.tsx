@@ -2238,7 +2238,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                 const itemId = item.isCustom ? item.custom_field_id : item.field_id;
                 
                 let defaultWidth = 100;
-                if (sectionName === 'Customer Information') defaultWidth = 50;
+                if (sectionName === 'Business Partner Information') defaultWidth = 50;
                 else if (sectionName === 'Invoice Information') defaultWidth = 33;
                 else if (sectionName === 'Totals') defaultWidth = 100;
 
@@ -3261,7 +3261,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                             </div>
                           ) : <div />}
 
-                          {activeSections.find(s => s.section_name === 'Customer Information' && s.is_visible) ? (
+                          {activeSections.find(s => s.section_name === 'Business Partner Information' && s.is_visible) ? (
                             <div 
                               className="rounded p-3 flex flex-col justify-start text-[9px] cursor-pointer hover:bg-slate-50/30"
                               style={{ 
@@ -3271,10 +3271,10 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                                 minHeight: '100%' 
                               }}
                               onDragOver={e => e.preventDefault()}
-                              onDrop={() => { if (draggedElement) handleSectionDropField('Customer Information'); }}
+                              onDrop={() => { if (draggedElement) handleSectionDropField('Business Partner Information'); }}
                               onDoubleClick={(e) => {
                                 e.stopPropagation();
-                                const s = activeSections.find(sec => sec.section_name === 'Customer Information');
+                                const s = activeSections.find(sec => sec.section_name === 'Business Partner Information');
                                 if (s) {
                                   setSelectedSectionId(s.section_id);
                                   setShowSectionPropertiesModal(true);
@@ -3286,8 +3286,8 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                               </div>
                               <div className="space-y-1.5">
                                 {(() => {
-                                  const secFields = activeFields.filter(f => f.section_name === 'Customer Information');
-                                  const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Customer Information');
+                                  const secFields = activeFields.filter(f => f.section_name === 'Business Partner Information');
+                                  const secCustomFields = activeCustomFields.filter(cf => (cf.section_name || 'Custom Fields') === 'Business Partner Information');
                                   const combined = [
                                     ...secFields.map(f => ({ ...f, isCustom: false as const })),
                                     ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
@@ -3878,7 +3878,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
             };
 
             const companyData = renderFieldsForSection('Company Information');
-            const customerData = renderFieldsForSection('Customer Information');
+            const customerData = renderFieldsForSection('Business Partner Information');
             const invoiceData = renderFieldsForSection('Invoice Information');
             const columnsData = renderTableColumnsSection();
             const customFieldsData = renderFieldsForSection('Custom Fields');

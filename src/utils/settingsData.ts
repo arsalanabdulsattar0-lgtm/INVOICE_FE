@@ -617,7 +617,7 @@ export const getSeedTemplateSections = (templateId: string): PrintTemplateSectio
   const isList = templateId.startsWith('pl-') || templateId.startsWith('bpl-') || templateId.startsWith('sl-') || templateId.startsWith('prl-') || templateId.includes('list') || templateId.startsWith('pul-');
   return [
     { section_id: `sec-${templateId}-1`, template_id: templateId, section_name: 'Company Information', display_order: 1, is_visible: true },
-    { section_id: `sec-${templateId}-2`, template_id: templateId, section_name: 'Customer Information', display_order: 2, is_visible: !isList },
+    { section_id: `sec-${templateId}-2`, template_id: templateId, section_name: 'Business Partner Information', display_order: 2, is_visible: !isList },
     { section_id: `sec-${templateId}-3`, template_id: templateId, section_name: 'Invoice Information', display_order: 3, is_visible: !isList },
     { section_id: `sec-${templateId}-4`, template_id: templateId, section_name: 'Product Table', display_order: 4, is_visible: true },
     { section_id: `sec-${templateId}-5`, template_id: templateId, section_name: 'Custom Fields', display_order: 5, is_visible: !isList },
@@ -640,15 +640,15 @@ export const getInitialRowCol = (fieldName: string, sectionName: string, display
     if (fieldName === 'FBR Logo') return { row_position: 1, column_position: 3 };
     return { row_position: displayOrder + 1, column_position: 1 };
   }
-  if (sectionName === 'Customer Information') {
-    if (fieldName === 'Customer Name') return { row_position: 1, column_position: 1 };
-    if (fieldName === 'Customer Address') return { row_position: 2, column_position: 1 };
+  if (sectionName === 'Business Partner Information') {
+    if (fieldName === 'Business Partner Name') return { row_position: 1, column_position: 1 };
+    if (fieldName === 'Business Partner Address') return { row_position: 2, column_position: 1 };
     if (fieldName === 'Mobile') return { row_position: 3, column_position: 1 };
-    if (fieldName === 'Customer Email') return { row_position: 4, column_position: 1 };
-    if (fieldName === 'Customer NTN') return { row_position: 1, column_position: 2 };
-    if (fieldName === 'Customer STRN') return { row_position: 2, column_position: 2 };
-    if (fieldName === 'Customer CNIC') return { row_position: 3, column_position: 2 };
-    if (fieldName === 'Customer Code') return { row_position: 4, column_position: 2 };
+    if (fieldName === 'Business Partner Email') return { row_position: 4, column_position: 1 };
+    if (fieldName === 'Business Partner NTN') return { row_position: 1, column_position: 2 };
+    if (fieldName === 'Business Partner STRN') return { row_position: 2, column_position: 2 };
+    if (fieldName === 'Business Partner CNIC') return { row_position: 3, column_position: 2 };
+    if (fieldName === 'Business Partner Code') return { row_position: 4, column_position: 2 };
     const idx = displayOrder - 1;
     const row = Math.floor(idx / 2) + 1;
     const col = (idx % 2) + 1;
@@ -699,15 +699,15 @@ export const getSeedTemplateFields = (templateId: string): PrintTemplateField[] 
     { section_name: 'Company Information', field_name: 'STRN', field_type: 'text', display_order: 8, is_visible: true, font_size: 10, alignment: 'left', is_bold: true, color: '#1E3A8A', border: 'none', background: 'transparent', padding: '0px', position_x: 30, position_y: 21, width_percent: 25 },
     { section_name: 'Company Information', field_name: 'FBR Logo', field_type: 'text', display_order: 9, is_visible: true, font_size: 10, alignment: 'right', is_bold: false, color: '#000000', border: 'none', background: 'transparent', padding: '0px', position_x: 85, position_y: 2, width_percent: 10 },
 
-    // Customer Information
-    { section_name: 'Customer Information', field_name: 'Customer Name', field_type: 'text', display_order: 1, is_visible: true, font_size: 12, alignment: 'left', is_bold: true, color: '#000000', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 26, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer Address', field_type: 'text', display_order: 2, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 30, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Mobile', field_type: 'text', display_order: 3, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 34, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer Email', field_type: 'text', display_order: 4, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 38, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer NTN', field_type: 'text', display_order: 5, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 26, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer STRN', field_type: 'text', display_order: 6, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 30, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer CNIC', field_type: 'text', display_order: 7, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 34, width_percent: 45 },
-    { section_name: 'Customer Information', field_name: 'Customer Code', field_type: 'text', display_order: 8, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 38, width_percent: 45 },
+    // Business Partner Information
+    { section_name: 'Business Partner Information', field_name: 'Business Partner Name', field_type: 'text', display_order: 1, is_visible: true, font_size: 12, alignment: 'left', is_bold: true, color: '#000000', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 26, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner Address', field_type: 'text', display_order: 2, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 30, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Mobile', field_type: 'text', display_order: 3, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 34, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner Email', field_type: 'text', display_order: 4, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 38, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner NTN', field_type: 'text', display_order: 5, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 26, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner STRN', field_type: 'text', display_order: 6, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 30, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner CNIC', field_type: 'text', display_order: 7, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 34, width_percent: 45 },
+    { section_name: 'Business Partner Information', field_name: 'Business Partner Code', field_type: 'text', display_order: 8, is_visible: true, font_size: 10, alignment: 'left', is_bold: false, color: '#4B5563', border: 'none', background: 'transparent', padding: '0px', position_x: 50, position_y: 38, width_percent: 45 },
 
     // Invoice Information
     { section_name: 'Invoice Information', field_name: 'Invoice Number', field_type: 'text', display_order: 1, is_visible: true, font_size: 12, alignment: 'left', is_bold: true, color: '#000000', border: 'none', background: 'transparent', padding: '0px', position_x: 5, position_y: 43, width_percent: 45 },
@@ -825,8 +825,8 @@ export const getSeedTemplateColumns = (templateId: string): PrintTemplateColumn[
     columns = [
       { column_name: 'Sr No', width: '4%', is_visible: true },
       { column_name: 'Purchase No', width: '8%', is_visible: true },
-      { column_name: 'Supplier Code', width: '8%', is_visible: true },
-      { column_name: 'Supplier Name', width: '10%', is_visible: true },
+      { column_name: 'Business Partner Code', width: '8%', is_visible: true },
+      { column_name: 'Business Partner Name', width: '10%', is_visible: true },
       { column_name: 'Invoice No', width: '8%', is_visible: true },
       { column_name: 'Purchase Date', width: '8%', is_visible: true },
       { column_name: 'Due Date', width: '8%', is_visible: true },

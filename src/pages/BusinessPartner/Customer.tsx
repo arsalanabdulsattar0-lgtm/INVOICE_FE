@@ -211,12 +211,44 @@ const CustomerComponent: React.FC = () => {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('customer_list');
-      const seededFlag = localStorage.getItem('customers_seeded_v9');
+      const seededFlag = localStorage.getItem('customers_seeded_v17');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setCustomers(parsed);
       } else {
-        setCustomers(parsed || []);
+        const sample: Customer[] = Array.from({ length: 5000 }, (_, i) => {
+          const isSupplier = i % 4 === 0;
+          return {
+            id: `${i}`,
+            customer_id: `BP-${i}`,
+            name: `Business Partner ${i}`,
+            email: '',
+            phone: '',
+            mobile: '',
+            website: '',
+            is_walkin: false,
+            is_filer: true,
+            credit_limit: 0,
+            opening_balance: 0,
+            opening_date: '',
+            payment_term_days: 0,
+            discount_percent: 0,
+            address: '',
+            city: '',
+            province: '',
+            country: '',
+            ntn: '',
+            stn: '',
+            cnic: '',
+            wht_type: '',
+            is_active: true,
+            sales_person_id: '',
+            bp_type: isSupplier ? 'supplier' : 'customer',
+          };
+        });
+        setCustomers(sample);
+        persist(sample);
+        localStorage.setItem('customers_seeded_v17', 'true');
       }
     } catch { /* ignore */ }
   }, []);

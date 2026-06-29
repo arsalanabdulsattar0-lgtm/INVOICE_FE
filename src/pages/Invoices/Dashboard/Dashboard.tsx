@@ -6,6 +6,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { usePermissions } from "../../../context/PermissionContext";
 
 interface InvoiceItem {
   id: string;
@@ -34,6 +35,14 @@ const statusStyle: Record<InvoiceItem['status'], { bg: string; text: string }> =
 
 export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps) {
   const [trendFilter, setTrendFilter] = useState<'All' | 'Posted' | 'Unposted'>('All');
+  const { isFunctionEnabled } = usePermissions();
+  const companyIdToUse = (() => {
+    try {
+      const stored = localStorage.getItem('invoice_settings');
+      if (stored) return JSON.parse(stored).company?.id || 'co1';
+    } catch {}
+    return 'co1';
+  })();
 
   const invoicesToUse = useMemo(() => {
     const raw = invoiceItems && invoiceItems.length > 0
@@ -279,10 +288,10 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
             {/* Dashboard Version Switcher */}
             <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
               {[
-                { id: 'dashboard', label: 'Default' },
-                { id: 'dashboard1', label: 'Inventory Operations Dashboard' },
+                { id: 'dashboard', label: 'Default', fnId: 'default_dashboard' },
+                { id: 'dashboard1', label: 'Inventory Operations Dashboard', fnId: 'inventory_dashboard' },
                 // { id: 'dashboard2', label: 'Business overview' },
-              ].map(t => {
+              ].filter(t => isFunctionEnabled(companyIdToUse, t.fnId as any)).map(t => {
                 const isActive = t.id === 'dashboard';
                 return (
                   <button
