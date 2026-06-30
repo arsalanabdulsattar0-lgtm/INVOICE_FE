@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Search, SlidersHorizontal, Plus, Pencil, Trash2,
+  Search, SlidersHorizontal, Pencil, Trash2,
   Database, ChevronLeft, ChevronRight,
   CheckCircle, AlertCircle, Warehouse as WarehouseIcon
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmati
 import { WarehouseDrawer } from './WarehouseDrawer';
 import { incrementNextCode } from '../../../utils/codeSettingsHelper';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -265,13 +266,13 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       <SectionCard
         title="Warehouse Settings"
         icon={<WarehouseIcon className="w-3.5 h-3.5 text-white" />}
         brand={brand}
-        scrollable
-        bodyClassName="space-y-5"
+        scrollable={false}
+        bodyClassName="space-y-5 p-6 flex flex-col min-h-0 overflow-hidden"
       >
 
       {/* Stats Cards */}
@@ -328,15 +329,9 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add Warehouse
-          </Button>
+          </AddButton>
         </div>
       </div>
 
@@ -345,7 +340,7 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-2xl border overflow-hidden"
+        className="bg-white rounded-2xl border overflow-hidden flex flex-col min-h-0"
         style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
       >
         {/* Scrollable table with sticky headers */}
@@ -354,8 +349,8 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
                 {[
-                  { label: 'Warehouse Name', key: 'name' as keyof Warehouse, w: 'min-w-[180px]' },
                   { label: 'Code', key: 'code' as keyof Warehouse, w: 'min-w-[120px]' },
+                  { label: 'Warehouse Name', key: 'name' as keyof Warehouse, w: 'min-w-[180px]' },
                   { label: 'Branch', key: undefined, w: 'min-w-[160px]' },
                   { label: 'City', key: 'city' as keyof Warehouse, w: 'min-w-[110px]' },
                   { label: 'Status', key: undefined, w: 'min-w-[90px]' },
@@ -391,6 +386,9 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
                     transition={{ delay: i * 0.03 }}
                     className="group border-b border-[#E2E8F0] transition-colors hover:bg-slate-50/60 last:border-0"
                   >
+                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600 font-mono">
+                      {w.code}
+                    </td>
                     <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">
                       <div className="flex items-center gap-1.5">
                         <span>{w.name}</span>
@@ -400,9 +398,6 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600 font-mono">
-                      {w.code}
                     </td>
                     <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">
                       {getBranchName(w.branchId)}

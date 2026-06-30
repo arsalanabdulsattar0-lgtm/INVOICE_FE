@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
+  Search, SlidersHorizontal, Pencil, Trash2, Check,
   ChevronLeft, ChevronRight, Copy, ArrowLeft,
   Move, Settings, ChevronDown, ChevronUp,
   Download, Upload, FileText, Undo, Redo, Eye, EyeOff, Printer
@@ -37,6 +37,7 @@ import {
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { AlertModal } from '../../../components/ui/AlertModal';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 const dummyContext = {
   row: {
@@ -3673,12 +3674,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
 
                     {(sectionName === 'Totals' || sectionName === 'Custom Fields') && (
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                        <Button
-                          variant="white"
-                          size="xs"
-                          icon={Plus}
-                          style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
-                          onClick={() => {
+                        <AddButton variant="white" size="xs" style={{ color: brand.primary, borderColor: `${brand.primary}35` }} onClick={() => {
                             setFormulaPlacement(sectionName === 'Totals' ? 'totals' : 'custom');
                             setEditingFormulaId(null);
                             resetFormulaModal();
@@ -3687,7 +3683,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                           }}
                         >
                           Add Custom Field
-                        </Button>
+                        </AddButton>
                       </div>
                     )}
                   </div>
@@ -3707,12 +3703,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                   <div className="space-y-3">
                     <div className="flex items-center justify-between border-b pb-2">
                       <span className="text-[10px] font-bold text-slate-400">Drag to reorder table columns.</span>
-                      <Button
-                        variant="white"
-                        size="xs"
-                        icon={Plus}
-                        style={{ color: brand.primary, borderColor: `${brand.primary}35` }}
-                        onClick={() => {
+                      <AddButton variant="white" size="xs" style={{ color: brand.primary, borderColor: `${brand.primary}35` }} onClick={() => {
                           setFormulaPlacement('column');
                           setEditingFormulaId(null);
                           resetFormulaModal();
@@ -3721,7 +3712,7 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
                         }}
                       >
                         Add Column
-                      </Button>
+                      </AddButton>
                     </div>
 
                     <div className="space-y-1.5">
@@ -5086,15 +5077,9 @@ export const PrintTemplatesModule: React.FC<PrintTemplatesModuleProps> = ({ bran
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add Template
-          </Button>
+          </AddButton>
         </div>
       </div>
 

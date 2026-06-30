@@ -44,7 +44,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
 
       {/* Card Body */}
       <div
-        className={`p-6 ${
+        className={`${bodyClassName?.includes('p-') ? '' : 'p-6'} ${
           scrollable ? 'flex-1 overflow-y-auto custom-scrollbar' : ''
         } ${bodyClassName}`}
       >

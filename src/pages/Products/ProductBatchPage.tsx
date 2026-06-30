@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Binary, Search, Plus, Pencil, Trash2, Check, AlertCircle, Box, Paperclip
+  Binary, Search, Pencil, Trash2, Check, AlertCircle, Box, Paperclip
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, ScrollArea, Toggle } from '../../components/ui/FormControls';
@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card';
 import { useTheme } from '../../context/ThemeContext';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import type { Product } from './ProductList';
+import { AddButton } from '../../components/ui/ActionButtons';
 
 interface ProductBatch {
   id: string;
@@ -319,15 +320,9 @@ export const ProductBatchPage: React.FC = () => {
         title="Product Batch List"
         subtitle="Manage product batches, manufacturing numbers, and expiry logs"
         actions={
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={handleOpenAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={handleOpenAdd} >
             Add Batch
-          </Button>
+          </AddButton>
         }
       />
 

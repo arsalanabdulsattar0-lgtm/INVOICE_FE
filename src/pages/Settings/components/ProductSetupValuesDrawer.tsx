@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Pencil, Trash2, Check, List } from 'lucide-react';
+import { X, Pencil, Trash2, Check, List } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -9,6 +9,7 @@ import { SectionHeader, TableHeader } from '../../../components/ui/Typography';
 import Card from '../../../components/ui/Card';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import type { ProductSetupType, ProductSetupValue } from './ProductSetupModule';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 interface ProductSetupValuesDrawerProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface ProductSetupValuesDrawerProps {
   values: ProductSetupValue[];
   onSave: (val: Omit<ProductSetupValue, 'id' | 'typeId' | 'typeName' | 'code'> & { id?: string; typeId?: string }) => void;
   onDelete: (id: string) => void;
+  onToggleActive?: (id: string) => void;
 }
 
 
@@ -27,6 +29,7 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
   values,
   onSave,
   onDelete,
+  onToggleActive,
 }) => {
   const { brand } = useTheme();
 
@@ -168,15 +171,9 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Active Category</span>
                             <span className="text-xs font-bold text-slate-700">{setupType.name}</span>
                           </div>
-                          <Button
-                            variant="primary"
-                            size="xs"
-                            icon={Plus}
-                            onClick={handleAddClick}
-                            style={{ backgroundColor: brand.primary }}
-                          >
+                          <AddButton size="xs" onClick={handleAddClick} >
                             Add Value
-                          </Button>
+                          </AddButton>
                         </div>
 
                         {/* Configured Count Info Row */}
@@ -218,9 +215,9 @@ export const ProductSetupValuesDrawer: React.FC<ProductSetupValuesDrawerProps> =
                                     <td className="px-3 py-2 text-[12px] font-normal text-slate-600">{v.name}</td>
                                     <td className="px-3 py-2">
                                       {v.active ? (
-                                        <ActiveChip label="Active" size="xs" />
+                                        <ActiveChip label="Active" onClick={onToggleActive ? () => onToggleActive(v.id) : undefined} />
                                       ) : (
-                                        <InactiveChip label="Inactive" size="xs" />
+                                        <InactiveChip label="Inactive" onClick={onToggleActive ? () => onToggleActive(v.id) : undefined} />
                                       )}
                                     </td>
                                     <td className="px-2 py-2 w-20">

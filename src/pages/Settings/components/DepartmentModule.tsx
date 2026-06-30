@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../../../components/ui/Card';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, FolderOpen } from 'lucide-react';
+import { Search, SlidersHorizontal, Pencil, Trash2, Check, FolderOpen } from 'lucide-react';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -12,6 +12,7 @@ import { TableHeader } from '../../../components/ui/Typography';
 import { useTheme } from '../../../context/ThemeContext';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 export interface Department {
   id: string; // Department Code
@@ -228,15 +229,9 @@ export const DepartmentModule: React.FC<DepartmentModuleProps> = ({ brand }) => 
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add Department
-          </Button>
+          </AddButton>
         </div>
       </div>
 

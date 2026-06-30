@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Pencil, Trash2, Check, List, Package } from 'lucide-react';
+import { Search, Pencil, Trash2, Check, List, Package } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
@@ -11,6 +11,7 @@ import { seedCompanies } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { ProductSetupValuesDrawer } from './ProductSetupValuesDrawer';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 export interface ProductSetupType {
   id: string;
@@ -136,6 +137,14 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
     setShowTypeForm(true);
   };
 
+  const handleToggleTypeActive = (id: string) => {
+    setTypes(prev => prev.map(t => t.id === id ? { ...t, active: !t.active } : t));
+  };
+
+  const handleToggleValueActive = (valId: string) => {
+    setValues(prev => prev.map(v => v.id === valId ? { ...v, active: !v.active } : v));
+  };
+
   const openEditType = (t: ProductSetupType) => {
     setEditingType(t);
     setFormType({
@@ -251,17 +260,17 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
   };
 
   return (
-    <div className="h-[calc(100vh-190px)] min-h-[550px] max-h-[850px] flex flex-col overflow-hidden">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       <SectionCard
         title="Product Setup Settings"
         icon={<Package className="w-3.5 h-3.5 text-white" />}
         brand={brand}
-        scrollable
-        bodyClassName="space-y-6"
+        scrollable={false}
+        bodyClassName="p-0 flex flex-col min-h-0"
       >
       
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-100 shrink-0 bg-white">
         <div className="w-64">
           <Input
             variant="compact"
@@ -272,19 +281,14 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAddType}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAddType} >
             Add Type
-          </Button>
+          </AddButton>
         </div>
       </div>
 
-      {/* ─── SECTION 1: Product Setup Types Card ─── */}
+      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6 bg-slate-50/30">
+        {/* 🛠️🛠️🛠️ SECTION 1: Product Setup Types Card 🛠️🛠️🛠️ */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -295,7 +299,7 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
-                {['Company', 'Name', 'Preview Code', 'Active', 'Actions'].map((h) => (
+                {['Name', 'Preview Code', 'Active', 'Actions'].map((h) => (
                   <TableHeader
                     key={h}
                     label={h}
@@ -309,7 +313,7 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
             <tbody>
               {paginatedTypes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-slate-400">
+                  <td colSpan={4} className="px-4 py-8 text-center text-[12px] text-slate-400">
                     No setup types configured.
                   </td>
                 </tr>
@@ -322,14 +326,13 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
                     transition={{ delay: i * 0.03 }}
                     className="group border-b border-[#E2E8F0] transition-colors hover:bg-slate-50/60 last:border-0"
                   >
-                    <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{seedCompanies.find(c => c.id === t.companyId)?.name || 'Unknown Company'}</td>
                     <td className="px-4 py-2.5 text-[12px] font-normal text-slate-600">{t.name}</td>
                     <td className="px-4 py-2.5 text-[12px] font-normal text-slate-650 font-mono">{t.prefix ? `${t.prefix}-${t.serialStart}` : ''}</td>
                     <td className="px-4 py-2.5">
                       {t.active ? (
-                        <ActiveChip label="Active" size="md" />
+                        <ActiveChip label="Active" onClick={() => handleToggleTypeActive(t.id)} />
                       ) : (
-                        <InactiveChip label="Inactive" size="md" />
+                        <InactiveChip label="Inactive" onClick={() => handleToggleTypeActive(t.id)} />
                       )}
                     </td>
                     <td className="px-2 py-2.5 w-24">
@@ -503,7 +506,9 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
         values={values}
         onSave={handleSaveDrawerValue}
         onDelete={handleDeleteDrawerValue}
+        onToggleActive={handleToggleValueActive}
       />
+      </div>
       </SectionCard>
     </div>
   );

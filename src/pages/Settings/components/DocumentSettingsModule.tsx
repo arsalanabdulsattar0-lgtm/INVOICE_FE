@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../../../components/ui/Card';
 import { useTheme } from '../../../context/ThemeContext';
 import {
-  Layout, Columns, Check, FileText, Undo2, Wrench, Globe, User, Package, Settings2, Plus, Trash2, Edit3, Eye, EyeOff
+  Layout, Columns, FileText, Undo2, Wrench, Globe, User, Package, Settings2, Trash2, Edit3, Eye, EyeOff
 } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
@@ -11,6 +11,8 @@ import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { TextArea } from '../../../components/ui/TextArea';
 import { Toggle } from '../../../components/ui/Toggle';
+import { Toast } from '../../../components/ui/Toast';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 interface DocumentSettingsModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
@@ -766,47 +768,45 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
 
   // handleToggleActive and handleToggleAll are unused and commented out to satisfy tsc
 
-  const renderSectionCard = (title: string, category: 'header' | 'column' | 'footer' | 'custom', IconComponent: any) => {
+  const renderSectionCard = (title: string, category: 'header' | 'column' | 'footer' | 'custom', IconComponent: any, isFullHeight?: boolean) => {
     const list = getUnifiedFields(activeTab).filter(f => f.category === category);
     
     return (
-      <Card className="rounded-2xl overflow-hidden p-0 flex flex-col h-[260px]" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-        <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 shrink-0">
+      <Card className={`rounded-2xl overflow-hidden p-0 flex flex-col ${isFullHeight ? 'h-full' : 'h-[260px]'}`} style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
+        <div className="px-4 py-3 flex items-center justify-between shrink-0" style={{ backgroundColor: brand.primary }}>
           <div className="flex items-center gap-2">
-            <IconComponent className="w-4 h-4 text-slate-500" />
-            <h3 className="text-xs font-black text-slate-700 tracking-wide">{title}</h3>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {category === 'custom' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFormState({
-                    label: '',
-                    type: 'Text',
-                    section: category,
-                    description: '',
-                    placeholder: '',
-                    defaultValue: '',
-                    width: '100%',
-                    required: false,
-                    readOnly: false,
-                    showOnScreen: true,
-                    showOnPrint: true,
-                    active: true,
-                    optionsText: ''
-                  });
-                  setFormError('');
-                  setShowModal(true);
-                }}
-                className="ml-1.5 flex items-center gap-0.5 text-[9px] font-black text-white px-2.5 py-1 rounded hover:opacity-90 cursor-pointer"
-                style={{ backgroundColor: brand.primary }}
-              >
-                <Plus className="w-2.5 h-2.5" /> Add
-              </button>
-            )}
+            <IconComponent className="w-4 h-4 text-white" />
+            <h3 className="text-xs font-black text-white tracking-wide">{title}</h3>
           </div>
         </div>
+
+        {category === 'custom' && (
+          <div className="flex items-center justify-end px-3 py-2 border-b border-slate-100 shrink-0">
+            <AddButton size="md" onClick={() => {
+                setFormState({
+                  label: '',
+                  type: 'Text',
+                  section: category,
+                  description: '',
+                  placeholder: '',
+                  defaultValue: '',
+                  width: '100%',
+                  required: false,
+                  readOnly: false,
+                  showOnScreen: true,
+                  showOnPrint: true,
+                  active: true,
+                  optionsText: ''
+                });
+                setFormError('');
+                setShowModal(true);
+              }}
+              style={{ backgroundColor: brand.primary }}
+            >
+              Add Field
+            </AddButton>
+          </div>
+        )}
 
         <div className="p-2 overflow-y-auto flex-1 custom-scrollbar space-y-1.5">
           {list.length === 0 ? (
@@ -891,10 +891,10 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="h-full w-full flex flex-col overflow-hidden">
       {/* ── Document Types Horizontal Tabs ── */}
       {!hideTabs && (
-        <div className="flex flex-nowrap items-center gap-1 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50 backdrop-blur-sm w-full">
+        <div className="flex flex-nowrap items-center gap-1 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50 backdrop-blur-sm w-full shrink-0">
           {DOC_TYPES.map(type => {
             const Icon = DOC_TYPE_ICONS[type] || FileText;
             const isActive = activeTab === type;
@@ -921,17 +921,14 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
       )}
 
       {/* ── Main Content Area ── */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-center h-5">
-          <p className="text-[11px] text-slate-400 font-medium font-sans">
-            Configure visible fields and columns for <strong className="text-slate-600">{activeTab === 'Customer' ? 'Business Partner - Customer' : activeTab === 'Supplier' ? 'Business Partner - Supplier' : activeTab}</strong>. Changes save automatically.
-          </p>
-          {savedMessage && (
-            <div className="text-[10px] font-black text-emerald-600 flex items-center gap-1 animate-fade-in-out font-sans">
-              <Check className="w-3.5 h-3.5" /> Settings Saved
-            </div>
-          )}
-        </div>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {!hideTabs && (
+          <div className="flex justify-between items-center h-5 shrink-0 mb-6">
+            <p className="text-[11px] text-slate-400 font-medium font-sans">
+              Configure visible fields and columns for <strong className="text-slate-600">{activeTab === 'Customer' ? 'Business Partner - Customer' : activeTab === 'Supplier' ? 'Business Partner - Supplier' : activeTab}</strong>. Changes save automatically.
+            </p>
+          </div>
+        )}
 
         {(() => {
           const unifiedFields = getUnifiedFields(activeTab);
@@ -943,10 +940,8 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
 
           if (onlyCustom) {
             return (
-              <div className="flex">
-                <div className="w-full lg:w-1/3">
-                  {renderSectionCard('Custom sections', 'custom', Settings2)}
-                </div>
+              <div className="flex-1 w-full min-h-0 h-full">
+                {renderSectionCard('Custom Fields', 'custom', Settings2, true)}
               </div>
             );
           }
@@ -965,7 +960,7 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
               {hasHeader && renderSectionCard('Header fields', 'header', Layout)}
               {hasColumn && renderSectionCard('Items table columns', 'column', Columns)}
               {hasFooter && renderSectionCard('Footer fields', 'footer', FileText)}
-              {renderSectionCard('Custom sections', 'custom', Settings2)}
+              {renderSectionCard('Custom Fields', 'custom', Settings2)}
             </div>
           );
         })()}
@@ -1009,7 +1004,11 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
             <Select
               label="Field Type *"
               variant="compact"
-              options={FIELD_TYPE_OPTIONS}
+              options={
+                ['Product', 'Inventory'].includes(activeTab)
+                  ? FIELD_TYPE_OPTIONS.filter(o => o.value !== 'Dropdown' && o.value !== 'Checkbox')
+                  : FIELD_TYPE_OPTIONS
+              }
               value={formState.type}
               onChange={e => setFormState({ ...formState, type: e.target.value })}
             />
@@ -1105,6 +1104,15 @@ export const DocumentSettingsModule: React.FC<DocumentSettingsModuleProps> = ({
         }
         confirmLabel="Yes, Delete"
         variant="danger"
+      />
+
+      <Toast
+        isOpen={savedMessage}
+        onClose={() => setSavedMessage(false)}
+        title="Settings Saved"
+        messages={[`Settings for ${activeTab} have been saved successfully.`]}
+        type="success"
+        duration={2500}
       />
     </div>
   );

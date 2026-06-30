@@ -19,6 +19,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { AlertModal } from '../../components/ui/AlertModal';
 import { Toast } from '../../components/ui/Toast';
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
+import { AddButton, SaveButton } from '../../components/ui/ActionButtons';
 
 export interface Customer {
   id: string;
@@ -551,15 +552,9 @@ const SupplierComponent: React.FC = () => {
                   style={{ background: brand.accent || '#EF4444' }}>!</span>
               )}
             </Button>
-            <Button
-              onClick={openCreate}
-              variant="primary"
-              size="md"
-              icon={Plus}
-              className="bg-emerald-500 hover:bg-emerald-600 shadow-none"
-            >
+            <AddButton onClick={openCreate} size="md"  >
               Add Supplier
-            </Button>
+            </AddButton>
           </>
         }
       />
@@ -1339,16 +1334,9 @@ const SupplierComponent: React.FC = () => {
                     Cancel
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    icon={Save}
-                    onClick={handleSave}
-                    className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white"
-                  >
+                  <SaveButton type="button" size="md" onClick={handleSave} className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white" >
                     {customers.some(c => c.id === editing.id) ? 'Save Changes' : 'Add Supplier'}
-                  </Button>
+                  </SaveButton>
 
                   {activeTab !== 'accounting' && (
                     <Button

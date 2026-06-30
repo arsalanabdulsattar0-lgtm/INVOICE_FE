@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Pencil, Trash2, Check, MapPin, Building, Home } from 'lucide-react';
+import { X, Pencil, Trash2, Check, MapPin, Building, Home } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { Button } from '../../../components/ui/Button';
 import { Input, TextArea, Toggle, ScrollArea } from '../../../components/ui/FormControls';
@@ -11,6 +11,7 @@ import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmati
 import type { Company } from './CompanyModule';
 import type { Branch } from '../../../utils/settingsData';
 import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 interface BranchManagementDrawerProps {
   isOpen: boolean;
@@ -171,15 +172,9 @@ export const BranchManagementDrawer: React.FC<BranchManagementDrawerProps> = ({
                       <p className="text-[11px] font-bold text-slate-400 tracking-wide">
                         {branches.length} {branches.length === 1 ? 'branch' : 'branches'} registered
                       </p>
-                      <Button
-                        variant="primary"
-                        size="xs"
-                        icon={Plus}
-                        onClick={handleAddClick}
-                        style={{ backgroundColor: brand.primary }}
-                      >
+                      <AddButton size="xs" onClick={handleAddClick} >
                         Add Branch
-                      </Button>
+                      </AddButton>
                     </div>
 
                     {/* Branch List */}

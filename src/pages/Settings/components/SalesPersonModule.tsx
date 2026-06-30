@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Eye, User, ShieldCheck, Users } from 'lucide-react';
+import { Search, SlidersHorizontal, Pencil, Trash2, Check, Eye, User, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
@@ -14,6 +14,7 @@ import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmati
 import { SalesTargetsModal } from './SalesTargetsModal';
 import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 export interface SalesPerson {
   id: string;
@@ -274,15 +275,9 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add Salesperson
-          </Button>
+          </AddButton>
         </div>
       </div>
 

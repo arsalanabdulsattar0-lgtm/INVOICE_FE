@@ -25,6 +25,7 @@ import { Toast } from '../../components/ui/Toast';
 import { AlertModal } from '../../components/ui/AlertModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
 import { getCodeSettingsForBranch } from '../../utils/codeSettingsHelper';
+import { AddButton, SaveButton } from '../../components/ui/ActionButtons';
 
 interface Props {
   data: InvoiceData;
@@ -623,24 +624,13 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
           </div>
 
           <div className="flex items-center gap-3 flex-wrap no-print">
-            <Button
-              onClick={handleNewInvoice}
-              variant="primary"
-              icon={Plus}
-              className="bg-emerald-500 hover:bg-emerald-600 border-none shadow-sm"
-              size="md"
-            >
+            <AddButton onClick={handleNewInvoice}  size="md" >
               New Return
-            </Button>
+            </AddButton>
 
-            <Button
-              variant="primary"
-              icon={Save}
-              onClick={handleSave}
-              size="md"
-            >
+            <SaveButton onClick={handleSave} size="md" >
               Save Return
-            </Button>
+            </SaveButton>
 
             {/* Multi-Split Print & Export Buttons */}
             {(() => {
@@ -1000,15 +990,9 @@ const ReturnInvoiceEditor: React.FC<Props> = ({ data, onChange, onSave, onViewCh
                       className="h-7 pl-8 pr-3 rounded-lg text-[11px] font-medium border outline-none w-52 placeholder:text-white/40 invoice-header-search-input"
                     />
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    className="border bg-white/10 border-white/20 text-white hover:bg-white/20"
-                    icon={Plus}
-                    onClick={addItem}
-                  >
+                  <AddButton variant="ghost" size="md" className="border bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={addItem} >
                     Add Item
-                  </Button>
+                  </AddButton>
                 </div>
               </div>
 

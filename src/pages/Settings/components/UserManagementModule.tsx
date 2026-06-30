@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
+  Search, SlidersHorizontal, Pencil, Trash2, Check,
   User, ShieldCheck, Building2, ChevronLeft, ChevronRight, Shield
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
@@ -16,6 +16,7 @@ import { seedCompanies, seedBranches, seedUsers, ROLES } from '../../../utils/se
 import type { UserRecord, Company, Branch } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 interface UserManagementModuleProps {
   brand: ReturnType<typeof useTheme>['brand'];
@@ -367,15 +368,9 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add user
-          </Button>
+          </AddButton>
         </div>
       </div>
 

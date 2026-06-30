@@ -2,8 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'white';
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'white' | 'success';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   icon?: LucideIcon;
   iconPosition?: 'left' | 'right';
@@ -28,6 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
     primary: "bg-[#2759CD] text-white hover:opacity-90",
     secondary: "bg-slate-100 text-slate-600 hover:bg-slate-200",
     danger: "bg-red-50 text-red-600 hover:bg-red-100",
+    success: "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600",
     ghost: "bg-transparent text-slate-500 hover:bg-slate-50 border-transparent",
     outline: "bg-transparent text-slate-600 hover:bg-slate-50",
     white: "bg-white text-slate-600 hover:bg-slate-50",

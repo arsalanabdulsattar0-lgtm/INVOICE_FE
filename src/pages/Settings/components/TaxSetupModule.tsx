@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Card from '../../../components/ui/Card';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal, Plus, Pencil, Trash2, Check, Receipt } from 'lucide-react';
+import { Search, SlidersHorizontal, Pencil, Trash2, Check, Receipt } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input, Select, Toggle, ScrollArea } from '../../../components/ui/FormControls';
 import { ActiveChip, InactiveChip } from '../../../components/ui/Chip';
@@ -13,6 +13,7 @@ import { seedTaxes, PROVINCES, TAX_TYPES } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { generateNextCode, incrementNextCode, getCodeSettingsForBranch } from '../../../utils/codeSettingsHelper';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 export interface TaxSetup {
   id: string;
@@ -152,7 +153,7 @@ export const TaxSetupModule: React.FC<TaxSetupModuleProps> = ({ brand }) => {
           >
             Filter
           </Button>
-          <Button variant="primary" size="md" icon={Plus} onClick={openAdd} style={{ backgroundColor: brand.primary }}>Add Tax</Button>
+          <AddButton size="md" onClick={openAdd} >Add Tax</AddButton>
         </div>
       </div>
 

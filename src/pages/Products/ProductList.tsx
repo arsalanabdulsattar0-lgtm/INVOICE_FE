@@ -19,6 +19,7 @@ import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationM
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
 import type { PrintTemplate } from '../../utils/settingsData';
+import { AddButton } from '../../components/ui/ActionButtons';
 import {
   ProductCategory,
   ProductBrand,
@@ -880,15 +881,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                   style={{ background: brand.accent || '#EF4444' }}>!</span>
               )}
             </Button>
-            <Button
-              onClick={onAddProductClick}
-              variant="primary"
-              size="md"
-              icon={Plus}
-              className="bg-emerald-500 hover:bg-emerald-600 shadow-none"
-            >
+            <AddButton onClick={onAddProductClick} size="md"  >
               Add Product
-            </Button>
+            </AddButton>
           </>
         }
       />

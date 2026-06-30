@@ -4,12 +4,16 @@ import { SectionCard } from '../../../components/ui/SectionCard';
 import { useTheme } from '../../../context/ThemeContext';
 import { Input, Select, Toggle } from '../../../components/ui/FormControls';
 import { Button } from '../../../components/ui/Button';
+import { Toast } from '../../../components/ui/Toast';
 import { seedCompanies, seedBranches } from '../../../utils/settingsData';
 import type { Company, Branch } from '../../../utils/settingsData';
 import { DocumentSettingsModule } from './DocumentSettingsModule';
+import { ProductSetupModule } from './ProductSetupModule';
+import { WarehouseModule } from './WarehouseModule';
+import { AdjustmentTypeModule } from './AdjustmentTypeModule';
 import {
   Check, Plus, Trash2, Settings2, Binary, User, Package,
-  Edit2, X, Save, Info
+  Edit2, X, Save, Info, Warehouse as WarehouseIcon, SlidersHorizontal
 } from 'lucide-react';
 import type {
   BranchCodeSettings, EntityCodeSetting
@@ -156,10 +160,15 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
 
   const handleTabSwitch = (tab: 'document' | 'setup' | 'sales' | 'purchases' | 'customer' | 'inventory') => {
     setActiveTab(tab);
-    if (tab === 'sales' || tab === 'purchases' || tab === 'inventory') return; // these tabs use direct layouts
+    if (tab === 'sales' || tab === 'purchases') return; // these tabs use direct layouts
 
     if (tab === 'customer') {
       setActiveModule('customer_settings');
+      return;
+    }
+    
+    if (tab === 'inventory') {
+      setActiveModule('product');
       return;
     }
 
@@ -455,8 +464,17 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
     localStorage.setItem('code_generation_settings', JSON.stringify(newSettings));
 
     setSavedMessage(true);
-    const timer = setTimeout(() => setSavedMessage(false), 1200);
-    return () => clearTimeout(timer);
+  };
+
+  const handleAddRow = (gridMode: 'draft' | 'regular') => {
+    const setCurrentGrid = gridMode === 'draft' ? setDraftGrid : setGrid;
+    const newId = `row-${Date.now()}-${Math.random()}`;
+    setCurrentGrid(prev => [
+      ...prev,
+      { id: newId, type: 'Custom Text', value: 'TEXT', separator: '\\' }
+    ]);
+    setEditingRowId(newId);
+    setEditingRowData({ type: 'Custom Text', value: 'TEXT', separator: '\\' });
   };
 
   const renderGridTable = (gridMode: 'draft' | 'regular') => {
@@ -485,16 +503,6 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       setEditingRowData(null);
     };
 
-    const addRow = () => {
-      const newId = `row-${Date.now()}-${Math.random()}`;
-      setCurrentGrid(prev => [
-        ...prev,
-        { id: newId, type: 'Custom Text', value: 'TEXT', separator: '\\' }
-      ]);
-      setEditingRowId(newId);
-      setEditingRowData({ type: 'Custom Text', value: 'TEXT', separator: '\\' });
-    };
-
     const deleteRow = (rowId: string) => {
       setCurrentGrid(prev => prev.filter(row => row.id !== rowId));
       if (editingRowId === rowId) {
@@ -504,7 +512,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
     };
 
     return (
-      <div className="border border-slate-200/60 rounded-xl overflow-hidden bg-white shadow-xs">
+      <div className="w-[80%] border border-slate-200/60 rounded-xl overflow-hidden bg-white shadow-xs">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-200/60">
@@ -513,16 +521,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
               <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-48">Value</th>
               <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">Separator</th>
               <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={addRow}
-                  icon={Plus}
-                  style={{ backgroundColor: brand.primary }}
-                  className="rounded-lg h-7"
-                >
-                  Add
-                </Button>
+                ACTION
               </th>
             </tr>
           </thead>
@@ -728,7 +727,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
           {/* Left Side Panel */}
           <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Screen Types</h4>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Document Type</h4>
             <div className="space-y-1">
               {[
                 { id: 'Purchase Invoice', label: 'Purchase Invoice' },
@@ -765,7 +764,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
           {/* Left Side Panel */}
           <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Screen Types</h4>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Document Type</h4>
             <div className="space-y-1">
               {[
                 { id: 'Sale Invoice', label: 'Sale Invoice' },
@@ -802,23 +801,38 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
         </div>
       ) : activeTab === 'customer' ? (
         <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
+          <div className="w-[40%] flex flex-col h-full min-h-0 overflow-hidden">
+            <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
+              <DocumentSettingsModule
+                brand={brand}
+                activeTab="Customer"
+                hideTabs={true}
+              />
+            </div>
+          </div>
+        </div>
+      ) : activeTab === 'inventory' ? (
+        <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
           {/* Left Side Panel */}
-          <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Partner Types</h4>
+          <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border-2 border-blue-100 shadow-sm shrink-0">
+            <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-wider px-2 py-1 mb-2">Inventory Setup</h4>
             <div className="space-y-1">
               {[
-                { id: 'customer_settings', label: 'Customer' },
-                { id: 'supplier_settings', label: 'Supplier' }
+                { id: 'product', label: 'Product', icon: Package },
+                { id: 'warehouse', label: 'Warehouse', icon: WarehouseIcon },
+                { id: 'adjustment', label: 'Adjustment Type', icon: SlidersHorizontal }
               ].map(mod => {
                 const isActive = activeModule === mod.id;
+                const IconComponent = mod.icon;
                 return (
                   <button
                     key={mod.id}
                     onClick={() => setActiveModule(mod.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition-all border-none outline-none cursor-pointer ${isActive ? 'text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border-none outline-none cursor-pointer ${isActive ? 'text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                     style={isActive ? { backgroundColor: brand.primary } : undefined}
                   >
+                    <IconComponent className="w-4 h-4" />
                     {mod.label}
                   </button>
                 );
@@ -826,21 +840,31 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
             </div>
           </Card>
 
-          {/* Right Side Settings Panel */}
-          <div className="w-3/4 flex flex-col h-full min-h-0 overflow-hidden">
-            <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
-              <DocumentSettingsModule
-                brand={brand}
-                activeTab={activeModule === 'supplier_settings' ? 'Supplier' : 'Customer'}
-                hideTabs={true}
-              />
-            </div>
+          {/* Right Side Panel */}
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+            {activeModule === 'product' ? (
+              <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
+                <div className="w-[60%] flex flex-col h-full min-h-0 overflow-hidden">
+                  <ProductSetupModule brand={brand} />
+                </div>
+                <div className="w-[40%] flex flex-col h-full min-h-0 overflow-hidden">
+                  <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
+                    <DocumentSettingsModule brand={brand} activeTab="Product" hideTabs={true} />
+                  </div>
+                </div>
+              </div>
+            ) : activeModule === 'warehouse' ? (
+              <div className="flex-grow flex flex-col h-full min-h-0 overflow-hidden">
+                <WarehouseModule brand={brand} />
+              </div>
+            ) : activeModule === 'adjustment' ? (
+              <div className="flex-grow flex gap-6 min-h-0 overflow-hidden">
+                <div className="w-[75%] flex flex-col h-full min-h-0 overflow-hidden">
+                  <AdjustmentTypeModule brand={brand} />
+                </div>
+              </div>
+            ) : null}
           </div>
-        </div>
-      ) : activeTab === 'inventory' ? (
-        // Inventory tab: Document Settings visibility cards for Inventory (no dropdown needed)
-        <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 min-h-0">
-          <DocumentSettingsModule brand={brand} activeTab="Inventory" hideTabs={true} />
         </div>
       ) : activeTab === 'document' ? (
         // Document tab: Custom full-width numbering editor, no left side panel!
@@ -850,32 +874,9 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           brand={brand}
           className="w-full flex flex-col flex-grow overflow-hidden min-h-0"
           bodyClassName="flex-grow overflow-y-auto p-6 space-y-6 custom-scrollbar min-h-0"
-          footer={
-            /* Footer Bar */
-            <div className="px-6 py-2.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
-              <div className="flex gap-2 items-center">
-                {savedMessage && (
-                  <div className="text-[12px] font-semibold text-emerald-600 flex items-center gap-1.5 font-sans">
-                    <Check className="w-4 h-4" /> Settings saved successfully
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleSaveSettings}
-                  icon={Save}
-                  style={{ backgroundColor: brand.primary }}
-                >
-                  Save
-                </Button>
-              </div>
-            </div>
-          }
         >
           {/* Document Type & Effective Dates in a single row */}
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-4 shrink-0">
+          <div className="flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-700">Document Type</span>
               <div className="w-52">
@@ -897,6 +898,32 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                   ]}
                 />
               </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {savedMessage && (
+                <div className="text-[12px] font-semibold text-emerald-600 flex items-center gap-1.5 font-sans">
+                  <Check className="w-4 h-4" /> Saved
+                </div>
+              )}
+              <Button
+                variant="white"
+                size="sm"
+                onClick={() => handleAddRow('regular')}
+                icon={Plus}
+                style={{ color: brand.primary }}
+              >
+                Add
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveSettings}
+                icon={Save}
+                style={{ backgroundColor: brand.primary }}
+              >
+                Save
+              </Button>
             </div>
           </div>
 
@@ -968,20 +995,31 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
             brand={brand}
             className="flex-1 min-h-0 overflow-hidden"
             bodyClassName="flex-grow overflow-y-auto p-6 space-y-5 custom-scrollbar min-h-0"
-            footer={
-              /* Standard footer bar */
-              <div className="px-6 py-2.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between shrink-0">
-                <div className="flex gap-2 items-center">
-                  {savedMessage && (
-                    <div className="text-[12px] font-semibold text-emerald-600 flex items-center gap-1.5 font-sans">
-                      <Check className="w-4 h-4" /> Settings saved successfully
-                    </div>
-                  )}
+          >
+            <div className="flex items-start justify-between gap-4">
+              {/* Code Setup Guidelines box — 75% width */}
+              <div className="w-[75%] shrink-0 flex gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: brand.primary }} />
+                <div className="space-y-1.5">
+                  <p className="text-[12px] font-black" style={{ color: brand.dark }}>Code setup guidelines</p>
+                  <ul className="space-y-1">
+                    {[
+                      'Prefix is used to identify document codes. Maximum 4 characters allowed.',
+                      'Start Serial defines the starting number for generated codes. Maximum 7 digits allowed.',
+                    ].map((line) => (
+                      <li key={line} className="flex items-start gap-1.5">
+                        <span className="text-[10px] font-black mt-0.5" style={{ color: brand.primary }}>•</span>
+                        <span className="text-[11px] font-normal text-slate-500 leading-relaxed">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="flex gap-3">
+              </div>
+              <div className="flex flex-col items-end gap-2 pt-2 pr-2 shrink-0">
+                <div className="flex items-center gap-3">
                   <Button
                     variant="primary"
-                    size="sm"
+                    size="md"
                     onClick={handleSaveSettings}
                     icon={Save}
                     style={{ backgroundColor: brand.primary }}
@@ -989,25 +1027,6 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                     Save
                   </Button>
                 </div>
-              </div>
-            }
-          >
-            {/* Code Setup Guidelines box — 60% width */}
-            <div className="w-[75%] flex gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: brand.primary }} />
-              <div className="space-y-1.5">
-                <p className="text-[12px] font-black" style={{ color: brand.dark }}>Code setup guidelines</p>
-                <ul className="space-y-1">
-                  {[
-                    'Prefix is used to identify document codes. Maximum 4 characters allowed.',
-                    'Start Serial defines the starting number for generated codes. Maximum 7 digits allowed.',
-                  ].map((line) => (
-                    <li key={line} className="flex items-start gap-1.5">
-                      <span className="text-[10px] font-black mt-0.5" style={{ color: brand.primary }}>•</span>
-                      <span className="text-[11px] font-normal text-slate-500 leading-relaxed">{line}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
 
@@ -1096,6 +1115,14 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
 
         </div>
       )}
+      <Toast 
+        isOpen={savedMessage} 
+        onClose={() => setSavedMessage(false)} 
+        title="Settings Saved" 
+        messages={['Code settings have been updated successfully.']} 
+        type="success" 
+        duration={3000}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Search, SlidersHorizontal, Plus, Pencil, Trash2, Check,
+  Search, SlidersHorizontal, Pencil, Trash2, Check,
   Building2, Phone, MapPin, Globe, ChevronLeft, ChevronRight, Home,
   CheckCircle, AlertCircle, Upload, X, Image,
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import type { Branch } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { BranchManagementDrawer } from './BranchManagementDrawer';
 import { SectionCard } from '../../../components/ui/SectionCard';
+import { AddButton } from '../../../components/ui/ActionButtons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -417,15 +418,9 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
           >
             Filter
           </Button>
-          <Button
-            variant="primary"
-            size="md"
-            icon={Plus}
-            onClick={openAdd}
-            style={{ backgroundColor: brand.primary }}
-          >
+          <AddButton size="md" onClick={openAdd} >
             Add Company
-          </Button>
+          </AddButton>
         </div>
       </div>
 

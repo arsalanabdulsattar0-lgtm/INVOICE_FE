@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Download, Eye, Plus,
+  Search, Download, Eye,
   FileText, CheckCircle, Clock, TrendingUp,
   ArrowUpDown, Printer, Trash2, Edit3,
   ChevronLeft, ChevronRight, SlidersHorizontal, X,
@@ -37,6 +37,7 @@ export const sampleSuppliers: SupplierListItem[] = [
 ];
 
 import type { InvoiceStatus, Invoice } from '../../types';
+import { AddButton } from '../../components/ui/ActionButtons';
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 const statusConfig: Record<InvoiceStatus, { bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -438,15 +439,11 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
                 style={{ background: brand.accent || '#EF4444' }}>!</span>
             )}
           </Button>
-          <Button
+          <AddButton
             onClick={() => onViewChange?.('add-purchase-invoice')}
-            variant="primary"
-            size="md"
-            icon={Plus}
-            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
           >
             Create Purchase
-          </Button>
+          </AddButton>
         </div>
       </motion.div>
 

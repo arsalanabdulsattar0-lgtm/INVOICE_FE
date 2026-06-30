@@ -135,12 +135,8 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
       setError('Warehouse Code is required.');
       return;
     }
-    if (!form.address.trim()) {
-      setError('Location is required.');
-      return;
-    }
 
-    const cityValue = warehouse?.city || form.address;
+    const cityValue = warehouse?.city || '';
 
     onSave({
       ...form,
@@ -228,7 +224,7 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
                   )}
 
                   <Input
-                    label="Warehouse Code *"
+                    label="Warehouse Code"
                     variant="compact"
                     placeholder="e.g. WH-001"
                     value={form.code}
@@ -242,14 +238,6 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
                     placeholder="e.g. Lahore Main Warehouse"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-
-                  <Input
-                    label="Location *"
-                    variant="compact"
-                    placeholder="e.g. Gulberg, Lahore"
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
                   />
 
                   <div className="pt-2">

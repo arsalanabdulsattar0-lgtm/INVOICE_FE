@@ -6,6 +6,7 @@ import { Input, ScrollArea } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
 import { Plus, Pencil, X, ChevronRight, Binary, Paperclip } from 'lucide-react';
 import type { Product } from './ProductList';
+import { AddButton } from '../../components/ui/ActionButtons';
 
 interface ProductBatch {
   id: string;
@@ -307,15 +308,9 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
       footer={
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <Button
-              variant="white"
-              size="sm"
-              icon={Plus}
-              onClick={handleOpenAdd}
-              className="border font-bold text-xs"
-            >
+            <AddButton variant="white" size="sm" onClick={handleOpenAdd} className="border font-bold text-xs" >
               Add
-            </Button>
+            </AddButton>
             <Button
               variant="white"
               size="sm"

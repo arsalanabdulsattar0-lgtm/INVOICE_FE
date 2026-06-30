@@ -22,6 +22,7 @@ import { sampleCustomers } from '../../utils/customerData';
 export type { InvoiceStatus, Invoice } from './invoiceTypes';
 export { initialInvoices } from './invoiceTypes';
 import type { InvoiceStatus, Invoice } from './invoiceTypes';
+import { AddButton } from '../../components/ui/ActionButtons';
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 const statusConfig: Record<InvoiceStatus, { bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -490,20 +491,16 @@ const InvoiceList: React.FC<InvoiceListProps> = ({ onViewChange, invoiceItems, s
                 style={{ background: brand.accent || '#EF4444' }}>!</span>
             )}
           </Button>
-          <Button
+          <AddButton
             onClick={() => {
               if (typeFilter === 'Service Invoice') onViewChange?.('add-service-invoice' as any);
               else if (typeFilter === 'Digital Invoice') onViewChange?.('add-digital-invoice' as any);
               else if (typeFilter === 'Sale Return') onViewChange?.('return-invoice' as any);
               else onViewChange?.('add-sale-invoice' as any);
             }}
-            variant="primary"
-            size="md"
-            icon={Plus}
-            className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
           >
             Create {terms.createBtnLabel}
-          </Button>
+          </AddButton>
         </div>
       </motion.div>
 

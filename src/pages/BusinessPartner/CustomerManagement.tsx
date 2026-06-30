@@ -22,6 +22,7 @@ import { Toast } from '../../components/ui/Toast';
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
 import { seedPrintTemplates } from '../../utils/settingsData';
 import type { PrintTemplate } from '../../utils/settingsData';
+import { AddButton, SaveButton } from '../../components/ui/ActionButtons';
 
 // ---------------------------------------------------------------------------
 // Types â€“ reflect the backend model supplied by the user
@@ -843,15 +844,9 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
                   style={{ background: brand.accent || '#EF4444' }}>!</span>
               )}
             </Button>
-            <Button
-              onClick={openCreate}
-              variant="primary"
-              size="md"
-              icon={Plus}
-              className="bg-emerald-500 hover:bg-emerald-600 shadow-none"
-            >
+            <AddButton onClick={openCreate} size="md"  >
               Add Business Partner
-            </Button>
+            </AddButton>
           </>
         }
       />
@@ -1729,16 +1724,9 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
                     Cancel
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="md"
-                    icon={Save}
-                    onClick={handleSave}
-                    className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white"
-                  >
+                  <SaveButton type="button" size="md" onClick={handleSave} className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white" >
                     Save
-                  </Button>
+                  </SaveButton>
 
                   {activeTab !== 'accounting' && (
                     <Button

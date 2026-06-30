@@ -10,6 +10,7 @@ import type { Product } from '../../pages/Products/ProductList';
 import { AlertModal } from './AlertModal';
 import { Toast } from './Toast';
 import { getCodeSettingsForBranch, generateNextCode, incrementNextCode } from '../../utils/codeSettingsHelper';
+import { SaveButton } from './ActionButtons';
 import {
   ProductCategory,
   ProductBrand,
@@ -788,16 +789,9 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                   Cancel
                 </Button>
 
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  icon={Save}
-                  onClick={handleSave}
-                  className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white"
-                >
+                <SaveButton type="button" size="md" onClick={handleSave} className="bg-emerald-500 hover:bg-emerald-600 shadow-none text-white" >
                   Save
-                </Button>
+                </SaveButton>
 
                 {activeTab !== 'pricing' && (
                   <Button
