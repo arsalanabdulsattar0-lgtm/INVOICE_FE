@@ -1,0 +1,120 @@
+@import "tailwindcss";
+@import "./assets/style.css";
+
+body, input, select, button, textarea, text, tspan {
+  font-family: 'Work Sans', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+@media print {
+
+  /* Hide sidebar, header, and action bars */
+  aside,
+  header,
+  .sticky,
+  button,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Reset main content layout */
+  body,
+  #root,
+  .flex,
+  main {
+    display: block !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Ensure invoice card takes full width and remove shadows */
+  .bg-white {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Force color printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove page margins */
+  @page {
+    margin: 1cm;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  width: 1px;
+  height: 1px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 100px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+
+.custom-scrollbar,
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #E2E8F0 transparent;
+}
+
+/* Hide scrollbars for overflow-x-auto containers to prevent layout shifting/jerking */
+.overflow-x-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+
+
+/* Hide number input spinners globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Ensure settings sub-modules take full height of their container and scroll internally */
+.settings-module-container > div {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+/* Ensure date picker inputs, calendar indicators, and select elements have pointer cursors */
+input[type="date"], select {
+  cursor: pointer !important;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+}

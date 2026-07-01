@@ -1,0 +1,694 @@
+/* Centralized Style Definitions for Form Controls and Page Restructuring */
+
+/* Theme Colors & Borders Utility Classes */
+.text-brand-primary {
+  color: var(--brand-primary) !important;
+}
+.text-brand-dark {
+  color: var(--brand-dark) !important;
+}
+.text-brand-accent {
+  color: var(--brand-accent) !important;
+}
+.text-brand-soft {
+  color: var(--brand-soft) !important;
+}
+.text-brand-text-primary {
+  color: var(--brand-text-primary) !important;
+}
+.text-brand-text-secondary {
+  color: var(--brand-text-secondary) !important;
+}
+
+.bg-brand-primary {
+  background-color: var(--brand-primary) !important;
+}
+.bg-brand-dark {
+  background-color: var(--brand-dark) !important;
+}
+.bg-brand-soft {
+  background-color: var(--brand-soft) !important;
+}
+.bg-brand-surface {
+  background-color: var(--brand-surface) !important;
+}
+
+/* Background Opacity helpers */
+.bg-brand-dark-20 {
+  background-color: var(--brand-dark-20) !important;
+}
+.bg-brand-primary-10 {
+  background-color: var(--brand-primary-10) !important;
+}
+.bg-brand-soft-25 {
+  background-color: var(--brand-soft-25) !important;
+}
+
+.border-brand-dark-08 {
+  border-color: #E2E8F0 !important;
+}
+.border-brand-dark-10 {
+  border-color: #E2E8F0 !important;
+}
+.border-brand-dark-15 {
+  border-color: #E2E8F0 !important;
+}
+.border-brand-dark-20 {
+  border-color: #E2E8F0 !important;
+}
+.border-brand-primary-30 {
+  border-color: #E2E8F0 !important;
+}
+.border-brand-primary-10 {
+  border-color: #E2E8F0 !important;
+}
+
+/* Form Controls Components Styles */
+
+/* Input Component */
+.form-input-container {
+  border: 1.5px solid #CBD5E1 !important;
+  background-color: #FFFFFF;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out;
+  min-height: 42px !important;
+  font-size: 13px !important;
+}
+.form-input-container:focus {
+  border-color: var(--brand-primary) !important;
+  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  outline: none !important;
+}
+.form-input-icon {
+  color: #CBD5E1;
+  transition: color 0.2s ease-in-out;
+}
+.form-input-container-group:focus-within .form-input-icon {
+  color: var(--brand-primary) !important;
+}
+
+/* Select Component */
+.form-select-container {
+  border: 1.5px solid #CBD5E1 !important;
+  background-color: #FFFFFF;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out;
+  min-height: 42px !important;
+  font-size: 13px !important;
+}
+.form-select-container:focus {
+  border-color: var(--brand-primary) !important;
+  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  outline: none !important;
+}
+
+/* TextArea Component */
+.form-textarea-container {
+  border: 1.5px solid #CBD5E1 !important;
+  background-color: #FFFFFF;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out;
+  font-size: 13px !important;
+  min-height: 80px !important;
+}
+.form-textarea-container:focus {
+  border-color: var(--brand-primary) !important;
+  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  outline: none !important;
+}
+
+/* ComboBox Component */
+.combobox-container-base {
+  border: 1px solid #E2E8F0 !important;
+  background-color: #FFFFFF;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out;
+}
+.combobox-container-open {
+  border-color: var(--brand-primary) !important;
+  box-shadow: none !important;
+  background-color: #FFFFFF !important;
+  outline: none !important;
+}
+.combobox-icon-base {
+  color: #CBD5E1;
+  transition: color 0.2s ease-in-out;
+}
+.combobox-icon-open {
+  color: var(--brand-primary) !important;
+}
+.combobox-dropdown-container {
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: none !important;
+}
+.combobox-option-selected {
+  background-color: var(--brand-soft-25) !important;
+}
+
+/* Toggle Component */
+.toggle-switch-base {
+  transition: background-color 0.2s ease-in-out;
+}
+.toggle-switch-checked {
+  background-color: var(--brand-primary) !important;
+}
+.toggle-switch-unchecked {
+  background-color: #E2E8F0 !important;
+}
+
+/* Page specific classes - InvoiceEditorV4 */
+.invoice-matrix-container {
+  border-color: #E2E8F0 !important;
+}
+.invoice-card-header {
+  border-color: #E2E8F0 !important;
+}
+.invoice-card-badge {
+  background-color: var(--brand-soft);
+  color: var(--brand-dark);
+}
+.invoice-badge-overdue {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #EF4444 !important;
+}
+.invoice-badge-active {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10B981 !important;
+}
+.invoice-badge-inactive {
+  background-color: rgba(100, 116, 139, 0.15) !important;
+  color: #64748B !important;
+}
+.invoice-client-limit-val {
+  color: var(--brand-primary) !important;
+}
+.invoice-header-div {
+  border-color: #E2E8F0 !important;
+}
+.invoice-header-title {
+  color: var(--brand-dark) !important;
+}
+.invoice-header-title-divider {
+  background-color: var(--brand-dark-20) !important;
+}
+.invoice-header-invoice-id {
+  color: var(--brand-primary) !important;
+}
+.invoice-dropdown-menu {
+  border-color: #E2E8F0 !important;
+}
+.invoice-dropdown-item {
+  color: var(--brand-dark) !important;
+}
+.invoice-recent-table-head {
+  color: var(--brand-dark) !important;
+  border-color: #E2E8F0 !important;
+}
+.invoice-recent-table-body {
+  border-color: #E2E8F0 !important;
+}
+.invoice-recent-table-row {
+  border-color: #E2E8F0 !important;
+}
+.invoice-recent-table-footer {
+  border-color: #E2E8F0 !important;
+}
+
+/* Glassmorphic input search in InvoiceEditorV4 header */
+.invoice-header-search-input {
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: white !important;
+}
+.invoice-header-search-input::placeholder {
+  color: rgba(255,255,255,0.4) !important;
+}
+
+/* Print Template styles */
+.printable-hidden-wrapper {
+  position: relative;
+  height: 0;
+  overflow: hidden;
+}
+.printable-invoice-container {
+  font-family: 'Inter, system-ui, sans-serif' !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  background: white !important;
+  color: #1e293b !important;
+  padding: 40px !important;
+  margin: 0 !important;
+  width: 210mm !important;
+}
+.printable-header-flex {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding-bottom: 24px !important;
+  margin-bottom: 32px !important;
+}
+.printable-sender-title {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  letter-spacing: -0.5px !important;
+}
+.printable-sender-address {
+  font-size: 11px !important;
+  color: #64748b !important;
+  margin-top: 6px !important;
+  line-height: 1.7 !important;
+}
+.printable-header-right {
+  text-align: right !important;
+}
+.printable-invoice-label {
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  color: #2759CD !important;
+  margin: 0 !important;
+  letter-spacing: 2px !important;
+}
+.printable-invoice-id {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin-top: 4px !important;
+}
+.printable-invoice-dates {
+  font-size: 10px !important;
+  color: #64748b !important;
+  margin-top: 8px !important;
+  line-height: 1.8 !important;
+}
+.printable-billing-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 32px !important;
+  margin-bottom: 32px !important;
+  padding-bottom: 24px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.printable-billing-section-title {
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: 2px !important;
+  color: #94a3b8 !important;
+  margin-bottom: 8px !important;
+}
+.printable-billing-name {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+}
+.printable-billing-address {
+  font-size: 11px !important;
+  color: #64748b !important;
+  margin-top: 6px !important;
+  line-height: 1.7 !important;
+}
+.printable-items-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-bottom: 32px !important;
+}
+.printable-table-head-row {
+  background: #f8fafc !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+.printable-table-row {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+.printable-totals-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+.printable-totals-container {
+  width: 300px !important;
+}
+.printable-totals-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+.printable-totals-row-net {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding: 12px 0 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+}
+.printable-totals-text-muted {
+  color: #64748b !important;
+}
+.printable-totals-val {
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+.printable-totals-val-discount {
+  font-weight: 700 !important;
+  color: #10B981 !important;
+}
+.printable-totals-val-net {
+  color: #2759CD !important;
+}
+
+/* Force all table headers globally to black text */
+th {
+  color: #000000 !important;
+}
+
+/* Sidebar refactored layout classes */
+.sidebar-aside {
+  background-color: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--brand-border) !important;
+  font-family: 'Work Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+.sidebar-logo-button {
+  width: 32px;
+  height: 32px;
+  background-color: var(--brand-primary) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px var(--brand-primary-30);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+}
+
+/* Sidebar Header / Section Titles (17px bold/semibold) */
+.sidebar-logo-text, .sidebar-section-title {
+  color: #000000 !important;
+  font-size: 17px !important;
+  font-weight: 700 !important; /* Bold/Semibold */
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+.sidebar-bottom-container {
+  border-top: 1px solid var(--brand-border) !important;
+}
+
+/* Select Dropdown Labels & Meta Descriptions (13px/12px) */
+.sidebar-dropdown-label {
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 550 !important; /* Medium/Semibold */
+  font-family: 'Work Sans', sans-serif !important;
+}
+.sidebar-dropdown-select {
+  font-size: 13px !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+.sidebar-meta-desc {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+.sidebar-username {
+  color: #000000 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+/* Sidebar navigation buttons (14px Button Labels) */
+.sidebar-btn-collapsed {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  border-radius: 8px !important;
+}
+.sidebar-btn-collapsed.active {
+  background-color: var(--brand-primary) !important;
+}
+.sidebar-btn-collapsed svg {
+  color: #000000 !important;
+}
+.sidebar-btn-collapsed.active svg {
+  color: #ffffff !important;
+}
+
+.sidebar-btn-expanded {
+  background-color: transparent;
+  color: #000000 !important;
+  border: none;
+  outline: none;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+.sidebar-btn-expanded.active {
+  background-color: var(--brand-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.sidebar-btn-expanded svg {
+  color: #000000 !important;
+}
+.sidebar-btn-expanded.active svg {
+  color: #ffffff !important;
+}
+.sidebar-btn-expanded span {
+  color: #000000 !important;
+}
+.sidebar-btn-expanded.active span {
+  color: #ffffff !important;
+}
+.sidebar-btn-expanded .sidebar-chevron {
+  color: #000000 !important;
+}
+.sidebar-btn-expanded.active .sidebar-chevron {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.sidebar-btn-active-pill {
+  background-color: var(--brand-primary) !important;
+  border-radius: 8px !important;
+}
+
+/* Sub-item buttons */
+.sidebar-sub-item-btn {
+  background-color: transparent;
+  color: #000000 !important;
+  border: none;
+  outline: none;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  font-family: 'Work Sans', sans-serif !important;
+}
+.sidebar-sub-item-btn.active {
+  background-color: var(--brand-primary-10) !important;
+  color: var(--brand-primary) !important;
+  font-weight: 700 !important;
+}
+
+.sidebar-sub-item-indicator {
+  background-color: var(--brand-primary) !important;
+}
+
+/* Primary Action Buttons (14px Extra bold/Heavy 900, UPPERCASE, tracking-wider) */
+.sidebar-primary-action-btn {
+  font-size: 14px !important;
+  font-weight: 900 !important; /* font-black */
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important; /* tracking-wider */
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+/* Avatar linear gradient customization */
+.sidebar-avatar-gradient {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)) !important;
+  border-radius: 8px !important;
+}
+
+/* Make all cards pop with a soft premium shadow */
+.bg-white.rounded-\[24px\] {
+  box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.bg-white.rounded-\[24px\]:hover {
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.07), 0 4px 12px -2px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Ensure all main content views use the theme background, ignoring hardcoded overrides */
+main > div > div {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* ── Dark Mode Overrides ────────────────────────────────────────────────── */
+.dark body, 
+.dark #root, 
+.dark main,
+.dark .bg-white,
+.dark .bg-slate-50,
+.dark .bg-slate-50\/60,
+.dark .bg-gray-50,
+.dark .bg-slate-50\/50,
+.dark .bg-white\/80 {
+  background-color: var(--brand-card-bg) !important;
+  color: var(--brand-text-primary) !important;
+}
+
+.dark main {
+  background-color: var(--brand-main-bg) !important;
+}
+
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-slate-900,
+.dark .text-slate-600,
+.dark .text-black,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark th {
+  color: var(--brand-text-primary) !important;
+}
+
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .sidebar-meta-desc {
+  color: var(--brand-text-secondary) !important;
+}
+
+.dark .border,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-gray-200,
+.dark .border-slate-100\/50,
+.dark .border-slate-200\/50,
+.dark .border-gray-100,
+.dark hr {
+  border-color: var(--brand-border) !important;
+}
+
+/* Form fields in dark mode */
+.dark input:not([type="checkbox"]),
+.dark select,
+.dark textarea {
+  background-color: var(--brand-card-bg) !important;
+  color: var(--brand-text-primary) !important;
+  border-color: var(--brand-border) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--brand-text-secondary) !important;
+  opacity: 0.6;
+}
+
+/* Sidebar overrides */
+.dark .sidebar-aside {
+  background-color: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--brand-border) !important;
+}
+
+.dark .sidebar-logo-text {
+  color: var(--brand-text-primary) !important;
+}
+
+.dark .sidebar-username {
+  color: var(--brand-text-primary) !important;
+}
+
+/* Nav button active states */
+.dark .sidebar-btn {
+  color: var(--sidebar-text) !important;
+}
+.dark .sidebar-btn.active {
+  background-color: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-text) !important;
+}
+
+.dark .sidebar-sub-item-btn {
+  color: var(--sidebar-text) !important;
+}
+.dark .sidebar-sub-item-btn.active {
+  background-color: var(--brand-primary-10) !important;
+  color: var(--brand-primary) !important;
+}
+
+/* Table overrides */
+.dark table {
+  background-color: var(--brand-card-bg) !important;
+}
+.dark tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+.dark td {
+  color: var(--brand-text-primary) !important;
+  border-color: var(--brand-border) !important;
+}
+
+/* Modals & Dialogs */
+.dark .modal-content, 
+.dark [role="dialog"],
+.dark .bg-white.rounded-3xl {
+  background-color: var(--brand-card-bg) !important;
+  border-color: var(--brand-border) !important;
+  color: var(--brand-text-primary) !important;
+}
+
+/* Dropdowns / Popovers */
+.dark .absolute.bg-white,
+.dark .shadow-lg.bg-white {
+  background-color: var(--brand-card-bg) !important;
+  border-color: var(--brand-border) !important;
+  color: var(--brand-text-primary) !important;
+}
+
+/* Specific buttons and badges */
+.dark .bg-slate-100, 
+.dark .bg-slate-200\/60,
+.dark .bg-slate-50\/60 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .text-slate-700 {
+  color: var(--brand-text-primary) !important;
+}
+
+/* Sidebar item colors in Dark Mode */
+.dark .sidebar-btn-expanded,
+.dark .sidebar-btn-expanded span,
+.dark .sidebar-btn-expanded svg,
+.dark .sidebar-btn-expanded .sidebar-chevron,
+.dark .sidebar-sub-item-btn,
+.dark .sidebar-btn-collapsed svg {
+  color: var(--sidebar-text, #94A3B8) !important;
+}
+
+/* Ensure active items retain white text/icon inside the blue/accent background */
+.dark .sidebar-btn-expanded.active,
+.dark .sidebar-btn-expanded.active span,
+.dark .sidebar-btn-expanded.active svg,
+.dark .sidebar-btn-expanded.active .sidebar-chevron,
+.dark .sidebar-sub-item-btn.active,
+.dark .sidebar-btn-collapsed.active svg {
+  color: #ffffff !important;
+}
+
+
