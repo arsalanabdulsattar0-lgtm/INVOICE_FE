@@ -137,7 +137,7 @@ function App() {
         const found = companies.find((c: any) => c.id === defCoId);
         if (found) return found;
       }
-    } catch {}
+    } catch { }
     return null;
   });
 
@@ -150,7 +150,7 @@ function App() {
         const found = branches.find((b: any) => b.id === defBrId);
         if (found) return found;
       }
-    } catch {}
+    } catch { }
     return null;
   });
 
@@ -164,7 +164,7 @@ function App() {
       const defCo = localStorage.getItem('default_company_id');
       const defBr = localStorage.getItem('default_branch_id');
       if (defCo && defBr) return false;
-    } catch {}
+    } catch { }
     return true;
   });
 
@@ -193,7 +193,7 @@ function App() {
         const firstBr = brs.find((b: any) => b.companyId === activeCoId);
         return firstBr ? firstBr.id : '';
       }
-    } catch {}
+    } catch { }
     return '';
   });
   const [tempSetAsDefault, setTempSetAsDefault] = useState(false);
@@ -202,7 +202,7 @@ function App() {
     try {
       const stored = localStorage.getItem('profile_details');
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return { name: 'Arsalan Ahmed', role: 'Administrator' };
   });
 
@@ -213,7 +213,7 @@ function App() {
         if (stored) {
           setUserProfile(JSON.parse(stored));
         }
-      } catch {}
+      } catch { }
     };
     window.addEventListener('storage', handleStorageChange);
     const interval = setInterval(handleStorageChange, 1000);
@@ -234,7 +234,7 @@ function App() {
     try {
       const stored = localStorage.getItem('active_view');
       if (stored) return stored as View;
-    } catch {}
+    } catch { }
     return 'dashboard';
   });
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -475,7 +475,7 @@ function App() {
         const parsed = JSON.parse(stored);
         if (parsed && parsed.length > 0) return parsed;
       }
-    } catch {}
+    } catch { }
     return initialPurchases;
   });
 
@@ -490,7 +490,7 @@ function App() {
     try {
       const stored = localStorage.getItem('bp_adjustments');
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -511,7 +511,7 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem('bp_adjustments', JSON.stringify(bpAdjustmentList));
-    } catch {}
+    } catch { }
   }, [bpAdjustmentList]);
 
   // Save default invoice data to localStorage if not present
@@ -540,7 +540,7 @@ function App() {
 
     setIsReloading(true);
     setReloadStep('Reloading Company Context...');
-    
+
     setTimeout(() => {
       setReloadStep('Reloading Branch Context...');
       setTimeout(() => {
@@ -562,7 +562,7 @@ function App() {
                   localStorage.removeItem('default_company_id');
                   localStorage.removeItem('default_branch_id');
                 }
-              } catch {}
+              } catch { }
               setIsReloading(false);
               setIsSelectingContext(false);
             }, 150);
@@ -611,7 +611,7 @@ function App() {
                 }
                 setIsSelectingContext(false);
               }
-            } catch {}
+            } catch { }
             setIsLoggedIn(true);
           }}
         />
@@ -659,136 +659,136 @@ function App() {
           />
 
           <div className="w-full max-w-[390px] space-y-6 relative z-10">
-            
+
             {/* InvoiceFlow App Logo */}
             <div className="flex items-center gap-3 justify-center">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-lg"
-              style={{
-                backgroundColor: brand.primary,
-                boxShadow: `0 4px 12px ${brand.primary}40`,
-                fontSize: 18
-              }}
-            >
-              I
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-800">Inventory Tracking System</span>
-          </div>
-
-          <Card
-            className="p-8"
-            style={{
-              background: `linear-gradient(${brand.cardBg}, ${brand.cardBg}) padding-box, linear-gradient(135deg, ${brand.primary}, #38bdf8) border-box`,
-              border: '1px solid transparent',
-              borderRadius: '1rem',
-              height: '455px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}
-          >
-            <div className="w-full">
-              {/* Title & Subtitle */}
-              <div className="text-center mb-5">
-                <h2 className="text-[22px] font-extrabold text-slate-800 tracking-tight mb-1">Select Context</h2>
-                <p className="text-xs font-semibold text-slate-500">
-                  Choose the company and branch to log in.
-                </p>
-              </div>
-
-              {/* Company & Branch form */}
-              <div className="space-y-4">
-                {/* Company Select */}
-                <div className="w-full space-y-1">
-                  <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
-                    Select Company
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={tempSelectedCompanyId}
-                      onChange={(e) => {
-                        const coId = e.target.value;
-                        setTempSelectedCompanyId(coId);
-                        const firstBr = branches.find((b: any) => b.companyId === coId);
-                        setTempSelectedBranchId(firstBr ? firstBr.id : '');
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-lg"
+                      style={{
+                        backgroundColor: brand.primary,
+                        boxShadow: `0 4px 12px ${brand.primary}40`,
+                        fontSize: 18
                       }}
-                      className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
                     >
-                      <option value="" disabled>Choose a company...</option>
-                      {activeCompanies.map((co: any) => (
-                        <option key={co.id} value={co.id}>
-                          {co.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      I
                     </div>
+                    <span className="text-2xl font-bold tracking-tight text-slate-800">Inventory Tracking System</span>
                   </div>
-                </div>
 
-                {/* Branch Select */}
-                <div className="w-full space-y-1">
-                  <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
-                    Select Branch
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={tempSelectedBranchId}
-                      onChange={(e) => setTempSelectedBranchId(e.target.value)}
-                      className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
-                      disabled={!tempSelectedCompanyId}
-                    >
-                      <option value="" disabled>Choose a branch...</option>
-                      {availableBranches.map((br: any) => (
-                        <option key={br.id} value={br.id}>
-                          {br.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                  <Card
+                    className="p-8"
+                    style={{
+                      background: `linear-gradient(${brand.cardBg}, ${brand.cardBg}) padding-box, linear-gradient(135deg, ${brand.primary}, #38bdf8) border-box`,
+                      border: '1px solid transparent',
+                      borderRadius: '1rem',
+                      height: '455px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <div className="w-full">
+                      {/* Title & Subtitle */}
+                      <div className="text-center mb-5">
+                        <h2 className="text-[22px] font-extrabold text-slate-800 tracking-tight mb-1">Select Context</h2>
+                        <p className="text-xs font-semibold text-slate-500">
+                          Choose the company and branch to log in.
+                        </p>
+                      </div>
+
+                      {/* Company & Branch form */}
+                      <div className="space-y-4">
+                        {/* Company Select */}
+                        <div className="w-full space-y-1">
+                          <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
+                            Select Company
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={tempSelectedCompanyId}
+                              onChange={(e) => {
+                                const coId = e.target.value;
+                                setTempSelectedCompanyId(coId);
+                                const firstBr = branches.find((b: any) => b.companyId === coId);
+                                setTempSelectedBranchId(firstBr ? firstBr.id : '');
+                              }}
+                              className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
+                            >
+                              <option value="" disabled>Choose a company...</option>
+                              {activeCompanies.map((co: any) => (
+                                <option key={co.id} value={co.id}>
+                                  {co.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Branch Select */}
+                        <div className="w-full space-y-1">
+                          <label className="text-[11px] font-bold ml-1 block mb-1.5 text-slate-500">
+                            Select Branch
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={tempSelectedBranchId}
+                              onChange={(e) => setTempSelectedBranchId(e.target.value)}
+                              className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
+                              disabled={!tempSelectedCompanyId}
+                            >
+                              <option value="" disabled>Choose a branch...</option>
+                              {availableBranches.map((br: any) => (
+                                <option key={br.id} value={br.id}>
+                                  {br.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-1">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={tempSetAsDefault}
+                              onChange={(e) => setTempSetAsDefault(e.target.checked)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                            />
+                            <span className="text-[11px] text-slate-600 font-bold">Set As Default Company & Branch</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="mt-6">
+                        <Button
+                          variant="primary"
+                          size="md"
+                          className="w-full font-bold h-10"
+                          onClick={() => {
+                            if (tempSelectedCompanyId && tempSelectedBranchId) {
+                              handleContextChange(tempSelectedCompanyId, tempSelectedBranchId, tempSetAsDefault);
+                            }
+                          }}
+                          disabled={!tempSelectedCompanyId || !tempSelectedBranchId}
+                        >
+                          Continue
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="pt-1">
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={tempSetAsDefault}
-                      onChange={(e) => setTempSetAsDefault(e.target.checked)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-[11px] text-slate-600 font-bold">Set As Default Company & Branch</span>
-                  </label>
+                  </Card>
                 </div>
               </div>
-
-              <div className="mt-6">
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full font-bold h-10"
-                  onClick={() => {
-                    if (tempSelectedCompanyId && tempSelectedBranchId) {
-                      handleContextChange(tempSelectedCompanyId, tempSelectedBranchId, tempSetAsDefault);
-                    }
-                  }}
-                  disabled={!tempSelectedCompanyId || !tempSelectedBranchId}
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
+    </div >
     );
   }
 
@@ -809,12 +809,12 @@ function App() {
     }
 
     if (!tId) {
-      const normType = inv.type === 'Sale Return' ? 'Sales Return' : 
-                       inv.type === 'Purchase Return' ? 'Purchase Return' :
-                       inv.type === 'Purchase Invoice' ? 'Purchase Invoice' : 'Sales Invoice';
+      const normType = inv.type === 'Sale Return' ? 'Sales Return' :
+        inv.type === 'Purchase Return' ? 'Purchase Return' :
+          inv.type === 'Purchase Invoice' ? 'Purchase Invoice' : 'Sales Invoice';
       const defaultTemplate = templates.find((t: any) => t.is_default && t.is_active && t.document_type === normType) ||
-                              templates.find((t: any) => t.is_default && t.is_active) ||
-                              templates[0];
+        templates.find((t: any) => t.is_default && t.is_active) ||
+        templates[0];
       tId = defaultTemplate?.template_id;
     }
 
@@ -868,7 +868,7 @@ function App() {
       const stored = localStorage.getItem('print_template_custom_fields');
       const allCustomFields = stored ? JSON.parse(stored) : [];
       customFields = allCustomFields.filter((cf: any) => cf.template_id === tId);
-    } catch {}
+    } catch { }
     customFields.sort((a, b) => a.display_order - b.display_order);
 
     setPrintTemplate(activeTemplate);
@@ -916,14 +916,14 @@ function App() {
     }
 
     const docType = listType === 'products' ? 'Product List' :
-                    listType === 'business_partners' ? 'Business Partner List' :
-                    listType === 'invoices' ? 'Sales Invoice' : 'Purchase Invoice';
+      listType === 'business_partners' ? 'Business Partner List' :
+        listType === 'invoices' ? 'Sales Invoice' : 'Purchase Invoice';
 
     if (!tId) {
       const defaultTemplate = templates.find((t: any) => t.is_default && t.is_active && t.document_type === docType) ||
-                              templates.find((t: any) => t.is_active && t.document_type === docType) ||
-                              templates.find((t: any) => t.is_default && t.is_active) ||
-                              templates[0];
+        templates.find((t: any) => t.is_active && t.document_type === docType) ||
+        templates.find((t: any) => t.is_default && t.is_active) ||
+        templates[0];
       tId = defaultTemplate?.template_id;
     }
 
@@ -972,10 +972,10 @@ function App() {
             filename: `${docType.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { 
-              unit: 'mm', 
-              format: activeTemplate.paper_size === 'Thermal' ? [80, 200] : 'a4', 
-              orientation: activeTemplate.orientation?.toLowerCase() || 'portrait' 
+            jsPDF: {
+              unit: 'mm',
+              format: activeTemplate.paper_size === 'Thermal' ? [80, 200] : 'a4',
+              orientation: activeTemplate.orientation?.toLowerCase() || 'portrait'
             }
           };
 
@@ -1496,42 +1496,42 @@ function App() {
 
     if (v === 'add-sale-invoice') {
       const settings = getCodeSettingsForBranch(companyId, branchId).sale_invoice;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('sale_invoice', companyId, branchId)
         : '';
       setInvoice(emptyInvoiceData('Sale Invoice', nextId || 'SI-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('add-invoice-v4');
     } else if (v === 'add-service-invoice') {
       const settings = getCodeSettingsForBranch(companyId, branchId).service_invoice;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('service_invoice', companyId, branchId)
         : '';
       setInvoice(emptyInvoiceData('Service Invoice', nextId || 'SRV-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('add-invoice-v4');
     } else if (v === 'add-digital-invoice') {
       const settings = getCodeSettingsForBranch(companyId, branchId).digital_invoice;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('digital_invoice', companyId, branchId)
         : '';
       setInvoice(emptyInvoiceData('Digital Invoice', nextId || 'DIG-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('add-invoice-v4');
     } else if (v === 'return-invoice') {
       const settings = getCodeSettingsForBranch(companyId, branchId).sale_return;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('sale_return', companyId, branchId)
         : '';
       setReturnInvoice(emptyInvoiceData('Sale Return', nextId || 'RTN-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('return-invoice');
     } else if (v === 'add-purchase-invoice') {
       const settings = getCodeSettingsForBranch(companyId, branchId).purchase_invoice;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('purchase_invoice', companyId, branchId)
         : '';
       setPurchase(emptyInvoiceData('Purchase Invoice', nextId || 'PI-' + Math.floor(1000 + Math.random() * 9000)));
       setActiveView('add-purchase-invoice');
     } else if (v === 'purchase-return') {
       const settings = getCodeSettingsForBranch(companyId, branchId).purchase_return;
-      const nextId = settings.mode === 'auto' 
+      const nextId = settings.mode === 'auto'
         ? generateNextCode('purchase_return', companyId, branchId)
         : '';
       setPurchaseReturn(emptyInvoiceData('Purchase Return', nextId || 'PRTN-' + Math.floor(1000 + Math.random() * 9000)));
@@ -1639,7 +1639,7 @@ function App() {
               localStorage.removeItem('active_view');
               sessionStorage.removeItem('active_company');
               sessionStorage.removeItem('active_branch');
-            } catch {}
+            } catch { }
             setActiveCompany(null);
             setActiveBranch(null);
             setIsLoggedIn(false);
@@ -1711,17 +1711,17 @@ function App() {
         const isLandscape = printOrientation === 'landscape';
 
         const pageWidthVal = printTemplate?.paper_size === 'Thermal' ? '80mm' :
-                             printTemplate?.paper_size === 'Letter' ? (isLandscape ? '279mm' : '216mm') :
-                             printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_height || '297mm') : (printTemplate.paper_width || '210mm')) :
-                             (isLandscape ? '297mm' : '210mm'); // A4 default
+          printTemplate?.paper_size === 'Letter' ? (isLandscape ? '279mm' : '216mm') :
+            printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_height || '297mm') : (printTemplate.paper_width || '210mm')) :
+              (isLandscape ? '297mm' : '210mm'); // A4 default
 
         const pageHeightVal = printTemplate?.paper_size === 'Thermal' ? 'auto' :
-                              printTemplate?.paper_size === 'Letter' ? (isLandscape ? '216mm' : '279mm') :
-                              printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_width || '210mm') : (printTemplate.paper_height || '297mm')) :
-                              (isLandscape ? '210mm' : '297mm'); // A4 default
+          printTemplate?.paper_size === 'Letter' ? (isLandscape ? '216mm' : '279mm') :
+            printTemplate?.paper_size === 'Custom' ? (isLandscape ? (printTemplate.paper_width || '210mm') : (printTemplate.paper_height || '297mm')) :
+              (isLandscape ? '210mm' : '297mm'); // A4 default
 
         const pageSizeRule = printTemplate?.paper_size === 'Thermal' ? '80mm auto' :
-                             `${pageWidthVal} ${pageHeightVal}`;
+          `${pageWidthVal} ${pageHeightVal}`;
 
         const companyDetails = (() => {
           try {
@@ -1741,7 +1741,7 @@ function App() {
                 };
               }
             }
-          } catch {}
+          } catch { }
           return {
             name: 'Acme Corporation',
             address: 'Main Boulevard, Gulberg III, Lahore',
@@ -1755,7 +1755,8 @@ function App() {
 
         return (
           <div className="fixed inset-0 z-[9999] bg-white overflow-auto print-visible-only">
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               @media screen {
                 .print-visible-only { display: none !important; }
               }
@@ -1779,8 +1780,8 @@ function App() {
               }
               @page { size: ${pageSizeRule}; margin: 0; }
             ` }} />
-            <div 
-              id="list-print-container" 
+            <div
+              id="list-print-container"
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 width: pageWidthVal,
@@ -1821,10 +1822,10 @@ function App() {
               {/* Centered Document Title */}
               <div className="w-full text-center my-4">
                 <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
-                  {printTemplate.document_type === 'Product List' ? 'Product Catalog' : 
-                   printTemplate.document_type === 'Business Partner List' ? 'Business Partner Directory' :
-                   printTemplate.document_type === 'Purchase List' ? 'Purchase Register' :
-                   printTemplate.document_type === 'Sales Invoice' ? 'Sales Invoice Register' : 'Purchase Register'}
+                  {printTemplate.document_type === 'Product List' ? 'Product Catalog' :
+                    printTemplate.document_type === 'Business Partner List' ? 'Business Partner Directory' :
+                      printTemplate.document_type === 'Purchase List' ? 'Purchase Register' :
+                        printTemplate.document_type === 'Sales Invoice' ? 'Sales Invoice Register' : 'Purchase Register'}
                 </h1>
               </div>
 
@@ -1875,7 +1876,7 @@ function App() {
                               if (storedDetail) {
                                 fullDetails = JSON.parse(storedDetail);
                               }
-                            } catch {}
+                            } catch { }
 
                             const supplierCode = (() => {
                               try {
@@ -1885,7 +1886,7 @@ function App() {
                                   const match = custs.find((c: any) => c.name === item.customer);
                                   if (match) return match.customer_id || match.id || '';
                                 }
-                              } catch {}
+                              } catch { }
                               return '';
                             })();
 
@@ -1909,7 +1910,7 @@ function App() {
                                   const parsedCo = JSON.parse(activeCo);
                                   val = parsedCo.activeBranchName || 'Main';
                                 }
-                              } catch {}
+                              } catch { }
                             }
                             else if (colName === 'Warehouse') val = fullDetails?.warehouse || 'Main Warehouse';
                             else if (colName === 'Total Amount') val = subtotal ? `${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00';
@@ -1965,16 +1966,16 @@ function App() {
       {/* Hidden Printable Invoice Area */}
       {printInvoiceData && (() => {
         const paperWidth = printTemplate?.paper_size === 'Thermal' ? '80mm' :
-                           printTemplate?.paper_size === 'Letter' ? '216mm' :
-                           printTemplate?.paper_size === 'Custom' ? (printTemplate.paper_width || '210mm') : '210mm'; // A4 default
+          printTemplate?.paper_size === 'Letter' ? '216mm' :
+            printTemplate?.paper_size === 'Custom' ? (printTemplate.paper_width || '210mm') : '210mm'; // A4 default
 
         const paperHeight = printTemplate?.paper_size === 'Thermal' ? 'auto' :
-                            printTemplate?.paper_size === 'Letter' ? '279mm' :
-                            printTemplate?.paper_size === 'Custom' ? (printTemplate.paper_height || '297mm') : '297mm'; // A4 default
+          printTemplate?.paper_size === 'Letter' ? '279mm' :
+            printTemplate?.paper_size === 'Custom' ? (printTemplate.paper_height || '297mm') : '297mm'; // A4 default
 
         const printOrientation = printTemplate?.orientation?.toLowerCase() || 'portrait';
         const pageSizeRule = printTemplate?.paper_size === 'Thermal' ? '80mm auto' :
-                             `${paperWidth} ${paperHeight} ${printOrientation}`;
+          `${paperWidth} ${paperHeight} ${printOrientation}`;
 
         const companyDetails = (() => {
           try {
@@ -1994,7 +1995,7 @@ function App() {
                 };
               }
             }
-          } catch {}
+          } catch { }
           return {
             name: 'Acme Corporation',
             address: 'Main Boulevard, Gulberg III, Lahore',
@@ -2025,7 +2026,7 @@ function App() {
                 };
               }
             }
-          } catch {}
+          } catch { }
           // Fallback to sampleCustomers/DEFAULT_CUSTOMERS or default
           const matchSample = sampleCustomers.find(c => c.name === printInvoiceData.customer);
           if (matchSample) {
@@ -2066,22 +2067,22 @@ function App() {
           try {
             const spListStored = localStorage.getItem('sales_persons');
             const spList = spListStored ? JSON.parse(spListStored) : [];
-            
+
             // Try to find salesperson via customer assignment
             const custName = printInvoiceData?.customer;
             if (custName) {
               const storedCustomers = localStorage.getItem('customer_list');
               const customersList = storedCustomers ? JSON.parse(storedCustomers) : [];
               const customer = customersList.find((c: any) => c.name === custName) || sampleCustomers.find((c: any) => c.name === custName);
-              
+
               if (customer && customer.sales_person_id) {
                 const sp = spList.find((s: any) => s.id === customer.sales_person_id);
                 if (sp) return sp.name;
               }
             }
-            
+
             if (spList.length > 0) return spList[0].name;
-          } catch {}
+          } catch { }
           return 'Arsalan Ahmed';
         })();
 
@@ -2154,7 +2155,7 @@ function App() {
                             {visibleCols.map((col: PrintTemplateColumn) => {
                               let val = '-';
                               const alignVal = col.alignment || (isNumericColumn(col.column_name) ? 'right' : 'left');
-                              
+
                               if (col.column_name === 'Sr No' || col.column_name === 'Sr#') val = (idx + 1).toString();
                               else if (col.column_name === 'Product Code') val = item.productCode || '';
                               else if (col.column_name === 'Product Name') {
@@ -2166,7 +2167,7 @@ function App() {
                                       const match = prods.find((p: any) => p.code === item.productCode || p.id === item.productCode);
                                       if (match) return match.name || '';
                                     }
-                                  } catch {}
+                                  } catch { }
                                   return item.description || 'Product/Service';
                                 })();
                                 val = productName;
@@ -2182,7 +2183,7 @@ function App() {
                                       const match = batches.find((b: any) => b.batch_no === item.batchNo);
                                       if (match) return match.expiry_date || '';
                                     }
-                                  } catch {}
+                                  } catch { }
                                   return '';
                                 })();
                                 val = expiryDate || '-';
@@ -2195,7 +2196,7 @@ function App() {
                               else if (col.column_name === 'Discount') val = item.discount.toLocaleString(undefined, { minimumFractionDigits: 2 });
                               else if (col.column_name === 'Tax') val = item.tax.toLocaleString(undefined, { minimumFractionDigits: 2 });
                               else if (col.column_name === 'Amount') val = itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                              
+
                               return (
                                 <td key={col.column_id} className="py-2 px-3 border border-slate-300" style={{ textAlign: alignVal }}>
                                   {val}
@@ -2212,7 +2213,7 @@ function App() {
                           const alignVal = col.alignment || (isNumericColumn(col.column_name) ? 'right' : 'left');
                           const rawStr = printInvoiceData?.amount?.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '') || '0';
                           const netPayable = parseFloat(rawStr) || 0;
-                          
+
                           if (col.column_name === 'Sr No' || col.column_name === 'Sr#') val = '1';
                           else if (col.column_name === 'Product Code') val = 'BC-001';
                           else if (col.column_name === 'Product Name') val = 'Services';
@@ -2223,7 +2224,7 @@ function App() {
                           else if (col.column_name === 'Batch No') val = 'BATCH-001';
                           else if (col.column_name === 'Expiry Date') val = '31-Dec-2027';
                           else if (col.column_name === 'Unit') val = 'Unit';
-                          
+
                           return (
                             <td key={col.column_id} className="py-2 px-3 border border-slate-300" style={{ textAlign: alignVal }}>
                               {val}
@@ -2252,23 +2253,23 @@ function App() {
             return printTemplate?.barcode_enabled ? (
               <div className="pt-1 w-32">
                 <svg className="h-6 w-32 text-slate-800" viewBox="0 0 100 20">
-                  <rect width="100" height="20" fill="white"/>
-                  <rect x="5" y="2" width="2" height="16" fill="currentColor"/>
-                  <rect x="10" y="2" width="4" height="16" fill="currentColor"/>
-                  <rect x="16" y="2" width="1" height="16" fill="currentColor"/>
-                  <rect x="20" y="2" width="3" height="16" fill="currentColor"/>
-                  <rect x="25" y="2" width="5" height="16" fill="currentColor"/>
-                  <rect x="32" y="2" width="2" height="16" fill="currentColor"/>
-                  <rect x="36" y="2" width="1" height="16" fill="currentColor"/>
-                  <rect x="40" y="2" width="4" height="16" fill="currentColor"/>
-                  <rect x="48" y="2" width="2" height="16" fill="currentColor"/>
-                  <rect x="52" y="2" width="3" height="16" fill="currentColor"/>
-                  <rect x="58" y="2" width="5" height="16" fill="currentColor"/>
-                  <rect x="65" y="2" width="2" height="16" fill="currentColor"/>
-                  <rect x="70" y="2" width="1" height="16" fill="currentColor"/>
-                  <rect x="74" y="2" width="4" height="16" fill="currentColor"/>
-                  <rect x="80" y="2" width="2" height="16" fill="currentColor"/>
-                  <rect x="85" y="2" width="5" height="16" fill="currentColor"/>
+                  <rect width="100" height="20" fill="white" />
+                  <rect x="5" y="2" width="2" height="16" fill="currentColor" />
+                  <rect x="10" y="2" width="4" height="16" fill="currentColor" />
+                  <rect x="16" y="2" width="1" height="16" fill="currentColor" />
+                  <rect x="20" y="2" width="3" height="16" fill="currentColor" />
+                  <rect x="25" y="2" width="5" height="16" fill="currentColor" />
+                  <rect x="32" y="2" width="2" height="16" fill="currentColor" />
+                  <rect x="36" y="2" width="1" height="16" fill="currentColor" />
+                  <rect x="40" y="2" width="4" height="16" fill="currentColor" />
+                  <rect x="48" y="2" width="2" height="16" fill="currentColor" />
+                  <rect x="52" y="2" width="3" height="16" fill="currentColor" />
+                  <rect x="58" y="2" width="5" height="16" fill="currentColor" />
+                  <rect x="65" y="2" width="2" height="16" fill="currentColor" />
+                  <rect x="70" y="2" width="1" height="16" fill="currentColor" />
+                  <rect x="74" y="2" width="4" height="16" fill="currentColor" />
+                  <rect x="80" y="2" width="2" height="16" fill="currentColor" />
+                  <rect x="85" y="2" width="5" height="16" fill="currentColor" />
                 </svg>
               </div>
             ) : null;
@@ -2373,35 +2374,35 @@ function App() {
               if (matched) actualVal = matched.value;
             }
           } else {
-            actualVal = 
+            actualVal =
               item.field_name === 'Company Name' ? companyDetails.name :
-              item.field_name === 'Company Address' ? companyDetails.address :
-              item.field_name === 'Phone' || item.field_name === 'Phone Number' ? companyDetails.phone :
-              item.field_name === 'Email' ? companyDetails.email :
-              item.field_name === 'Website' ? companyDetails.website :
-              item.field_name === 'NTN' ? companyDetails.ntn :
-              item.field_name === 'STRN' || item.field_name === 'STN' || item.field_name === 'STN / STRN' ? companyDetails.strn :
-              item.field_name === 'Customer Name' || item.field_name === 'Supplier Name' ? (printInvoiceData?.customer || '') :
-              item.field_name === 'Customer Address' || item.field_name === 'Address' ? (customerDetails?.address || '') :
-              item.field_name === 'Mobile' || item.field_name === 'Mobile Number' ? (customerDetails?.phone || '') :
-              item.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
-              item.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
-              item.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
-              item.field_name === 'Customer Code' || item.field_name === 'Supplier Code' ? (customerDetails?.code || '') :
-              item.field_name === 'Customer Email' ? customerDetails?.email || '' :
-              item.field_name === 'Contact Person' ? ((customerDetails as any)?.contact_person || '') :
-              item.field_name === 'Invoice Number' || item.field_name === 'Purchase Invoice Number' || item.field_name === 'Purchase Return Number' ? (printInvoiceData?.id || '') :
-              item.field_name === 'Date' || item.field_name === 'Invoice Date' || item.field_name === 'Purchase Date' || item.field_name === 'Return Date' ? (printInvoiceData?.issueDate || '') :
-              item.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
-              item.field_name === 'Sales Person' ? salesPersonName :
-              item.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
-              item.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
-              item.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
-              item.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') :
-              item.field_name === 'Prepared By' || item.field_name === 'Printed By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
-              item.field_name === 'Received By' ? (printInvoiceFullData as any)?.receivedBy || 'Received By Client' :
-              item.field_name === 'Remarks' ? ((printInvoiceFullData as any)?.remarks || `Payment term: ${printInvoiceData?.payment || ''}`) :
-              item.field_name === 'Terms & Conditions' ? 'Payment is due within 30 days of issue. Balance subject to 2% late penalty.' : '';
+                item.field_name === 'Company Address' ? companyDetails.address :
+                  item.field_name === 'Phone' || item.field_name === 'Phone Number' ? companyDetails.phone :
+                    item.field_name === 'Email' ? companyDetails.email :
+                      item.field_name === 'Website' ? companyDetails.website :
+                        item.field_name === 'NTN' ? companyDetails.ntn :
+                          item.field_name === 'STRN' || item.field_name === 'STN' || item.field_name === 'STN / STRN' ? companyDetails.strn :
+                            item.field_name === 'Customer Name' || item.field_name === 'Supplier Name' ? (printInvoiceData?.customer || '') :
+                              item.field_name === 'Customer Address' || item.field_name === 'Address' ? (customerDetails?.address || '') :
+                                item.field_name === 'Mobile' || item.field_name === 'Mobile Number' ? (customerDetails?.phone || '') :
+                                  item.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
+                                    item.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
+                                      item.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
+                                        item.field_name === 'Customer Code' || item.field_name === 'Supplier Code' ? (customerDetails?.code || '') :
+                                          item.field_name === 'Customer Email' ? customerDetails?.email || '' :
+                                            item.field_name === 'Contact Person' ? ((customerDetails as any)?.contact_person || '') :
+                                              item.field_name === 'Invoice Number' || item.field_name === 'Purchase Invoice Number' || item.field_name === 'Purchase Return Number' ? (printInvoiceData?.id || '') :
+                                                item.field_name === 'Date' || item.field_name === 'Invoice Date' || item.field_name === 'Purchase Date' || item.field_name === 'Return Date' ? (printInvoiceData?.issueDate || '') :
+                                                  item.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
+                                                    item.field_name === 'Sales Person' ? salesPersonName :
+                                                      item.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
+                                                        item.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
+                                                          item.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
+                                                            item.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') :
+                                                              item.field_name === 'Prepared By' || item.field_name === 'Printed By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
+                                                                item.field_name === 'Received By' ? (printInvoiceFullData as any)?.receivedBy || 'Received By Client' :
+                                                                  item.field_name === 'Remarks' ? ((printInvoiceFullData as any)?.remarks || `Payment term: ${printInvoiceData?.payment || ''}`) :
+                                                                    item.field_name === 'Terms & Conditions' ? 'Payment is due within 30 days of issue. Balance subject to 2% late penalty.' : '';
           }
 
           if (!actualVal && item.field_name !== 'Remarks' && item.field_name !== 'Terms & Conditions') return null;
@@ -2417,7 +2418,7 @@ function App() {
         const renderPrintSectionFields = (sectionName: string) => {
           const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === sectionName);
           const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === sectionName);
-          
+
           const combined = [
             ...secFields.map(f => ({ ...f, isCustom: false as const })),
             ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
@@ -2454,7 +2455,7 @@ function App() {
 
                       const widthPercent = sectionName === 'Totals' ? 100 : (item.width_percent || defaultWidth);
                       const isFullBlock = ['Company Logo', 'Item Table', 'Remarks', 'Terms & Conditions', 'FBR Logo', 'Notes'].includes(item.field_name);
-                      
+
                       let colSpan = 'col-span-12';
                       if (!isFullBlock) {
                         if (widthPercent <= 25) colSpan = 'col-span-3';
@@ -2575,7 +2576,7 @@ function App() {
                     .filter((f: PrintTemplateField) => f.is_visible)
                     .map((f: PrintTemplateField) => {
                       let elementContent = null;
-                      
+
                       if (f.field_name === 'Company Logo') {
                         elementContent = printTemplate.logo_url ? (
                           <img
@@ -2617,7 +2618,7 @@ function App() {
                                         {visibleCols.map((col: PrintTemplateColumn) => {
                                           let val = '-';
                                           const alignVal = col.alignment || (isNumericColumn(col.column_name) ? 'right' : 'left');
-                                          
+
                                           if (col.column_name === 'Sr No') val = (idx + 1).toString();
                                           else if (col.column_name === 'Product Code') val = item.productCode || '';
                                           else if (col.column_name === 'Product Name') val = 'Product/Service';
@@ -2641,7 +2642,7 @@ function App() {
                                           else if (col.column_name === 'Amount') {
                                             val = itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
                                           }
-                                          
+
                                           return (
                                             <td key={col.column_id} className="py-1 px-1.5" style={{ textAlign: alignVal }}>
                                               {val}
@@ -2658,7 +2659,7 @@ function App() {
                                       const alignVal = col.alignment || (isNumericColumn(col.column_name) ? 'right' : 'left');
                                       const rawStr = printInvoiceData?.amount?.replace(/^(Rs\.|PKR|\$)\s*/i, '').replace(/,/g, '') || '0';
                                       const netPayable = parseFloat(rawStr) || 0;
-                                      
+
                                       if (col.column_name === 'Sr No') val = '1';
                                       else if (col.column_name === 'Product Code') val = 'BC-001';
                                       else if (col.column_name === 'Product Name') val = 'Services';
@@ -2666,7 +2667,7 @@ function App() {
                                       else if (col.column_name === 'Quantity' || col.column_name === 'Qty') val = '1.00';
                                       else if (col.column_name === 'Rate' || col.column_name === 'Unit Price') val = netPayable.toLocaleString(undefined, { minimumFractionDigits: 2 });
                                       else if (col.column_name === 'Amount') val = netPayable.toLocaleString(undefined, { minimumFractionDigits: 2 });
-                                      
+
                                       return (
                                         <td key={col.column_id} className="py-1 px-1.5" style={{ textAlign: alignVal }}>
                                           {val}
@@ -2690,18 +2691,18 @@ function App() {
                       } else if (f.field_name === 'Barcode') {
                         elementContent = printTemplate.barcode_enabled ? (
                           <svg className="h-6 w-full text-slate-800" viewBox="0 0 100 20" preserveAspectRatio="none">
-                            <rect width="100" height="20" fill="white"/>
-                            <rect x="5" y="2" width="2" height="16" fill="currentColor"/>
-                            <rect x="10" y="2" width="4" height="16" fill="currentColor"/>
-                            <rect x="16" y="2" width="1" height="16" fill="currentColor"/>
-                            <rect x="20" y="2" width="3" height="16" fill="currentColor"/>
-                            <rect x="25" y="2" width="5" height="16" fill="currentColor"/>
-                            <rect x="32" y="2" width="2" height="16" fill="currentColor"/>
-                            <rect x="36" y="2" width="1" height="16" fill="currentColor"/>
-                            <rect x="40" y="2" width="4" height="16" fill="currentColor"/>
-                            <rect x="48" y="2" width="2" height="16" fill="currentColor"/>
-                            <rect x="52" y="2" width="3" height="16" fill="currentColor"/>
-                            <rect x="58" y="2" width="5" height="16" fill="currentColor"/>
+                            <rect width="100" height="20" fill="white" />
+                            <rect x="5" y="2" width="2" height="16" fill="currentColor" />
+                            <rect x="10" y="2" width="4" height="16" fill="currentColor" />
+                            <rect x="16" y="2" width="1" height="16" fill="currentColor" />
+                            <rect x="20" y="2" width="3" height="16" fill="currentColor" />
+                            <rect x="25" y="2" width="5" height="16" fill="currentColor" />
+                            <rect x="32" y="2" width="2" height="16" fill="currentColor" />
+                            <rect x="36" y="2" width="1" height="16" fill="currentColor" />
+                            <rect x="40" y="2" width="4" height="16" fill="currentColor" />
+                            <rect x="48" y="2" width="2" height="16" fill="currentColor" />
+                            <rect x="52" y="2" width="3" height="16" fill="currentColor" />
+                            <rect x="58" y="2" width="5" height="16" fill="currentColor" />
                           </svg>
                         ) : null;
                       } else if (f.field_name === 'Signature') {
@@ -2790,34 +2791,34 @@ function App() {
                         );
                       } else {
                         // Standard field sample/real value
-                        const actualVal = 
+                        const actualVal =
                           f.field_name === 'Company Name' ? companyDetails.name :
-                          f.field_name === 'Company Address' ? companyDetails.address :
-                          f.field_name === 'Phone' ? companyDetails.phone :
-                          f.field_name === 'Email' ? companyDetails.email :
-                          f.field_name === 'Website' ? companyDetails.website :
-                          f.field_name === 'NTN' ? companyDetails.ntn :
-                          f.field_name === 'STRN' || f.field_name === 'STN' || f.field_name === 'STN / STRN' ? companyDetails.strn :
-                          f.field_name === 'Customer Name' ? (printInvoiceData?.customer || '') :
-                          f.field_name === 'Customer Address' ? (customerDetails?.address || '') :
-                          f.field_name === 'Mobile' ? (customerDetails?.phone || '') :
-                          f.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
-                          f.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
-                          f.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
-                          f.field_name === 'Customer Code' ? (customerDetails?.code || '') :
-                          f.field_name === 'Customer Email' ? customerDetails?.email || '' :
-                          f.field_name === 'Invoice Number' ? (printInvoiceData?.id || '') :
-                          f.field_name === 'Date' || f.field_name === 'Invoice Date' ? (printInvoiceData?.issueDate || '') :
-                          f.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
-                          f.field_name === 'Sales Person' ? salesPersonName :
-                          f.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
-                          f.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
-                          f.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
-                          f.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') :
-                          f.field_name === 'Prepared By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
-                          f.field_name === 'Received By' ? (printInvoiceFullData as any)?.receivedBy || 'Received By Client' :
-                          f.field_name === 'Remarks' ? ((printInvoiceFullData as any)?.remarks || '') :
-                          f.field_name === 'Terms & Conditions' ? 'Payment is due within 30 days.' : '';
+                            f.field_name === 'Company Address' ? companyDetails.address :
+                              f.field_name === 'Phone' ? companyDetails.phone :
+                                f.field_name === 'Email' ? companyDetails.email :
+                                  f.field_name === 'Website' ? companyDetails.website :
+                                    f.field_name === 'NTN' ? companyDetails.ntn :
+                                      f.field_name === 'STRN' || f.field_name === 'STN' || f.field_name === 'STN / STRN' ? companyDetails.strn :
+                                        f.field_name === 'Customer Name' ? (printInvoiceData?.customer || '') :
+                                          f.field_name === 'Customer Address' ? (customerDetails?.address || '') :
+                                            f.field_name === 'Mobile' ? (customerDetails?.phone || '') :
+                                              f.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
+                                                f.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
+                                                  f.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
+                                                    f.field_name === 'Customer Code' ? (customerDetails?.code || '') :
+                                                      f.field_name === 'Customer Email' ? customerDetails?.email || '' :
+                                                        f.field_name === 'Invoice Number' ? (printInvoiceData?.id || '') :
+                                                          f.field_name === 'Date' || f.field_name === 'Invoice Date' ? (printInvoiceData?.issueDate || '') :
+                                                            f.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
+                                                              f.field_name === 'Sales Person' ? salesPersonName :
+                                                                f.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
+                                                                  f.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
+                                                                    f.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
+                                                                      f.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') :
+                                                                        f.field_name === 'Prepared By' ? (printInvoiceFullData as any)?.preparedBy || 'Prepared By User' :
+                                                                          f.field_name === 'Received By' ? (printInvoiceFullData as any)?.receivedBy || 'Received By Client' :
+                                                                            f.field_name === 'Remarks' ? ((printInvoiceFullData as any)?.remarks || '') :
+                                                                              f.field_name === 'Terms & Conditions' ? 'Payment is due within 30 days.' : '';
 
                         if (f.field_name === 'Remarks' && !printTemplate?.remarks_enabled) return null;
                         if (f.field_name === 'Terms & Conditions' && !printTemplate?.terms_enabled) return null;
@@ -2922,69 +2923,155 @@ function App() {
                     })}
                 </div>
               ) : printTemplate?.paper_size === 'Thermal' ? (
-                  <div className="space-y-4 z-10 flex-grow text-[10px]">
-                    {printSections
-                      .filter((s: PrintTemplateSection) => s.is_visible)
-                      .map((sec: PrintTemplateSection) => {
-                        if (sec.section_name === 'Attachments') {
-                          const fullData = printInvoiceFullData as any;
-                          if (!fullData?.attachments || fullData.attachments.length === 0) return null;
-                          return (
-                            <div key={sec.section_id} className="space-y-1 py-2 border-b">
-                              <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
-                              <div className="flex gap-2 text-[8px] text-blue-500">
-                                {fullData.attachments.map((att: any, attIdx: number) => (
-                                  <span key={attIdx} className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
-                                    <FileText className="w-2.5 h-2.5 text-slate-400" />
-                                    {att.name || 'attachment.pdf'}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        const dynamicFields = renderPrintSectionFields(sec.section_name);
-                        if (!dynamicFields) return null;
-
+                <div className="space-y-4 z-10 flex-grow text-[10px]">
+                  {printSections
+                    .filter((s: PrintTemplateSection) => s.is_visible)
+                    .map((sec: PrintTemplateSection) => {
+                      if (sec.section_name === 'Attachments') {
+                        const fullData = printInvoiceFullData as any;
+                        if (!fullData?.attachments || fullData.attachments.length === 0) return null;
                         return (
-                          <div key={sec.section_id} className="w-full">
-                            <span className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider">{sec.section_name}</span>
-                            {dynamicFields}
+                          <div key={sec.section_id} className="space-y-1 py-2 border-b">
+                            <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
+                            <div className="flex gap-2 text-[8px] text-blue-500">
+                              {fullData.attachments.map((att: any, attIdx: number) => (
+                                <span key={attIdx} className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
+                                  <FileText className="w-2.5 h-2.5 text-slate-400" />
+                                  {att.name || 'attachment.pdf'}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         );
-                      })}
-                  </div>
-                ) : (
-                  // BEAUTIFUL A4/LETTER SOLID LAYOUT MATCHING USER'S IMAGE
-                  <div className="space-y-6 z-10 flex-grow w-full flex flex-col justify-start">
-                    <div>
-                      {/* 1. Header (Company details & centered Title) */}
-                      {printSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
-                        <div className="w-full flex justify-between items-start border-b pb-4 mb-2">
-                          <div className="flex-grow">
-                            {renderPrintSectionFields('Company Information')}
-                          </div>
+                      }
+
+                      const dynamicFields = renderPrintSectionFields(sec.section_name);
+                      if (!dynamicFields) return null;
+
+                      return (
+                        <div key={sec.section_id} className="w-full">
+                          <span className="text-[8px] font-bold text-slate-400 block border-b pb-0.5 mb-1 uppercase tracking-wider">{sec.section_name}</span>
+                          {dynamicFields}
                         </div>
-                      )}
-
-                      {/* Centered Document Title */}
-                      <div className="w-full text-center my-3">
-                        <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
-                          {['Purchase Invoice', 'Purchase Return'].includes(printInvoiceData?.type || '')
-                            ? printInvoiceData?.type
-                            : (printTemplate?.document_type || printInvoiceData?.type || 'Sale Tax Invoice')}
-                        </h1>
+                      );
+                    })}
+                </div>
+              ) : (
+                // BEAUTIFUL A4/LETTER SOLID LAYOUT MATCHING USER'S IMAGE
+                <div className="space-y-6 z-10 flex-grow w-full flex flex-col justify-start">
+                  <div>
+                    {/* 1. Header (Company details & centered Title) */}
+                    {printSections.find(s => s.section_name === 'Company Information' && s.is_visible) && (
+                      <div className="w-full flex justify-between items-start border-b pb-4 mb-2">
+                        <div className="flex-grow">
+                          {renderPrintSectionFields('Company Information')}
+                        </div>
                       </div>
+                    )}
 
-                      {/* 2. Side-by-Side Information Boxes (Invoice & Customer details) */}
-                      <div className="grid grid-cols-2 gap-4 mb-4 items-stretch">
-                        {/* Left Column: Stacked Invoice Information Boxes */}
-                        {printSections.find(s => s.section_name === 'Invoice Information' && s.is_visible) ? (
-                          <div className="flex flex-col space-y-1.5 h-full justify-between">
+                    {/* Centered Document Title */}
+                    <div className="w-full text-center my-3">
+                      <h1 className="text-base font-extrabold tracking-wider text-slate-800 uppercase pb-1 border-b-2 border-slate-700 inline-block">
+                        {['Purchase Invoice', 'Purchase Return'].includes(printInvoiceData?.type || '')
+                          ? printInvoiceData?.type
+                          : (printTemplate?.document_type || printInvoiceData?.type || 'Sale Tax Invoice')}
+                      </h1>
+                    </div>
+
+                    {/* 2. Side-by-Side Information Boxes (Invoice & Customer details) */}
+                    <div className="grid grid-cols-2 gap-4 mb-4 items-stretch">
+                      {/* Left Column: Stacked Invoice Information Boxes */}
+                      {printSections.find(s => s.section_name === 'Invoice Information' && s.is_visible) ? (
+                        <div className="flex flex-col space-y-1.5 h-full justify-between">
+                          {(() => {
+                            const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Invoice Information');
+                            const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Invoice Information');
+                            const combined = [
+                              ...secFields.map(f => ({ ...f, isCustom: false as const })),
+                              ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
+                            ].sort((a, b) => a.display_order - b.display_order);
+
+                            return combined.map(item => {
+                              let actualVal = '';
+                              if (item.isCustom) {
+                                actualVal = item.default_value || '';
+                                if (printInvoiceFullData && (printInvoiceFullData as any).customFields) {
+                                  const matched = (printInvoiceFullData as any).customFields.find((x: any) => x.name === item.field_name || x.id === item.custom_field_id);
+                                  if (matched) actualVal = matched.value;
+                                }
+                              } else {
+                                actualVal =
+                                  item.field_name === 'Invoice Number' ? (printInvoiceData?.id || '') :
+                                    item.field_name === 'Date' || item.field_name === 'Invoice Date' ? (printInvoiceData?.issueDate || '') :
+                                      item.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
+                                        item.field_name === 'Sales Person' ? salesPersonName :
+                                          item.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
+                                            item.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
+                                              item.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
+                                                item.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') : '';
+                              }
+
+                              const labelColor = item.label_color || item.color;
+                              const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
+                              const valueColor = item.value_color || item.color;
+                              const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
+
+                              const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
+                                item.border === 'bottom-slate' ? '1px solid #475569' :
+                                  item.border === 'bottom-black' ? '1px solid #000000' :
+                                    item.border === 'none' ? 'none' :
+                                      item.border || '1px solid #cbd5e1';
+
+                              const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
+                                borderBottom: item.border === 'none' ? 'none' : borderVal,
+                                borderTop: 'none',
+                                borderLeft: 'none',
+                                borderRight: 'none'
+                              } : {
+                                border: borderVal
+                              };
+
+                              const isVisible = item.is_visible && !!actualVal;
+
+                              return (
+                                <div
+                                  key={item.isCustom ? item.custom_field_id : item.field_id}
+                                  className="rounded px-3 py-1.5 flex justify-between items-center text-[10px]"
+                                  style={{
+                                    ...borderStyles,
+                                    backgroundColor: item.background || '#ffffff',
+                                    fontSize: item.font_size ? `${item.font_size}px` : undefined,
+                                    padding: item.padding || undefined,
+                                    marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
+                                    visibility: isVisible ? undefined : 'hidden',
+                                  }}
+                                >
+                                  <strong className="text-slate-500 mr-2" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>{item.custom_label || item.field_name}:</strong>
+                                  <span className="text-slate-800" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{actualVal}</span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      ) : <div />}
+
+                      {printSections.find(s => s.section_name === 'Business Partner Information' && s.is_visible) ? (
+                        <div
+                          className="rounded p-3 flex flex-col justify-start text-[10px]"
+                          style={{
+                            border: '1px solid #cbd5e1',
+                            backgroundColor: '#ffffff',
+                            color: '#1e293b',
+                            minHeight: '100%'
+                          }}
+                        >
+                          <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left">
+                            Business Partner Details
+                          </div>
+                          <div className="space-y-1.5">
                             {(() => {
-                              const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Invoice Information');
-                              const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Invoice Information');
+                              const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Business Partner Information');
+                              const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Business Partner Information');
                               const combined = [
                                 ...secFields.map(f => ({ ...f, isCustom: false as const })),
                                 ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
@@ -2999,15 +3086,15 @@ function App() {
                                     if (matched) actualVal = matched.value;
                                   }
                                 } else {
-                                  actualVal = 
-                                    item.field_name === 'Invoice Number' ? (printInvoiceData?.id || '') :
-                                    item.field_name === 'Date' || item.field_name === 'Invoice Date' ? (printInvoiceData?.issueDate || '') :
-                                    item.field_name === 'Due Date' ? (printInvoiceData?.dueDate || '') :
-                                    item.field_name === 'Sales Person' ? salesPersonName :
-                                    item.field_name === 'Reference Number' ? (printInvoiceData as any)?.referenceNumber || '' :
-                                    item.field_name === 'Warehouse' ? (printInvoiceData as any)?.warehouse || 'Main Warehouse' :
-                                    item.field_name === 'FBR Invoice Number' ? (printInvoiceData?.status === 'Posted' ? ((printInvoiceData as any)?.fbrInvoiceNumber || ('FBR-INV-' + (printInvoiceData?.id || '1092837'))) : '') :
-                                    item.field_name === 'Payment Terms' ? (printInvoiceData?.payment || (printInvoiceFullData as any)?.paymentTerms || 'Net 30') : '';
+                                  actualVal =
+                                    item.field_name === 'Customer Name' ? (printInvoiceData?.customer || '') :
+                                      item.field_name === 'Customer Address' ? (customerDetails?.address || '') :
+                                        item.field_name === 'Mobile' ? (customerDetails?.phone || '') :
+                                          item.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
+                                            item.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
+                                              item.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
+                                                item.field_name === 'Customer Code' ? (customerDetails?.code || '') :
+                                                  item.field_name === 'Customer Email' ? customerDetails?.email || '' : '';
                                 }
 
                                 const labelColor = item.label_color || item.color;
@@ -3016,10 +3103,10 @@ function App() {
                                 const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
 
                                 const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
-                                                  item.border === 'bottom-slate' ? '1px solid #475569' :
-                                                  item.border === 'bottom-black' ? '1px solid #000000' :
-                                                  item.border === 'none' ? 'none' :
-                                                  item.border || '1px solid #cbd5e1';
+                                  item.border === 'bottom-slate' ? '1px solid #475569' :
+                                    item.border === 'bottom-black' ? '1px solid #000000' :
+                                      item.border === 'none' ? 'none' :
+                                        item.border || '1px solid #f1f5f9';
 
                                 const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
                                   borderBottom: item.border === 'none' ? 'none' : borderVal,
@@ -3027,181 +3114,95 @@ function App() {
                                   borderLeft: 'none',
                                   borderRight: 'none'
                                 } : {
-                                  border: borderVal
+                                  borderBottom: borderVal
                                 };
 
                                 const isVisible = item.is_visible && !!actualVal;
 
                                 return (
-                                  <div 
-                                    key={item.isCustom ? item.custom_field_id : item.field_id} 
-                                    className="rounded px-3 py-1.5 flex justify-between items-center text-[10px]"
-                                    style={{ 
+                                  <div
+                                    key={item.isCustom ? item.custom_field_id : item.field_id}
+                                    className="flex justify-between items-start pb-1.5 last:border-0 last:pb-0"
+                                    style={{
                                       ...borderStyles,
-                                      backgroundColor: item.background || '#ffffff',
                                       fontSize: item.font_size ? `${item.font_size}px` : undefined,
                                       padding: item.padding || undefined,
                                       marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
                                       visibility: isVisible ? undefined : 'hidden',
                                     }}
                                   >
-                                    <strong className="text-slate-500 mr-2" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>{item.custom_label || item.field_name}:</strong>
-                                    <span className="text-slate-800" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{actualVal}</span>
+                                    <strong className="text-slate-500 mr-2 shrink-0" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>
+                                      {(() => {
+                                        let dl = item.custom_label || item.field_name;
+                                        if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
+                                        if (dl === 'Customer Address' || dl === 'Supplier Address') return 'Business Partner Address';
+                                        if (dl === 'Customer NTN' || dl === 'Supplier NTN') return 'Business Partner NTN';
+                                        if (dl === 'Customer STRN' || dl === 'Supplier STRN') return 'Business Partner STRN';
+                                        if (dl === 'Customer CNIC' || dl === 'Supplier CNIC') return 'Business Partner CNIC';
+                                        if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
+                                        if (dl === 'Customer Email' || dl === 'Supplier Email') return 'Business Partner Email';
+                                        return dl;
+                                      })()}:
+                                    </strong>
+                                    <span className="text-slate-800 text-right break-words max-w-[65%]" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{actualVal}</span>
                                   </div>
                                 );
                               });
                             })()}
                           </div>
-                        ) : <div />}
-
-                        {printSections.find(s => s.section_name === 'Business Partner Information' && s.is_visible) ? (
-                          <div 
-                            className="rounded p-3 flex flex-col justify-start text-[10px]"
-                            style={{ 
-                              border: '1px solid #cbd5e1', 
-                              backgroundColor: '#ffffff', 
-                              color: '#1e293b',
-                              minHeight: '100%' 
-                            }}
-                          >
-                            <div className="font-extrabold border-b border-slate-300 pb-1 mb-2 text-slate-800 uppercase tracking-wider text-left">
-                              Business Partner Details
-                            </div>
-                            <div className="space-y-1.5">
-                              {(() => {
-                                const secFields = printFields.filter((f: PrintTemplateField) => f.section_name === 'Business Partner Information');
-                                const secCustomFields = printCustomFields.filter((cf: PrintTemplateCustomField) => (cf.section_name || 'Custom Fields') === 'Business Partner Information');
-                                const combined = [
-                                  ...secFields.map(f => ({ ...f, isCustom: false as const })),
-                                  ...secCustomFields.map(cf => ({ ...cf, isCustom: true as const }))
-                                ].sort((a, b) => a.display_order - b.display_order);
-
-                                return combined.map(item => {
-                                  let actualVal = '';
-                                  if (item.isCustom) {
-                                    actualVal = item.default_value || '';
-                                    if (printInvoiceFullData && (printInvoiceFullData as any).customFields) {
-                                      const matched = (printInvoiceFullData as any).customFields.find((x: any) => x.name === item.field_name || x.id === item.custom_field_id);
-                                      if (matched) actualVal = matched.value;
-                                    }
-                                  } else {
-                                    actualVal = 
-                                      item.field_name === 'Customer Name' ? (printInvoiceData?.customer || '') :
-                                      item.field_name === 'Customer Address' ? (customerDetails?.address || '') :
-                                      item.field_name === 'Mobile' ? (customerDetails?.phone || '') :
-                                      item.field_name === 'Customer NTN' ? (customerDetails?.ntn || '') :
-                                      item.field_name === 'Customer STRN' ? (customerDetails?.strn || '') :
-                                      item.field_name === 'Customer CNIC' ? (customerDetails?.cnic || '') :
-                                      item.field_name === 'Customer Code' ? (customerDetails?.code || '') :
-                                      item.field_name === 'Customer Email' ? customerDetails?.email || '' : '';
-                                  }
-
-                                  const labelColor = item.label_color || item.color;
-                                  const labelBold = item.label_is_bold !== undefined ? item.label_is_bold : item.is_bold;
-                                  const valueColor = item.value_color || item.color;
-                                  const valueBold = item.value_is_bold !== undefined ? item.value_is_bold : item.is_bold;
-
-                                  const borderVal = item.border === 'bottom-light' ? '1px solid #cbd5e1' :
-                                                    item.border === 'bottom-slate' ? '1px solid #475569' :
-                                                    item.border === 'bottom-black' ? '1px solid #000000' :
-                                                    item.border === 'none' ? 'none' :
-                                                    item.border || '1px solid #f1f5f9';
-
-                                  const borderStyles = item.border && (item.border.startsWith('bottom-') || item.border === 'none') ? {
-                                    borderBottom: item.border === 'none' ? 'none' : borderVal,
-                                    borderTop: 'none',
-                                    borderLeft: 'none',
-                                    borderRight: 'none'
-                                  } : {
-                                    borderBottom: borderVal
-                                  };
-
-                                  const isVisible = item.is_visible && !!actualVal;
-
-                                  return (
-                                    <div 
-                                      key={item.isCustom ? item.custom_field_id : item.field_id} 
-                                      className="flex justify-between items-start pb-1.5 last:border-0 last:pb-0"
-                                      style={{
-                                        ...borderStyles,
-                                        fontSize: item.font_size ? `${item.font_size}px` : undefined,
-                                        padding: item.padding || undefined,
-                                        marginBottom: item.margin_bottom ? `${item.margin_bottom}px` : undefined,
-                                        visibility: isVisible ? undefined : 'hidden',
-                                      }}
-                                    >
-                                      <strong className="text-slate-500 mr-2 shrink-0" style={{ color: labelColor || undefined, fontWeight: labelBold ? 'bold' : 'normal' }}>
-                                        {(() => {
-                                          let dl = item.custom_label || item.field_name;
-                                          if (dl === 'Customer Name' || dl === 'Supplier Name') return 'Business Partner Name';
-                                          if (dl === 'Customer Address' || dl === 'Supplier Address') return 'Business Partner Address';
-                                          if (dl === 'Customer NTN' || dl === 'Supplier NTN') return 'Business Partner NTN';
-                                          if (dl === 'Customer STRN' || dl === 'Supplier STRN') return 'Business Partner STRN';
-                                          if (dl === 'Customer CNIC' || dl === 'Supplier CNIC') return 'Business Partner CNIC';
-                                          if (dl === 'Customer Code' || dl === 'Supplier Code') return 'Business Partner Code';
-                                          if (dl === 'Customer Email' || dl === 'Supplier Email') return 'Business Partner Email';
-                                          return dl;
-                                        })()}:
-                                      </strong>
-                                      <span className="text-slate-800 text-right break-words max-w-[65%]" style={{ color: valueColor || undefined, fontWeight: valueBold ? 'bold' : 'normal' }}>{actualVal}</span>
-                                    </div>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </div>
-                        ) : <div />}
-                      </div>
-
-                      {printSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
-                        <div className="w-full my-4">
-                          {renderPrintSectionFields('Product Table')}
                         </div>
-                      )}
-
-                      {/* Attachments if any */}
-                      {(() => {
-                        const fullData = printInvoiceFullData as any;
-                        if (!fullData?.attachments || fullData.attachments.length === 0) return null;
-                        return (
-                          <div className="space-y-1 py-2 border-b w-full">
-                            <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
-                            <div className="flex gap-2 text-[8px] text-blue-500">
-                              {fullData.attachments.map((att: any, attIdx: number) => (
-                                <span key={attIdx} className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
-                                  <FileText className="w-2.5 h-2.5 text-slate-400" />
-                                  {att.name || 'attachment.pdf'}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      ) : <div />}
                     </div>
 
-                    {/* 4. Footer Section (Side-by-Side Note & Totals Box) */}
-                    <div className="grid grid-cols-12 gap-6 items-end w-full pt-4 border-t">
-                      {/* Left: Notes, Remarks, Signatures */}
-                      <div className="col-span-7 space-y-4">
-                        {printSections.find(s => s.section_name === 'Footer' && s.is_visible) && (
-                          <div className="space-y-3">
-                            {renderPrintSectionFields('Footer')}
-                          </div>
-                        )}
+                    {printSections.find(s => s.section_name === 'Product Table' && s.is_visible) && (
+                      <div className="w-full my-4">
+                        {renderPrintSectionFields('Product Table')}
                       </div>
+                    )}
 
-                      {/* Right: Bordered Totals Box */}
-                      {printSections.find(s => s.section_name === 'Totals' && s.is_visible) && (
-                        <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[10px]">
-                          <div className="font-bold border-b pb-1 mb-2 text-slate-700 uppercase tracking-wider text-right">Summary</div>
-                          <div className="space-y-1.5 flex flex-col items-end w-full">
-                            {renderPrintSectionFields('Totals')}
+                    {/* Attachments if any */}
+                    {(() => {
+                      const fullData = printInvoiceFullData as any;
+                      if (!fullData?.attachments || fullData.attachments.length === 0) return null;
+                      return (
+                        <div className="space-y-1 py-2 border-b w-full">
+                          <span className="text-[9px] font-bold text-slate-400 block">Attachments</span>
+                          <div className="flex gap-2 text-[8px] text-blue-500">
+                            {fullData.attachments.map((att: any, attIdx: number) => (
+                              <span key={attIdx} className="flex items-center gap-1 border rounded px-1.5 py-0.5 bg-slate-50">
+                                <FileText className="w-2.5 h-2.5 text-slate-400" />
+                                {att.name || 'attachment.pdf'}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
-                )}
+
+                  {/* 4. Footer Section (Side-by-Side Note & Totals Box) */}
+                  <div className="grid grid-cols-12 gap-6 items-end w-full pt-4 border-t">
+                    {/* Left: Notes, Remarks, Signatures */}
+                    <div className="col-span-7 space-y-4">
+                      {printSections.find(s => s.section_name === 'Footer' && s.is_visible) && (
+                        <div className="space-y-3">
+                          {renderPrintSectionFields('Footer')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Bordered Totals Box */}
+                    {printSections.find(s => s.section_name === 'Totals' && s.is_visible) && (
+                      <div className="col-span-5 border border-slate-300 rounded p-3 bg-slate-50/50 text-[10px]">
+                        <div className="font-bold border-b pb-1 mb-2 text-slate-700 uppercase tracking-wider text-right">Summary</div>
+                        <div className="space-y-1.5 flex flex-col items-end w-full">
+                          {renderPrintSectionFields('Totals')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         );
