@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { Input, ScrollArea } from '../../components/ui/FormControls';
+import { Input, ScrollArea, ComboBox, Toggle, Select } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
 import { Plus, Pencil, X, ChevronRight, Binary, Paperclip } from 'lucide-react';
 import type { Product } from './ProductList';
@@ -13,10 +13,17 @@ interface ProductBatch {
   product_id: string;
   product_name: string;
   batch_no: string;
+  mfg_date?: string;
   expiry_date: string;
   is_active: boolean;
   attachment_name?: string;
   attachment_url?: string;
+  supplier?: string;
+  food_grade?: boolean;
+  coa_available?: boolean;
+  halal_certificate?: boolean;
+  dg_type?: string;
+  flash_point?: string;
 }
 
 interface ProductBatchModalProps {
@@ -72,10 +79,17 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
   const [formData, setFormData] = useState({
     productId: '',
     batchNo: '',
+    mfgDate: '',
     expiryDate: '',
     isActive: true,
     attachmentName: '',
-    attachmentUrl: ''
+    attachmentUrl: '',
+    supplier: '',
+    foodGrade: true,
+    coaAvailable: true,
+    halalCertificate: true,
+    dgType: 'Non DG',
+    flashPoint: ''
   });
 
   // Quick product add states
@@ -140,10 +154,17 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
     setFormData({
       productId: selectedProductId || products[0]?.id || '',
       batchNo: '',
+      mfgDate: new Date().toISOString().split('T')[0],
       expiryDate: new Date().toISOString().split('T')[0],
       isActive: true,
       attachmentName: '',
-      attachmentUrl: ''
+      attachmentUrl: '',
+      supplier: '',
+      foodGrade: true,
+      coaAvailable: true,
+      halalCertificate: true,
+      dgType: 'Non-Dangerous Goods',
+      flashPoint: ''
     });
     setShowFormModal(true);
   };
@@ -154,16 +175,27 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
     setFormData({
       productId: activeBatch.product_id,
       batchNo: activeBatch.batch_no,
+      mfgDate: activeBatch.mfg_date || '',
       expiryDate: activeBatch.expiry_date,
       isActive: activeBatch.is_active,
       attachmentName: activeBatch.attachment_name || '',
-      attachmentUrl: activeBatch.attachment_url || ''
+      attachmentUrl: activeBatch.attachment_url || '',
+      supplier: activeBatch.supplier || '',
+      foodGrade: activeBatch.food_grade ?? true,
+      coaAvailable: activeBatch.coa_available ?? true,
+      halalCertificate: activeBatch.halal_certificate ?? true,
+      dgType: activeBatch.dg_type === 'Non DG' ? 'Non-Dangerous Goods' : activeBatch.dg_type === 'DG' ? 'Dangerous Goods' : activeBatch.dg_type || 'Non-Dangerous Goods',
+      flashPoint: activeBatch.flash_point || ''
     });
     setShowFormModal(true);
   };
 
   const handleSaveBatch = () => {
     if (!formData.productId || !formData.batchNo.trim()) return;
+    if (!formData.supplier) {
+      alert("Supplier is required.");
+      return;
+    }
 
     const matchedProduct = products.find(p => p.id === formData.productId);
     const productName = matchedProduct ? matchedProduct.name : 'Unknown Product';
@@ -175,10 +207,17 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
         product_id: formData.productId,
         product_name: productName,
         batch_no: formData.batchNo.trim(),
+        mfg_date: formData.mfgDate,
         expiry_date: formData.expiryDate,
         is_active: formData.isActive,
         attachment_name: formData.attachmentName,
-        attachment_url: formData.attachmentUrl
+        attachment_url: formData.attachmentUrl,
+        supplier: formData.supplier,
+        food_grade: formData.foodGrade,
+        coa_available: formData.coaAvailable,
+        halal_certificate: formData.halalCertificate,
+        dg_type: formData.dgType,
+        flash_point: formData.flashPoint
       };
       updated = [...batches, newBatch];
       setSelectedBatchId(newBatch.id);
@@ -190,10 +229,17 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               product_id: formData.productId,
               product_name: productName,
               batch_no: formData.batchNo.trim(),
+              mfg_date: formData.mfgDate,
               expiry_date: formData.expiryDate,
               is_active: formData.isActive,
               attachment_name: formData.attachmentName,
-              attachment_url: formData.attachmentUrl
+              attachment_url: formData.attachmentUrl,
+              supplier: formData.supplier,
+              food_grade: formData.foodGrade,
+              coa_available: formData.coaAvailable,
+              halal_certificate: formData.halalCertificate,
+              dg_type: formData.dgType,
+              flash_point: formData.flashPoint
             }
           : b
       );
@@ -442,7 +488,7 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="bg-white rounded-[20px] w-full max-w-[340px] h-[310px] border border-slate-200 overflow-hidden relative shadow-xl font-sans flex flex-col"
+              className="bg-white rounded-[20px] w-full max-w-[400px] h-auto max-h-[90vh] border border-slate-200 overflow-hidden relative shadow-xl font-sans flex flex-col"
             >
               {/* Inner Modal Header */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white flex-shrink-0">
@@ -458,9 +504,8 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               </div>
 
               {/* Inner Modal Body */}
-              <div className="px-5 py-4 space-y-3 flex-grow overflow-y-auto">
-                {/* Batch No */}
-                <div className="space-y-1">
+              <div className="px-5 py-4 grid grid-cols-2 gap-x-4 gap-y-3 flex-grow overflow-y-auto">
+                <div className="col-span-1 space-y-1">
                   <label className="block text-[10px] font-bold text-slate-700">Batch No.</label>
                   <input
                     type="text"
@@ -471,8 +516,22 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                   />
                 </div>
 
-                {/* Expiry Date */}
-                <div className="space-y-1">
+                <div className="col-span-1 space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-700">Business Partner *</label>
+                  <ComboBox
+                    variant="compact"
+                    value={formData.supplier}
+                    onChange={val => setFormData({ ...formData, supplier: val })}
+                    options={[
+                    { id: 'Supplier A', name: 'Supplier A' },
+                    { id: 'Supplier B', name: 'Supplier B' },
+                    { id: 'Supplier C', name: 'Supplier C' }
+                    ]}
+                    placeholder="Select Supplier"
+                  />
+                </div>
+
+                <div className="col-span-1 space-y-1">
                   <label className="block text-[10px] font-bold text-slate-700">Expiry Date</label>
                   <input
                     type="date"
@@ -482,13 +541,45 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                   />
                 </div>
 
-                {/* Attachment */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-slate-700">Attachment Details</label>
+                <div className="col-span-1 space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-700">Mfg Date</label>
+                  <input
+                    type="date"
+                    value={formData.mfgDate}
+                    onChange={e => setFormData({ ...formData, mfgDate: e.target.value })}
+                    className="w-full h-8.5 px-3.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 outline-none focus:border-[#009bf2] focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer"
+                  />
+                </div>
+
+                <div className="col-span-1 space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-700">Dangerous Goods (DG)</label>
+                  <Select
+                    variant="compact"
+                    value={formData.dgType}
+                    onChange={e => setFormData({ ...formData, dgType: e.target.value })}
+                    options={[
+                      { value: 'Non-Dangerous Goods', label: 'Non-Dangerous Goods' },
+                      { value: 'Dangerous Goods', label: 'Dangerous Goods' }
+                    ]}
+                  />
+                </div>
+
+                <div className="col-span-1 space-y-1 pb-2">
+                  <label className="block text-[11px] font-bold text-slate-700">Flash point</label>
+                  <Input
+                    variant="compact"
+                    value={formData.flashPoint}
+                    onChange={e => setFormData({ ...formData, flashPoint: e.target.value })}
+                    placeholder="Enter flash point"
+                  />
+                </div>
+
+                <div className="col-span-1 space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-700">Attachment Details</label>
                   <div className="flex items-center gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 h-8.5 px-3.5 rounded-full border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
-                      <Binary className="w-3.5 h-3.5 group-hover:text-[#009bf2]" />
-                      <span className="truncate max-w-[150px]">
+                    <label className="flex-1 flex flex-col items-center justify-center gap-1.5 h-[68px] px-3.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
+                      <Binary className="w-4 h-4 group-hover:text-[#009bf2]" />
+                      <span className="truncate max-w-[120px] text-center">
                         {formData.attachmentName || 'Attach File'}
                       </span>
                       <input
@@ -518,13 +609,51 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
-                        className="p-1.5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
                         title="Remove Attachment"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
+                </div>
+
+                <div className="col-span-1 flex flex-col justify-center gap-2 mt-4 pl-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                      checked={formData.foodGrade}
+                      onChange={e => setFormData({ ...formData, foodGrade: e.target.checked })}
+                    />
+                    <span className="text-[11px] font-bold text-slate-700">Food Grade</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                      checked={formData.coaAvailable}
+                      onChange={e => setFormData({ ...formData, coaAvailable: e.target.checked })}
+                    />
+                    <span className="text-[11px] font-bold text-slate-700">Certificate of Analysis (COA)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                      checked={formData.halalCertificate}
+                      onChange={e => setFormData({ ...formData, halalCertificate: e.target.checked })}
+                    />
+                    <span className="text-[11px] font-bold text-slate-700">Halal certificate</span>
+                  </label>
+                </div>
+
+                <div className="col-span-1 flex items-center">
+                  <Toggle
+                    checked={formData.isActive}
+                    onChange={v => setFormData({ ...formData, isActive: v })}
+                    label="Is Active"
+                  />
                 </div>
               </div>
 
@@ -540,7 +669,7 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveBatch}
-                  disabled={!formData.productId || !formData.batchNo.trim()}
+                  disabled={!formData.productId || !formData.batchNo.trim() || !formData.supplier}
                   className="h-8 px-4 rounded-full bg-[#56CCF2] hover:bg-[#43b9de] text-white text-xs font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Save

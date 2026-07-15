@@ -4,7 +4,7 @@ import {
   Binary, Search, Pencil, Trash2, Check, AlertCircle, Box, Paperclip
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { Input, ScrollArea, Toggle } from '../../components/ui/FormControls';
+import { Input, ScrollArea, Toggle, ComboBox, Select } from '../../components/ui/FormControls';
 import { Modal } from '../../components/ui/Modal';
 import { PageHeader, TableHeader, CardTitle } from '../../components/ui/Typography';
 import Card from '../../components/ui/Card';
@@ -18,10 +18,17 @@ interface ProductBatch {
   product_id: string;
   product_name: string;
   batch_no: string;
+  mfg_date?: string;
   expiry_date: string;
   is_active: boolean;
   attachment_name?: string;
   attachment_url?: string;
+  supplier?: string;
+  food_grade?: boolean;
+  coa_available?: boolean;
+  halal_certificate?: boolean;
+  dg_type?: string;
+  flash_point?: string;
 }
 
 const DEFAULT_BATCHES: ProductBatch[] = [
@@ -64,10 +71,17 @@ export const ProductBatchPage: React.FC = () => {
   const [formData, setFormData] = useState({
     productId: '',
     batchNo: '',
+    mfgDate: '',
     expiryDate: '',
     isActive: true,
     attachmentName: '',
-    attachmentUrl: ''
+    attachmentUrl: '',
+    supplier: '',
+    foodGrade: true,
+    coaAvailable: true,
+    halalCertificate: true,
+    dgType: 'Non DG',
+    flashPoint: ''
   });
 
   // Sorting state
@@ -173,10 +187,17 @@ export const ProductBatchPage: React.FC = () => {
     setFormData({
       productId: products[0]?.id || '',
       batchNo: '',
+      mfgDate: new Date().toISOString().split('T')[0],
       expiryDate: new Date().toISOString().split('T')[0],
       isActive: true,
       attachmentName: '',
-      attachmentUrl: ''
+      attachmentUrl: '',
+      supplier: '',
+      foodGrade: true,
+      coaAvailable: true,
+      halalCertificate: true,
+      dgType: 'Non-Dangerous Goods',
+      flashPoint: ''
     });
     setShowFormModal(true);
   };
@@ -187,10 +208,17 @@ export const ProductBatchPage: React.FC = () => {
     setFormData({
       productId: b.product_id,
       batchNo: b.batch_no,
+      mfgDate: b.mfg_date || '',
       expiryDate: b.expiry_date,
       isActive: b.is_active,
       attachmentName: b.attachment_name || '',
-      attachmentUrl: b.attachment_url || ''
+      attachmentUrl: b.attachment_url || '',
+      supplier: b.supplier || '',
+      foodGrade: b.food_grade ?? true,
+      coaAvailable: b.coa_available ?? true,
+      halalCertificate: b.halal_certificate ?? true,
+      dgType: b.dg_type || 'Non DG',
+      flashPoint: b.flash_point || ''
     });
     setShowFormModal(true);
   };
@@ -217,6 +245,10 @@ export const ProductBatchPage: React.FC = () => {
 
   const handleSaveBatch = () => {
     if (!formData.batchNo.trim()) return;
+    if (!formData.supplier) {
+      alert("Supplier is required.");
+      return;
+    }
 
     const matchedProduct = products.find(p => p.id === formData.productId);
     const productName = matchedProduct ? matchedProduct.name : 'Unknown Product';
@@ -228,10 +260,17 @@ export const ProductBatchPage: React.FC = () => {
         product_id: formData.productId,
         product_name: productName,
         batch_no: formData.batchNo.trim(),
+        mfg_date: formData.mfgDate,
         expiry_date: formData.expiryDate,
         is_active: formData.isActive,
         attachment_name: formData.attachmentName,
-        attachment_url: formData.attachmentUrl
+        attachment_url: formData.attachmentUrl,
+        supplier: formData.supplier,
+        food_grade: formData.foodGrade,
+        coa_available: formData.coaAvailable,
+        halal_certificate: formData.halalCertificate,
+        dg_type: formData.dgType,
+        flash_point: formData.flashPoint
       };
       updated = [...batches, newBatch];
     } else {
@@ -242,10 +281,17 @@ export const ProductBatchPage: React.FC = () => {
               product_id: formData.productId,
               product_name: productName,
               batch_no: formData.batchNo.trim(),
+              mfg_date: formData.mfgDate,
               expiry_date: formData.expiryDate,
               is_active: formData.isActive,
               attachment_name: formData.attachmentName,
-              attachment_url: formData.attachmentUrl
+              attachment_url: formData.attachmentUrl,
+              supplier: formData.supplier,
+              food_grade: formData.foodGrade,
+              coa_available: formData.coaAvailable,
+              halal_certificate: formData.halalCertificate,
+              dg_type: formData.dgType,
+              flash_point: formData.flashPoint
             }
           : b
       );
@@ -519,7 +565,7 @@ export const ProductBatchPage: React.FC = () => {
                   size="md"
                   icon={Check}
                   onClick={handleSaveBatch}
-                  disabled={!formData.batchNo.trim()}
+                  disabled={!formData.batchNo.trim() || !formData.supplier}
                   style={{ backgroundColor: brand.primary }}
                 >
                   {formMode === 'add' ? 'Save Batch' : 'Update Batch'}
@@ -528,7 +574,7 @@ export const ProductBatchPage: React.FC = () => {
             }
           >
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+              <div className="col-span-1 space-y-1.5">
                 <label className="block text-[11px] font-bold text-slate-700">Batch No. *</label>
                 <Input
                   variant="compact"
@@ -537,6 +583,23 @@ export const ProductBatchPage: React.FC = () => {
                   placeholder="e.g. 181024H"
                 />
               </div>
+
+              {/* Supplier */}
+              <div className="col-span-1 space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700">Business Partner *</label>
+                <ComboBox
+                  variant="compact"
+                  value={formData.supplier}
+                  onChange={val => setFormData({ ...formData, supplier: val })}
+                  options={[
+                    { id: 'Supplier A', name: 'Supplier A' },
+                    { id: 'Supplier B', name: 'Supplier B' },
+                    { id: 'Supplier C', name: 'Supplier C' }
+                  ]}
+                  placeholder="Select Supplier"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-bold text-slate-700">Expiry Date</label>
                 <Input
@@ -546,12 +609,80 @@ export const ProductBatchPage: React.FC = () => {
                   onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
                 />
               </div>
-              <div className="col-span-2 space-y-1.5">
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700">Mfg Date</label>
+                <Input
+                  variant="compact"
+                  type="date"
+                  value={formData.mfgDate}
+                  onChange={e => setFormData({ ...formData, mfgDate: e.target.value })}
+                />
+              </div>
+
+              {/* DG Or Non Dg */}
+              <div className="col-span-1 space-y-1.5">
+                <label className="block text-[11px] font-bold text-slate-700">Dangerous Goods (DG)</label>
+                <Select
+                  variant="compact"
+                  value={formData.dgType}
+                  onChange={e => setFormData({ ...formData, dgType: e.target.value })}
+                  options={[
+                    { value: 'Non-Dangerous Goods', label: 'Non-Dangerous Goods' },
+                    { value: 'Dangerous Goods', label: 'Dangerous Goods' }
+                  ]}
+                />
+              </div>
+
+              {/* Flash point */}
+              <div className="col-span-1 space-y-1.5 pb-2">
+                <label className="block text-[11px] font-bold text-slate-700">Flash point</label>
+                <Input
+                  value={formData.flashPoint}
+                  onChange={e => setFormData({ ...formData, flashPoint: e.target.value })}
+                  placeholder="Enter flash point"
+                  variant="compact"
+                />
+              </div>
+
+              {/* Food Grade, COA, Halal */}
+              <div className="col-span-1 flex flex-col justify-center gap-2 pl-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                    checked={formData.foodGrade}
+                    onChange={e => setFormData({ ...formData, foodGrade: e.target.checked })}
+                  />
+                  <span className="text-[11px] font-bold text-slate-700">Food Grade</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                    checked={formData.coaAvailable}
+                    onChange={e => setFormData({ ...formData, coaAvailable: e.target.checked })}
+                  />
+                  <span className="text-[11px] font-bold text-slate-700">Certificate of Analysis (COA)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
+                    checked={formData.halalCertificate}
+                    onChange={e => setFormData({ ...formData, halalCertificate: e.target.checked })}
+                  />
+                  <span className="text-[11px] font-bold text-slate-700">Halal certificate</span>
+                </label>
+              </div>
+
+              {/* Attachment Details */}
+              <div className="col-span-1 space-y-1.5">
                 <label className="block text-[11px] font-bold text-slate-700">Attachment Details</label>
                 <div className="flex items-center gap-2">
-                  <label className="flex-1 flex items-center justify-center gap-2 h-9 px-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
+                  <label className="flex-1 flex flex-col items-center justify-center gap-1.5 h-[68px] px-3.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:border-[#009bf2] transition-all cursor-pointer group">
                     <Binary className="w-4 h-4 group-hover:text-[#009bf2]" />
-                    <span className="truncate max-w-[200px]">
+                    <span className="truncate max-w-[120px] text-center">
                       {formData.attachmentName || 'Attach File'}
                     </span>
                     <input
@@ -581,15 +712,16 @@ export const ProductBatchPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, attachmentName: '', attachmentUrl: '' }))}
-                      className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
                       title="Remove Attachment"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               </div>
-              <div className="col-span-2 flex items-center pt-2">
+
+              <div className="col-span-1 flex items-center">
                 <Toggle
                   checked={formData.isActive}
                   onChange={v => setFormData({ ...formData, isActive: v })}

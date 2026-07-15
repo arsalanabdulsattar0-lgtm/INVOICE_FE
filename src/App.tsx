@@ -21,6 +21,7 @@ import { BPLedgerForm } from './pages/BusinessPartner/BPLedgerForm';
 import Settings from './pages/Settings/Settings';
 import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
+import loginIllustration from './assets/login-illustration.png';
 import ProductList from './pages/Products/ProductList';
 import WarehousesPage from './pages/Products/Warehouses';
 import { ProductBatchPage } from './pages/Products/ProductBatchPage';
@@ -623,22 +624,44 @@ function App() {
     const availableBranches = branches.filter((b: any) => b.companyId === tempSelectedCompanyId);
 
     return (
-      <div
-        className="min-h-screen font-sans flex flex-col justify-center px-6 py-16 relative items-center transition-colors duration-500"
-        style={{
-          backgroundColor: brand.mainBg
-        }}
-      >
-        {/* Soft radial glow in top right */}
-        <div
-          className="absolute -top-30 -right-30 w-80 h-80 rounded-full filter blur-3xl opacity-15 pointer-events-none"
-          style={{ background: brand.primary }}
-        />
+      <div className="min-h-screen font-sans flex flex-col lg:flex-row transition-colors duration-500 overflow-hidden bg-white">
+        {/* ─── LEFT SIDE: PREMIUM ILLUSTRATION PANEL ─── */}
+        <div className="hidden lg:flex lg:w-1/2 relative bg-white items-center justify-center p-12 overflow-hidden border-r border-slate-100">
+          {/* Soft, Brand-Colored Glow Blobs */}
+          <div
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full filter blur-3xl opacity-20 pointer-events-none"
+            style={{ background: 'rgba(186, 230, 253, 0.4)' }}
+          />
+          <div
+            className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full filter blur-3xl opacity-20 pointer-events-none"
+            style={{ background: 'rgba(219, 234, 254, 0.4)' }}
+          />
 
-        <div className="w-full max-w-[390px] space-y-6 relative z-10">
-          
-          {/* InvoiceFlow App Logo */}
-          <div className="flex items-center gap-3 justify-center">
+          <img
+            src={loginIllustration}
+            alt="Login Illustration"
+            className="w-full h-full object-contain select-none pointer-events-none z-10"
+            style={{ clipPath: 'inset(8px)' }}
+          />
+        </div>
+
+        {/* ─── RIGHT SIDE: THEMED CONTEXT SELECTION PANEL ─── */}
+        <div
+          className="flex-1 flex flex-col justify-center px-6 sm:px-16 lg:px-24 py-16 relative items-center transition-colors duration-500"
+          style={{
+            backgroundColor: brand.mainBg
+          }}
+        >
+          {/* Soft radial glow in top right */}
+          <div
+            className="absolute -top-30 -right-30 w-80 h-80 rounded-full filter blur-3xl opacity-15 pointer-events-none"
+            style={{ background: brand.primary }}
+          />
+
+          <div className="w-full max-w-[390px] space-y-6 relative z-10">
+            
+            {/* InvoiceFlow App Logo */}
+            <div className="flex items-center gap-3 justify-center">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-lg"
               style={{
@@ -765,6 +788,7 @@ function App() {
           </Card>
         </div>
       </div>
+    </div>
     );
   }
 
