@@ -277,22 +277,22 @@ export const ProductBatchPage: React.FC = () => {
       updated = batches.map(b =>
         b.id === editingBatchId
           ? {
-              ...b,
-              product_id: formData.productId,
-              product_name: productName,
-              batch_no: formData.batchNo.trim(),
-              mfg_date: formData.mfgDate,
-              expiry_date: formData.expiryDate,
-              is_active: formData.isActive,
-              attachment_name: formData.attachmentName,
-              attachment_url: formData.attachmentUrl,
-              supplier: formData.supplier,
-              food_grade: formData.foodGrade,
-              coa_available: formData.coaAvailable,
-              halal_certificate: formData.halalCertificate,
-              dg_type: formData.dgType,
-              flash_point: formData.flashPoint
-            }
+            ...b,
+            product_id: formData.productId,
+            product_name: productName,
+            batch_no: formData.batchNo.trim(),
+            mfg_date: formData.mfgDate,
+            expiry_date: formData.expiryDate,
+            is_active: formData.isActive,
+            attachment_name: formData.attachmentName,
+            attachment_url: formData.attachmentUrl,
+            supplier: formData.supplier,
+            food_grade: formData.foodGrade,
+            coa_available: formData.coaAvailable,
+            halal_certificate: formData.halalCertificate,
+            dg_type: formData.dgType,
+            flash_point: formData.flashPoint
+          }
           : b
       );
     }
@@ -510,11 +510,10 @@ export const ProductBatchPage: React.FC = () => {
                     <td className="px-4 py-3 text-[12px]">
                       <span
                         onClick={e => handleToggleStatus(b.id, e)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer select-none transition-colors ${
-                          b.is_active
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100/50'
-                            : 'bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100/50'
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer select-none transition-colors ${b.is_active
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100/50'
+                          : 'bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100/50'
+                          }`}
                       >
                         {b.is_active ? 'Active' : 'Inactive'}
                       </span>
@@ -648,8 +647,8 @@ export const ProductBatchPage: React.FC = () => {
               {/* Food Grade, COA, Halal */}
               <div className="col-span-1 flex flex-col justify-center gap-2 pl-2">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
                     checked={formData.foodGrade}
                     onChange={e => setFormData({ ...formData, foodGrade: e.target.checked })}
@@ -657,8 +656,8 @@ export const ProductBatchPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-700">Food Grade</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
                     checked={formData.coaAvailable}
                     onChange={e => setFormData({ ...formData, coaAvailable: e.target.checked })}
@@ -666,8 +665,8 @@ export const ProductBatchPage: React.FC = () => {
                   <span className="text-[11px] font-bold text-slate-700">Certificate of Analysis (COA)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-[#009bf2] focus:ring-[#009bf2]"
                     checked={formData.halalCertificate}
                     onChange={e => setFormData({ ...formData, halalCertificate: e.target.checked })}

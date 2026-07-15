@@ -1,0 +1,580 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Settings,
+  HelpCircle,
+  LogOut,
+  FilePlus,
+  Menu,
+  Box,
+  Undo2,
+  List,
+  Warehouse,
+  ShoppingCart,
+  Binary,
+  SlidersHorizontal,
+} from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
+import SidebarNavButton from './SidebarNavButton';
+import { usePermissions, type ModuleId } from '../../../context/PermissionContext';
+
+interface Props {
+  activeView: string;
+  invoiceType?: string;
+  onViewChange: (view: string) => void;
+  isCollapsed: boolean;
+  onToggleSidebar: () => void;
+  onLogout: () => void;
+  userName?: string;
+  userRole?: string;
+  currentCompany?: { id: string; name: string; logo?: string } | null;
+  currentBranch?: { id: string; name: string } | null;
+  companies?: { id: string; name: string; is_active: boolean; logo?: string }[];
+  branches?: { id: string; companyId: string; name: string }[];
+  onContextChange?: (companyId: string, branchId: string, setAsDefault: boolean) => void;
+}
+
+const Sidebar: React.FC<Props> = ({
+  activeView,
+  invoiceType,
+  onViewChange,
+  isCollapsed,
+  onToggleSidebar,
+  onLogout,
+  userName = 'Arsalan Ahmed',
+  userRole = 'Administrator',
+  currentCompany = null,
+  currentBranch = null,
+  companies = [],
+  branches = [],
+  onContextChange
+}) => {
+  const { brand, showSalesModule } = useTheme();
+  const [showPopover, setShowPopover] = React.useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = React.useState('');
+  const [selectedBranchId, setSelectedBranchId] = React.useState('');
+  const [setAsDefault, setSetAsDefault] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const isCurrentlyCollapsed = isCollapsed;
+  const { isModuleEnabled, isFunctionEnabled } = usePermissions();
+  const companyIdToUse = currentCompany?.id || 'co1'; // Default to first seed company if null
+
+  if (isHovered && false) {
+    console.log(isHovered);
+  }
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    {
+      id: 'customers',
+      label: 'Partners',
+      icon: Users,
+      isParent: true,
+      subItems: [
+        { id: 'customers', label: 'Partner List', icon: List },
+        { id: 'bp-ledger', label: 'Ledger', icon: FileText },
+        { id: 'bp-adjustments', label: 'Adjustments', icon: SlidersHorizontal }
+      ]
+    },
+    {
+      id: 'products',
+      label: 'Inventory',
+      icon: Box,
+      isParent: true,
+      subItems: [
+        { id: 'products', label: 'Product List', icon: List },
+        { id: 'warehouses', label: 'Warehouses', icon: Warehouse },
+        { id: 'product-batches', label: 'Batches', icon: Binary },
+        { id: 'stock-adjustments', label: 'Adjustments', icon: SlidersHorizontal },
+      ]
+    },
+    {
+      id: 'purchases',
+      label: 'Purchase',
+      icon: ShoppingCart,
+      isParent: true,
+      subItems: [
+        { id: 'purchases', label: 'List', icon: FileText },
+        { id: 'add-purchase-invoice', label: 'Invoice', icon: FilePlus },
+        { id: 'purchase-return', label: 'Return', icon: Undo2 }
+      ]
+    },
+    {
+      id: 'sales',
+      label: 'Sale',
+      icon: FileText,
+      isParent: true,
+      subItems: [
+        { id: 'invoices', label: 'List', icon: FileText },
+        { id: 'add-sale-invoice', label: 'Invoice', icon: FilePlus },
+        { id: 'return-invoice', label: 'Return', icon: Undo2 },
+        { id: 'add-service-invoice', label: 'Service', icon: FilePlus },
+        { id: 'add-digital-invoice', label: 'Digital', icon: FilePlus }
+      ]
+    },
+  ].map(item => {
+    if (!item.subItems) return item;
+    return {
+      ...item,
+      subItems: item.subItems.filter(sub => {
+        const functionIdMap: Record<string, import('../../../context/PermissionContext').FunctionId> = {
+          'customers': 'bp_list',
+          'bp-ledger': 'bp_ledger',
+          'bp-adjustments': 'bp_adjustments',
+          'products': 'product_list',
+          'warehouses': 'warehouses',
+          'product-batches': 'product_batches',
+          'stock-adjustments': 'stock_adjustments',
+          'purchases': 'purchase_list',
+          'add-purchase-invoice': 'add_purchase_invoice',
+          'purchase-return': 'purchase_return',
+          'invoices': 'sale_list',
+          'add-sale-invoice': 'add_sale_invoice',
+          'return-invoice': 'return_invoice',
+          'add-service-invoice': 'add_service_invoice',
+          'add-digital-invoice': 'add_digital_invoice'
+        };
+        const fnId = functionIdMap[sub.id];
+        return fnId ? isFunctionEnabled(companyIdToUse, fnId) : true;
+      })
+    };
+  }).filter(item => {
+    if (item.id === 'sales' && !showSalesModule) return false;
+    
+    const moduleId = item.id as ModuleId;
+    let mappedModuleId: ModuleId = moduleId;
+    if (item.id === 'sales') mappedModuleId = 'sales';
+    if (item.id === 'purchases') mappedModuleId = 'purchases';
+    if (item.id === 'customers') mappedModuleId = 'customers';
+    if (item.id === 'products') mappedModuleId = 'products';
+    if (item.id === 'settings') mappedModuleId = 'settings';
+    if (item.id === 'dashboard') mappedModuleId = 'dashboard';
+    if (item.id === 'help') mappedModuleId = 'help';
+    
+    return isModuleEnabled(companyIdToUse, mappedModuleId);
+  });
+
+  const isSalesActive =
+    activeView === 'invoices' ||
+    activeView === 'return-invoice' ||
+    activeView === 'add-invoice-v4';
+
+  const isBpActive =
+    activeView === 'customers' ||
+    activeView === 'add-customer' ||
+    activeView === 'bp-ledger' ||
+    activeView === 'bp-adjustments' ||
+    activeView === 'add-bp-adjustment';
+  const isProductsActive = activeView === 'products' || activeView === 'warehouses' || activeView === 'product-batches';
+  const isPurchaseActive = activeView === 'purchases' || activeView === 'add-purchase-invoice' || activeView === 'purchase-return';
+
+  const [salesExpanded, setSalesExpanded] = React.useState(isSalesActive);
+  const [bpExpanded, setBpExpanded] = React.useState(isBpActive);
+  const [productsExpanded, setProductsExpanded] = React.useState(isProductsActive);
+  const [purchaseExpanded, setPurchaseExpanded] = React.useState(isPurchaseActive);
+
+  React.useEffect(() => {
+    if (isSalesActive) {
+      setSalesExpanded(true);
+      setBpExpanded(false);
+      setProductsExpanded(false);
+      setPurchaseExpanded(false);
+    }
+  }, [activeView, isSalesActive]);
+
+  React.useEffect(() => {
+    if (isBpActive) {
+      setBpExpanded(true);
+      setSalesExpanded(false);
+      setProductsExpanded(false);
+      setPurchaseExpanded(false);
+    }
+  }, [activeView, isBpActive]);
+
+  React.useEffect(() => {
+    if (isProductsActive) {
+      setProductsExpanded(true);
+      setSalesExpanded(false);
+      setBpExpanded(false);
+      setPurchaseExpanded(false);
+    }
+  }, [activeView, isProductsActive]);
+
+  React.useEffect(() => {
+    if (isPurchaseActive) {
+      setPurchaseExpanded(true);
+      setSalesExpanded(false);
+      setBpExpanded(false);
+      setProductsExpanded(false);
+    }
+  }, [activeView, isPurchaseActive]);
+
+  const bottomItems = [
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'help', label: 'Help', icon: HelpCircle },
+  ];
+
+  return (
+    <motion.aside
+      onMouseEnter={() => {
+        if (activeView !== 'dashboard') {
+          setIsHovered(true);
+        }
+      }}
+      onMouseLeave={() => {
+        if (activeView !== 'dashboard') {
+          setIsHovered(false);
+        }
+      }}
+      initial={false}
+      animate={{ width: isCurrentlyCollapsed ? 44 : 240 }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      className="h-screen flex flex-col sticky top-0 flex-shrink-0 overflow-hidden z-50 transition-colors duration-300 sidebar-aside"
+    >
+      {/* Logo / Toggle */}
+      <div className={`py-6 flex items-center ${isCurrentlyCollapsed ? 'justify-center' : 'px-5 gap-2'}`}>
+        <button
+          onClick={onToggleSidebar}
+          className="shrink-0 transition-all hover:opacity-90 cursor-pointer sidebar-logo-button"
+        >
+          <Menu className="w-[18px] h-[18px] text-white" />
+        </button>
+
+        {!isCurrentlyCollapsed && (
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-md font-bold tracking-tight whitespace-normal break-words leading-tight transition-colors duration-300 sidebar-logo-text"
+          >
+            Inventory System
+          </motion.span>
+        )}
+      </div>
+
+      {/* Nav Items */}
+      <nav className={`flex-grow ${isCurrentlyCollapsed ? 'px-1.5' : 'px-2.5'} space-y-1 py-4 overflow-y-auto custom-scrollbar`}>
+        {menuItems.map((item) => {
+          if (item.isParent) {
+            const isBpParent = item.id === 'customers';
+            const isProductParent = item.id === 'products';
+            const isPurchaseParent = item.id === 'purchases';
+
+            const isParentActive = isBpParent
+              ? isBpActive
+              : isProductParent
+                ? isProductsActive
+                : isPurchaseParent
+                  ? isPurchaseActive
+                  : (activeView === 'invoices' ||
+                    activeView === 'return-invoice' ||
+                    activeView === 'add-invoice-v4');
+
+            const isExpanded = isBpParent
+              ? bpExpanded
+              : isProductParent
+                ? productsExpanded
+                : isPurchaseParent
+                  ? purchaseExpanded
+                  : salesExpanded;
+
+            const toggleExpand = () => {
+              if (isCurrentlyCollapsed) {
+                if (activeView === 'dashboard') onToggleSidebar();
+                else setIsHovered(true);
+                setBpExpanded(isBpParent);
+                setProductsExpanded(isProductParent);
+                setPurchaseExpanded(isPurchaseParent);
+                setSalesExpanded(!isBpParent && !isProductParent && !isPurchaseParent);
+              } else {
+                if (isBpParent) {
+                  setBpExpanded(v => !v);
+                  setProductsExpanded(false);
+                  setPurchaseExpanded(false);
+                  setSalesExpanded(false);
+                } else if (isProductParent) {
+                  setProductsExpanded(v => !v);
+                  setBpExpanded(false);
+                  setPurchaseExpanded(false);
+                  setSalesExpanded(false);
+                } else if (isPurchaseParent) {
+                  setPurchaseExpanded(v => !v);
+                  setBpExpanded(false);
+                  setProductsExpanded(false);
+                  setSalesExpanded(false);
+                } else {
+                  setSalesExpanded(v => !v);
+                  setBpExpanded(false);
+                  setProductsExpanded(false);
+                  setPurchaseExpanded(false);
+                }
+              }
+            };
+
+            return (
+              <SidebarNavButton
+                key={item.id}
+                id={item.id}
+                label={item.label}
+                icon={item.icon}
+                primaryColor={brand.primary}
+                isActive={isParentActive}
+                isCollapsed={isCurrentlyCollapsed}
+                onClick={onViewChange}
+                isParent
+                subItems={item.subItems}
+                isExpanded={isExpanded}
+                onToggleExpand={toggleExpand}
+                isSubItemActive={(subId) => {
+                  if (isBpParent) {
+                    if (subId === 'bp-adjustments') return activeView === 'bp-adjustments' || activeView === 'add-bp-adjustment';
+                    return activeView === subId;
+                  }
+                  if (isProductParent) return activeView === subId;
+                  if (isPurchaseParent) return activeView === subId;
+                  if (subId === 'invoices') return activeView === 'invoices';
+                  if (subId === 'return-invoice') return activeView === 'return-invoice';
+                  if (subId === 'add-sale-invoice') return activeView === 'add-invoice-v4' && (invoiceType === 'Sale Invoice' || !invoiceType || (invoiceType !== 'Service Invoice' && invoiceType !== 'Digital Invoice'));
+                  if (subId === 'add-service-invoice') return activeView === 'add-invoice-v4' && invoiceType === 'Service Invoice';
+                  if (subId === 'add-digital-invoice') return activeView === 'add-invoice-v4' && invoiceType === 'Digital Invoice';
+                  return false;
+                }}
+              />
+            );
+          }
+
+          return (
+            <SidebarNavButton
+              key={item.id}
+              id={item.id}
+              label={item.label}
+              icon={item.icon}
+              primaryColor={brand.primary}
+              isActive={activeView === item.id}
+              isCollapsed={isCurrentlyCollapsed}
+              onClick={onViewChange}
+            />
+          );
+        })}
+
+        {bottomItems.map((item) => (
+          <SidebarNavButton
+            key={item.id}
+            id={item.id}
+            label={item.label}
+            icon={item.icon}
+            primaryColor={brand.primary}
+            isActive={activeView === item.id}
+            isCollapsed={isCurrentlyCollapsed}
+            onClick={onViewChange}
+          />
+        ))}
+
+        <button
+          onClick={onLogout}
+          className={`w-full flex items-center ${isCurrentlyCollapsed ? 'justify-center px-0 h-8 w-8 mx-auto' : 'gap-2 px-3 py-2'} rounded-lg text-[14px] font-medium text-red-500 hover:bg-red-50 transition-all cursor-pointer`}
+        >
+          <LogOut className={`${isCurrentlyCollapsed ? 'w-[16px] h-[16px]' : 'w-4 h-4'}`} />
+          {!isCurrentlyCollapsed && <span>Logout</span>}
+        </button>
+      </nav>
+
+      {/* Bottom Profile / Company Info Card */}
+      <div className={`py-4 ${isCurrentlyCollapsed ? 'px-1.5' : 'px-2.5'} sidebar-bottom-container`}>
+        {/* PROFILE CARD */}
+        <div className="relative">
+          {isCurrentlyCollapsed ? (
+            <button
+              onClick={() => {
+                if (currentCompany && currentBranch) {
+                  setSelectedCompanyId(currentCompany.id);
+                  setSelectedBranchId(currentBranch.id);
+                  try {
+                    const defCo = localStorage.getItem('default_company_id');
+                    const defBr = localStorage.getItem('default_branch_id');
+                    setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
+                  } catch { }
+                }
+                setShowPopover(!showPopover);
+              }}
+              className="w-full flex items-center justify-center p-1 rounded-lg transition-all cursor-pointer group"
+            >
+              {currentCompany?.logo ? (
+                <img
+                  src={currentCompany.logo}
+                  alt={currentCompany.name}
+                  className="w-7 h-7 rounded-lg object-contain border border-slate-100 bg-white shadow-lg shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shadow-lg shrink-0 sidebar-avatar-gradient">
+                  {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                </div>
+              )}
+            </button>
+          ) : (
+            <div className="w-full bg-slate-50/60 border border-slate-100/50 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-slate-200/50 transition-all animate-fade-in">
+              {/* Top Row: Avatar, Name & Role */}
+              <button
+                onClick={() => {
+                  if (currentCompany && currentBranch) {
+                    setSelectedCompanyId(currentCompany.id);
+                    setSelectedBranchId(currentBranch.id);
+                    try {
+                      const defCo = localStorage.getItem('default_company_id');
+                      const defBr = localStorage.getItem('default_branch_id');
+                      setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
+                    } catch { }
+                  }
+                  setShowPopover(!showPopover);
+                }}
+                className="flex items-center gap-2 w-full text-left cursor-pointer group"
+              >
+                {currentCompany?.logo ? (
+                  <img
+                    src={currentCompany.logo}
+                    alt={currentCompany.name}
+                    className="w-7 h-7 rounded-lg object-contain border border-slate-100 bg-white shadow-md shrink-0 transition-transform group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-extrabold text-[10px] shadow-md shrink-0 transition-transform group-hover:scale-105 sidebar-avatar-gradient">
+                    {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                )}
+                <div className="text-left select-none min-w-0 flex-grow">
+                  <p className="text-[13px] font-medium leading-tight text-slate-800 truncate sidebar-username">{userName}</p>
+                  <p className="text-[12px] font-medium text-slate-400 mt-0.5 truncate sidebar-meta-desc">{userRole}</p>
+                </div>
+              </button>
+
+              {/* Separator / Divider */}
+              <div className="h-[1px] bg-slate-100 my-2" />
+
+              {/* Bottom Row: Company & Branch Context selection */}
+              <button
+                onClick={() => {
+                  if (currentCompany && currentBranch) {
+                    setSelectedCompanyId(currentCompany.id);
+                    setSelectedBranchId(currentBranch.id);
+                    try {
+                      const defCo = localStorage.getItem('default_company_id');
+                      const defBr = localStorage.getItem('default_branch_id');
+                      setSetAsDefault(defCo === currentCompany.id && defBr === currentBranch.id);
+                    } catch { }
+                  }
+                  setShowPopover(!showPopover);
+                }}
+                className="w-full text-left cursor-pointer group select-none"
+              >
+                <p className="text-[11px] font-bold text-slate-700 leading-tight truncate group-hover:text-blue-600 transition-colors">{currentCompany?.name || 'Select Company'}</p>
+                <p className="text-[9.5px] font-semibold text-slate-400 mt-0.5 truncate">{currentBranch?.name || 'Select Branch'}</p>
+              </button>
+            </div>
+          )}
+
+          {/* POPOVER OVERLAY */}
+          {showPopover && (
+            <>
+              {/* Backdrop to close click outside */}
+              <div
+                className="fixed inset-0 z-40 cursor-default"
+                onClick={() => setShowPopover(false)}
+              />
+
+              {/* Context Selector Popover */}
+              <div className={`fixed z-50 w-72 bg-white rounded-lg border border-slate-200 shadow-xl p-4 flex flex-col space-y-4 bottom-5 ${isCurrentlyCollapsed ? 'left-[54px]' : 'left-[250px]'}`}>
+                {/* Profile Information Header */}
+                <div className="flex items-center gap-3">
+                  {currentCompany?.logo ? (
+                    <img
+                      src={currentCompany.logo}
+                      alt={currentCompany.name}
+                      className="w-7 h-7 rounded-lg object-contain border border-slate-100 bg-white shadow-md shrink-0"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shadow-md shrink-0 sidebar-avatar-gradient">
+                      {userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                  )}
+                  <div className="text-left">
+                    <h4 className="text-[12px] font-bold text-slate-800 leading-tight">{userName}</h4>
+                    <p className="text-[10px] font-medium text-slate-400 mt-0.5">{userRole}</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-lg p-2.5 text-left space-y-1">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Current Context</p>
+                  <p className="text-[11px] font-bold text-slate-700 truncate">{currentCompany?.name}</p>
+                  <p className="text-[10px] font-medium text-slate-500 truncate">{currentBranch?.name}</p>
+                </div>
+
+                <hr className="border-slate-100" />
+
+                {/* Company & Branch Selection */}
+                <div className="text-left space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[13px] font-medium text-slate-500 sidebar-dropdown-label">Company</label>
+                    <select
+                      value={selectedCompanyId}
+                      onChange={(e) => {
+                        const coId = e.target.value;
+                        setSelectedCompanyId(coId);
+                        const firstBr = branches.find(b => b.companyId === coId);
+                        setSelectedBranchId(firstBr ? firstBr.id : '');
+                      }}
+                      className="w-full text-[13px] bg-white border border-slate-200 rounded-lg p-2 outline-none font-medium text-slate-700 focus:border-blue-500 sidebar-dropdown-select"
+                    >
+                      {companies.filter(c => c.is_active).map(co => (
+                        <option key={co.id} value={co.id}>{co.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[13px] font-medium text-slate-500 sidebar-dropdown-label">Branch</label>
+                    <select
+                      value={selectedBranchId}
+                      onChange={(e) => setSelectedBranchId(e.target.value)}
+                      className="w-full text-[13px] bg-white border border-slate-200 rounded-lg p-2 outline-none font-medium text-slate-700 focus:border-blue-500 sidebar-dropdown-select"
+                    >
+                      {branches.filter(b => b.companyId === selectedCompanyId).map(br => (
+                        <option key={br.id} value={br.id}>{br.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Set as Default Toggle */}
+                  <label className="flex items-center gap-2.5 pt-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={setAsDefault}
+                      onChange={(e) => setSetAsDefault(e.target.checked)}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-[12px] text-slate-600 font-medium sidebar-meta-desc">Set As Default Company & Branch</span>
+                  </label>
+                </div>
+
+                {/* Save changes Button */}
+                <button
+                  onClick={() => {
+                    if (onContextChange && selectedCompanyId && selectedBranchId) {
+                      onContextChange(selectedCompanyId, selectedBranchId, setAsDefault);
+                    }
+                    setShowPopover(false);
+                  }}
+                  className="w-full py-2.5 rounded-lg text-center shadow-md cursor-pointer hover:opacity-90 transition-opacity bg-brand-primary sidebar-primary-action-btn"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </motion.aside>
+  );
+};
+
+export default Sidebar;
