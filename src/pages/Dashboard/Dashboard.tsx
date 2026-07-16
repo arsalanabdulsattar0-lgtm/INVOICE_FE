@@ -41,6 +41,16 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
   const { brand } = useTheme();
   const [trendFilter, setTrendFilter] = useState<'All' | 'Posted' | 'Unposted'>('All');
   const { isFunctionEnabled } = usePermissions();
+  const isSpecificUser = (() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  })();
   const companyIdToUse = (() => {
     try {
       const stored = localStorage.getItem('invoice_settings');
@@ -254,9 +264,9 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
   }, [invoicesToUse, trendFilter]);
 
   const trendDesc: Record<string, string> = {
-    All: 'Total revenue across all invoice statuses.',
-    Posted: 'Revenue successfully collected.',
-    Unposted: 'Pending revenue from unposted invoices.',
+    All: isSpecificUser ? 'Total expenditure across all invoice statuses.' : 'Total revenue across all invoice statuses.',
+    Posted: isSpecificUser ? 'Expenditure successfully posted.' : 'Revenue successfully collected.',
+    Unposted: isSpecificUser ? 'Pending expenditure from unposted invoices.' : 'Pending revenue from unposted invoices.',
   };
 
   // Peak month index for the floating dot
@@ -282,7 +292,7 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
         <div className="mb-5">
           <PageHeader
             title="Dashboard"
-            subtitle="Here's your overview of your business sales."
+            subtitle={isSpecificUser ? "Here's your overview of your business purchases." : "Here's your overview of your business sales."}
             actions={
               <DashboardTabSwitcher
                 companyId={companyIdToUse}
@@ -370,7 +380,7 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
                   <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-1px", color: brand.textPrimary, lineHeight: 1 }}>
                     Rs. {trendTotal.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 11, color: brand.textSecondary, fontWeight: 500, marginTop: 2 }}>Total Revenue</div>
+                  <div style={{ fontSize: 11, color: brand.textSecondary, fontWeight: 500, marginTop: 2 }}>{isSpecificUser ? 'Total Expenditure' : 'Total Revenue'}</div>
                 </div>
               </div>
 

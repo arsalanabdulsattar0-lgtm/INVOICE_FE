@@ -150,6 +150,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
   useEffect(() => {
     try {
       localStorage.setItem('company_records', JSON.stringify(companies));
+      window.dispatchEvent(new Event('companies_updated'));
     } catch (e) {
       console.error('Failed to save companies to localStorage', e);
     }
@@ -158,6 +159,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
   useEffect(() => {
     try {
       localStorage.setItem('branch_records', JSON.stringify(branches));
+      window.dispatchEvent(new Event('branches_updated'));
     } catch (e) {
       console.error('Failed to save branches to localStorage', e);
     }
@@ -181,8 +183,21 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
 
   // ── Derived data ──────────────────────────────────────────────────────────
 
+  const viewableCompanies = useMemo(() => {
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (!parsedUser.roles.includes('Super Admin')) {
+           return companies.filter(c => parsedUser.companyIds?.includes(c.id));
+        }
+      }
+    } catch {}
+    return companies;
+  }, [companies]);
+
   const filtered = useMemo(() => {
-    return companies
+    return viewableCompanies
       .filter(c => {
         const q = search.toLowerCase();
         const matchSearch =
@@ -205,8 +220,8 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const totalActive = companies.filter(c => c.is_active).length;
-  const totalInactive = companies.filter(c => !c.is_active).length;
+  const totalActive = viewableCompanies.filter(c => c.is_active).length;
+  const totalInactive = viewableCompanies.filter(c => !c.is_active).length;
 
   // ── Sort handler ──────────────────────────────────────────────────────────
 
@@ -256,7 +271,38 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      setForm(prev => ({ ...prev, logo: result }));
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 200;
+        const MAX_HEIGHT = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/png');
+          setForm(prev => ({ ...prev, logo: dataUrl }));
+        } else {
+          setForm(prev => ({ ...prev, logo: result }));
+        }
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
@@ -379,7 +425,7 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
               <div>
                 <p className="text-[11px] font-bold text-black tracking-wide">{stat.label}</p>
                 <p className="text-2xl font-black mt-1 tracking-tight" style={{ color: brand.dark }}>
-                  {stat.value}
+                  {stat.label === 'Total Companies' ? viewableCompanies.length : stat.value}
                 </p>
                 <p className="text-[10px] font-medium text-slate-400 mt-1">{stat.sub}</p>
               </div>

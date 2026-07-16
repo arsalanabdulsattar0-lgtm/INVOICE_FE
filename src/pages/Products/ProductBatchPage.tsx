@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Binary, Search, Pencil, Trash2, Check, AlertCircle, Box, Paperclip
+  Binary, Search, Pencil, Trash2, Check, AlertCircle, Box, Paperclip, QrCode
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input, ScrollArea, Toggle, ComboBox, Select } from '../../components/ui/FormControls';
@@ -12,6 +12,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import type { Product } from './ProductList';
 import { AddButton } from '../../components/ui/ActionButtons';
+import { BatchQrCodeModal } from './BatchQrCodeModal';
 
 interface ProductBatch {
   id: string;
@@ -64,6 +65,7 @@ export const ProductBatchPage: React.FC = () => {
   // Modals visibility
   const [showFormModal, setShowFormModal] = useState<boolean>(false);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
+  const [viewingQrBatch, setViewingQrBatch] = useState<ProductBatch | null>(null);
 
   // Form states
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
@@ -523,6 +525,17 @@ export const ProductBatchPage: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="xs"
+                          icon={QrCode}
+                          title="Generate QR Code"
+                          className="!px-1.5 !text-indigo-500 hover:!bg-indigo-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingQrBatch(b);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="xs"
                           icon={Pencil}
                           title="Edit"
                           className="!px-1.5"
@@ -735,11 +748,21 @@ export const ProductBatchPage: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, id: '', name: '' })}
-        onConfirm={confirmDelete}
-        title="Delete Product Batch"
+        title="Delete Batch"
         itemName={deleteModal.name}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteModal({ isOpen: false, id: '', name: '' })}
       />
+
+      <AnimatePresence>
+        {viewingQrBatch && (
+          <BatchQrCodeModal
+            viewingQrBatch={viewingQrBatch}
+            brand={brand}
+            onClose={() => setViewingQrBatch(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

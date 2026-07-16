@@ -158,6 +158,17 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
   const [salesDocType, setSalesDocType] = useState<string>('Sale Invoice');
   const [purchasesDocType, setPurchasesDocType] = useState<string>('Purchase Invoice');
 
+  const isSpecificUser = useMemo(() => {
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        return parsedUser.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  }, []);
+
   const handleTabSwitch = (tab: 'document' | 'setup' | 'sales' | 'purchases' | 'customer' | 'inventory') => {
     setActiveTab(tab);
     if (tab === 'sales' || tab === 'purchases') return; // these tabs use direct layouts
@@ -209,12 +220,20 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
 
   // Load companies
   const companies = useMemo<Company[]>(() => {
+    let allCompanies = seedCompanies;
     try {
       const stored = localStorage.getItem('company_records');
-      return stored ? JSON.parse(stored) : seedCompanies;
-    } catch {
-      return seedCompanies;
-    }
+      if (stored) allCompanies = JSON.parse(stored);
+      
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (!parsedUser.roles.includes('Super Admin')) {
+           return allCompanies.filter(c => parsedUser.companyIds?.includes(c.id));
+        }
+      }
+    } catch {}
+    return allCompanies;
   }, []);
 
   // Load branches
@@ -684,15 +703,17 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           <Binary className="w-3.5 h-3.5" />
           Setup Code Settings
         </button>
-        <button
-          onClick={() => handleTabSwitch('sales')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none outline-none ${activeTab === 'sales' ? 'bg-white shadow-sm font-bold text-slate-800' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          style={activeTab === 'sales' ? { color: brand.primary } : undefined}
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-          Sales
-        </button>
+        {!isSpecificUser && (
+          <button
+            onClick={() => handleTabSwitch('sales')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none outline-none ${activeTab === 'sales' ? 'bg-white shadow-sm font-bold text-slate-800' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            style={activeTab === 'sales' ? { color: brand.primary } : undefined}
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            Sales
+          </button>
+        )}
         <button
           onClick={() => handleTabSwitch('purchases')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none outline-none ${activeTab === 'purchases' ? 'bg-white shadow-sm font-bold text-slate-800' : 'text-slate-500 hover:text-slate-800'
@@ -895,7 +916,12 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                     { value: 'digital_invoice', label: 'Digital Invoice' },
                     { value: 'purchase_invoice', label: 'Purchase Invoice' },
                     { value: 'purchase_return', label: 'Purchase Return' }
-                  ]}
+                  ].filter(opt => {
+                    if (isSpecificUser) {
+                      return !['sale_invoice', 'sale_return', 'service_invoice', 'digital_invoice'].includes(opt.value);
+                    }
+                    return true;
+                  })}
                 />
               </div>
             </div>
@@ -971,7 +997,18 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
           <Card className="w-[180px] p-3 flex flex-col h-full overflow-y-auto border border-[#E2E8F0] shadow-sm shrink-0">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 py-1 mb-2">Modules</h4>
             <div className="space-y-1">
-              {TAB_MODULES[activeTab]?.map(mod => {
+              {TAB_MODULES[activeTab]?.filter(mod => {
+                try {
+                  const storedUser = localStorage.getItem('currentUser');
+                  if (storedUser) {
+                    const parsedUser = JSON.parse(storedUser);
+                    if (parsedUser.email === 'arsalanabdulsattar0@gmail.com' && (mod.id as string) === 'sales') {
+                      return false;
+                    }
+                  }
+                } catch {}
+                return true;
+              }).map(mod => {
                 const isActive = activeModule === mod.id;
                 return (
                   <button

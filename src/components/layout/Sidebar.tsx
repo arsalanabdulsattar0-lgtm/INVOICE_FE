@@ -158,6 +158,16 @@ const Sidebar: React.FC<Props> = ({
     if (item.id === 'dashboard') mappedModuleId = 'dashboard';
     if (item.id === 'help') mappedModuleId = 'help';
     
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.email === 'arsalanabdulsattar0@gmail.com' && mappedModuleId === 'sales') {
+          return false;
+        }
+      }
+    } catch {}
+
     return isModuleEnabled(companyIdToUse, mappedModuleId);
   });
 
@@ -250,11 +260,11 @@ const Sidebar: React.FC<Props> = ({
       <div className={`py-6 flex items-center ${isCurrentlyCollapsed ? 'justify-center' : 'px-5 gap-2'}`}>
         <button
           onClick={onToggleSidebar}
-          className="group/logo relative shrink-0 overflow-hidden transition-all hover:opacity-90 cursor-pointer"
+          className="group/logo relative shrink-0 overflow-hidden transition-all hover:opacity-90 cursor-pointer bg-white"
           style={{
             width: 32,
             height: 32,
-            backgroundColor: brand.primary,
+            backgroundColor: currentCompany?.logo ? '#ffffff' : brand.primary,
             borderRadius: 10,
             boxShadow: `0 4px 12px ${brand.primary}40`,
             display: 'flex',
@@ -262,13 +272,21 @@ const Sidebar: React.FC<Props> = ({
             justifyContent: 'center',
           }}
         >
-          <span
-            className="text-white font-bold group-hover/logo:scale-0 transition-all duration-300"
-            style={{ fontSize: 16 }}
-          >
-            I
-          </span>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 scale-50 group-hover/logo:scale-100 transition-all duration-300">
+          {currentCompany?.logo ? (
+            <img 
+              src={currentCompany.logo} 
+              alt="Logo" 
+              className="w-full h-full object-contain p-0.5 rounded-lg group-hover/logo:scale-0 transition-all duration-300"
+            />
+          ) : (
+            <span
+              className="text-white font-bold group-hover/logo:scale-0 transition-all duration-300"
+              style={{ fontSize: 16 }}
+            >
+              I
+            </span>
+          )}
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 scale-50 group-hover/logo:scale-100 transition-all duration-300 rounded-lg" style={{ backgroundColor: brand.primary }}>
             <Menu className="w-[18px] h-[18px] text-white" />
           </div>
         </button>
@@ -580,7 +598,19 @@ const Sidebar: React.FC<Props> = ({
                       }}
                       className="w-full text-[12px] bg-white border border-slate-200 rounded-lg p-2 outline-none font-medium text-slate-700 focus:border-blue-500"
                     >
-                      {companies.filter(c => c.is_active).map(co => (
+                      {(() => {
+                        let filtered = companies.filter(c => c.is_active);
+                        try {
+                          const storedUser = localStorage.getItem('currentUser');
+                          if (storedUser) {
+                            const parsedUser = JSON.parse(storedUser);
+                            if (!parsedUser.roles.includes('Super Admin')) {
+                              filtered = filtered.filter(c => parsedUser.companyIds?.includes(c.id));
+                            }
+                          }
+                        } catch {}
+                        return filtered;
+                      })().map(co => (
                         <option key={co.id} value={co.id}>{co.name}</option>
                       ))}
                     </select>

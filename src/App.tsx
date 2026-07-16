@@ -110,19 +110,43 @@ const initialPurchases: Invoice[] = [
 
 function App() {
   const { brand } = useTheme();
-  const [companies] = useState(() => {
+  const [companies, setCompanies] = useState(() => {
     try {
       const stored = localStorage.getItem('company_records');
-      return stored ? JSON.parse(stored) : seedCompanies;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed.some((c: any) => c.id === 'co-am')) {
+          const amCo = seedCompanies.find(c => c.id === 'co-am');
+          if (amCo) {
+            const merged = [...parsed, amCo];
+            localStorage.setItem('company_records', JSON.stringify(merged));
+            return merged;
+          }
+        }
+        return parsed;
+      }
+      return seedCompanies;
     } catch {
       return seedCompanies;
     }
   });
 
-  const [branches] = useState(() => {
+  const [branches, setBranches] = useState(() => {
     try {
       const stored = localStorage.getItem('branch_records');
-      return stored ? JSON.parse(stored) : seedBranches;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed.some((b: any) => b.companyId === 'co-am')) {
+          const amBranches = seedBranches.filter(b => b.companyId === 'co-am');
+          if (amBranches.length > 0) {
+            const merged = [...parsed, ...amBranches];
+            localStorage.setItem('branch_records', JSON.stringify(merged));
+            return merged;
+          }
+        }
+        return parsed;
+      }
+      return seedBranches;
     } catch {
       return seedBranches;
     }
@@ -153,6 +177,55 @@ function App() {
     } catch { }
     return null;
   });
+
+  useEffect(() => {
+    const handleCompaniesUpdate = () => {
+      try {
+        const stored = localStorage.getItem('company_records');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setCompanies(parsed);
+          setActiveCompany((prev: any) => {
+            if (prev) {
+              const updated = parsed.find((c: any) => c.id === prev.id);
+              if (updated) {
+                sessionStorage.setItem('active_company', JSON.stringify(updated));
+                return updated;
+              }
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    const handleBranchesUpdate = () => {
+      try {
+        const stored = localStorage.getItem('branch_records');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setBranches(parsed);
+          setActiveBranch((prev: any) => {
+            if (prev) {
+              const updated = parsed.find((b: any) => b.id === prev.id);
+              if (updated) {
+                sessionStorage.setItem('active_branch', JSON.stringify(updated));
+                return updated;
+              }
+            }
+            return prev;
+          });
+        }
+      } catch {}
+    };
+
+    window.addEventListener('companies_updated', handleCompaniesUpdate);
+    window.addEventListener('branches_updated', handleBranchesUpdate);
+    return () => {
+      window.removeEventListener('companies_updated', handleCompaniesUpdate);
+      window.removeEventListener('branches_updated', handleBranchesUpdate);
+    };
+  }, []);
 
   const [isSelectingContext, setIsSelectingContext] = useState<boolean>(() => {
     const loggedIn = localStorage.getItem('is_logged_in') === 'true';
@@ -1561,13 +1634,24 @@ function App() {
   };
 
   const renderView = () => {
+    let dashboardList = filteredInvoiceList;
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') {
+          dashboardList = filteredPurchaseList;
+        }
+      }
+    } catch {}
+
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard invoiceItems={filteredInvoiceList} onViewChange={handleViewChange} />;
+        return <Dashboard invoiceItems={dashboardList} onViewChange={handleViewChange} />;
       case 'dashboard1':
-        return <Dashboard1 invoiceItems={filteredInvoiceList} onViewChange={handleViewChange} />;
+        return <Dashboard1 invoiceItems={dashboardList} onViewChange={handleViewChange} />;
       case 'dashboard2':
-        return <Dashboard2 invoiceItems={filteredInvoiceList} onViewChange={handleViewChange} />;
+        return <Dashboard2 invoiceItems={dashboardList} onViewChange={handleViewChange} />;
       case 'add-invoice':
         return <div>Invoice creation is handled via AI Inline Panel.</div>;
       case 'add-invoice-v2':
@@ -1725,10 +1809,21 @@ function App() {
 
         const companyDetails = (() => {
           try {
+            const storedUser = localStorage.getItem('currentUser');
+            let isSpecific = false;
+            if (storedUser) {
+              const parsedUser = JSON.parse(storedUser);
+              if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') isSpecific = true;
+            }
+
             const stored = localStorage.getItem('company_records');
             if (stored) {
               const list = JSON.parse(stored);
-              const activeCo = list.find((c: any) => c.is_active) || list[0];
+              let activeCo = list.find((c: any) => c.is_active) || list[0];
+              if (isSpecific) {
+                const amCo = list.find((c: any) => c.id === 'co-am');
+                if (amCo) activeCo = amCo;
+              }
               if (activeCo) {
                 return {
                   name: activeCo.name || 'Acme Corporation',
@@ -1979,10 +2074,21 @@ function App() {
 
         const companyDetails = (() => {
           try {
+            const storedUser = localStorage.getItem('currentUser');
+            let isSpecific = false;
+            if (storedUser) {
+              const parsedUser = JSON.parse(storedUser);
+              if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') isSpecific = true;
+            }
+
             const stored = localStorage.getItem('company_records');
             if (stored) {
               const list = JSON.parse(stored);
-              const activeCo = list.find((c: any) => c.is_active) || list[0];
+              let activeCo = list.find((c: any) => c.is_active) || list[0];
+              if (isSpecific) {
+                const amCo = list.find((c: any) => c.id === 'co-am');
+                if (amCo) activeCo = amCo;
+              }
               if (activeCo) {
                 return {
                   name: activeCo.name || 'Acme Corporation',

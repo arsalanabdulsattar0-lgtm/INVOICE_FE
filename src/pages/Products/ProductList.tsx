@@ -4,7 +4,7 @@ import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   FileText, CheckCircle, ChevronLeft, ChevronRight,
-  CreditCard, ShieldCheck, Printer, QrCode, ChevronDown
+  CreditCard, ShieldCheck, Printer, QrCode, ChevronDown, Boxes
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { getQRCodeSvgPath, formatExpiryDate } from '../../utils/qrCode';
@@ -93,7 +93,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
       const stored = localStorage.getItem('document_view_settings');
       const allSettings = stored ? JSON.parse(stored) : {};
       const settingsForType = allSettings['Inventory'] || {};
-      
+
       const defaultFields = {
         'Category': true,
         'Brand': true,
@@ -111,7 +111,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         'HS Code': true,
         'Serial Prefix': true
       };
-      
+
       const defaultColumns = {
         'Product Details': true,
         'Category': true,
@@ -121,7 +121,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         'Status': true,
         'Last Updated': true
       };
-      
+
       return {
         fields: { ...defaultFields, ...settingsForType.fields },
         columns: { ...defaultColumns, ...settingsForType.columns }
@@ -179,7 +179,6 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
 
   // Viewing detail product modal
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
-  const [viewingQrProduct, setViewingQrProduct] = useState<Product | null>(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
@@ -550,236 +549,6 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
     { key: 'expiry_date', label: 'Expiry Date' },
   ];
 
-  const viewQrModalContent = (viewingQrProduct: Product | null, brand: any) => {
-    if (!viewingQrProduct) return null;
-    const qrText = `Product Code : ${viewingQrProduct.code}\nProduct Name : ${viewingQrProduct.name}\nExpiry Date : ${viewingQrProduct.expiry_date || '31-Dec-2027'}`;
-    const { size, path } = getQRCodeSvgPath(qrText);
-
-    const handleDownloadPng = () => {
-      const svgElement = document.getElementById('qr-code-svg') as SVGGraphicsElement & HTMLElement;
-      if (!svgElement) return;
-
-      const svgString = new XMLSerializer().serializeToString(svgElement);
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const URL = window.URL || window.webkitURL || window;
-      const blobURL = URL.createObjectURL(svgBlob);
-      
-      const image = new Image();
-      image.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 300;
-        canvas.height = 340;
-        const context = canvas.getContext('2d');
-        if (context) {
-          // Fill white background
-          context.fillStyle = '#FFFFFF';
-          context.fillRect(0, 0, 300, 340);
-          
-          // Draw QR Code centered
-          context.drawImage(image, 50, 20, 200, 200);
-          
-          // Set text alignment
-          context.textAlign = 'center';
-          
-          // Product Code Label
-          context.font = '10px sans-serif';
-          context.fillStyle = '#94A3B8';
-          context.fillText('Product Code', 150, 245);
-          
-          // Product Code Value
-          context.font = 'bold 13px sans-serif';
-          context.fillStyle = '#1E293B';
-          context.fillText(viewingQrProduct.code, 150, 262);
-          
-          // Expiry Date Label
-          context.font = '10px sans-serif';
-          context.fillStyle = '#94A3B8';
-          context.fillText('Expiry Date', 150, 290);
-          
-          // Expiry Date Value
-          context.font = 'bold 13px sans-serif';
-          context.fillStyle = '#1E293B';
-          context.fillText(viewingQrProduct.expiry_date || '31-Dec-2027', 150, 307);
-          
-          const png = canvas.toDataURL('image/png');
-          const downloadLink = document.createElement('a');
-          downloadLink.href = png;
-          downloadLink.download = `QR_${viewingQrProduct.code}.png`;
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
-        }
-      };
-      image.src = blobURL;
-    };
-
-    const handlePrintLabel = () => {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        const svgElement = document.getElementById('qr-code-svg');
-        const svgOuterHtml = svgElement ? svgElement.outerHTML : '';
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Print Label - ${viewingQrProduct.code}</title>
-              <style>
-                html, body {
-                  height: 100%;
-                  margin: 0;
-                  padding: 0;
-                }
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  background: white;
-                }
-                .label-card {
-                  border: 1px dashed #94a3b8;
-                  padding: 20px;
-                  border-radius: 12px;
-                  background: white;
-                  display: inline-block;
-                }
-                .qr-container {
-                  width: 150px;
-                  height: 150px;
-                  margin: 0 auto 10px auto;
-                }
-                .qr-container svg {
-                  width: 100%;
-                  height: 100%;
-                }
-                .info-text {
-                  font-size: 12px;
-                  font-weight: bold;
-                  color: #1e293b;
-                  margin: 4px 0;
-                }
-                .subtitle {
-                  font-size: 10px;
-                  color: #64748b;
-                }
-                @media print {
-                  html, body {
-                    height: 100vh;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                  }
-                  .label-card {
-                    border: none !important;
-                    padding: 0 !important;
-                  }
-                }
-              </style>
-            </head>
-            <body>
-              <div class="label-card">
-                <div class="qr-container">
-                  ${svgOuterHtml}
-                </div>
-                <div class="info-text">Product Code: ${viewingQrProduct.code}</div>
-                <div class="subtitle">Expiry Date: ${viewingQrProduct.expiry_date || '31-Dec-2027'}</div>
-              </div>
-              <script>
-                window.onload = function() {
-                  window.print();
-                  setTimeout(function() { window.close(); }, 500);
-                };
-              </script>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-white rounded-3xl max-w-sm w-full border overflow-hidden flex flex-col"
-          style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}
-        >
-          {/* Modal Header */}
-          <ModalHeader
-            title="Generate QR Code"
-            onClose={() => setViewingQrProduct(null)}
-          />
-
-          {/* Modal Body */}
-          <div className="px-6 py-8 flex flex-col items-center justify-center bg-slate-50 border-b border-slate-100 flex-grow">
-            
-            {/* QR Label Card */}
-            <Card className="p-6 bg-white flex flex-col items-center w-64 shadow-sm border border-slate-200/60 rounded-2xl">
-              
-              {/* SVG QR Code */}
-              <div className="w-40 h-40 bg-white flex items-center justify-center p-1 border border-slate-100 rounded-xl mb-4">
-                <svg
-                  id="qr-code-svg"
-                  className="w-full h-full text-slate-900"
-                  viewBox={`0 0 ${size} ${size}`}
-                  shapeRendering="crispEdges"
-                >
-                  <path fill="#FFFFFF" d={`M0,0h${size}v${size}H0z`} />
-                  <path fill="currentColor" d={path} />
-                </svg>
-              </div>
-
-              {/* Metadata below QR */}
-              <div className="text-center space-y-1.5 w-full">
-                <div>
-                  <div className="text-[10px] font-medium text-slate-400">Product Code</div>
-                  <div className="text-[12px] font-bold text-slate-800">{viewingQrProduct.code}</div>
-                </div>
-                
-                <div>
-                  <div className="text-[10px] font-medium text-slate-400">Expiry Date</div>
-                  <div className="text-[12px] font-bold text-slate-800">
-                    {viewingQrProduct.expiry_date || '31-Dec-2027'}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Modal Footer */}
-          <div className="flex justify-end gap-2 px-6 py-4 bg-white flex-shrink-0">
-            <Button
-              variant="white"
-              size="md"
-              onClick={handleDownloadPng}
-            >
-              Download PNG
-            </Button>
-            <Button
-              variant="white"
-              size="md"
-              onClick={handlePrintLabel}
-            >
-              Print Label
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setViewingQrProduct(null)}
-              style={{ backgroundColor: brand.primary }}
-            >
-              Close
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
-
 
 
 
@@ -801,9 +570,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
               <button
                 type="button"
                 onClick={() => {
-                  const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') || 
-                                  templates.find(t => t.is_active && t.document_type === 'Product List') || 
-                                  templates[0];
+                  const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') ||
+                    templates.find(t => t.is_active && t.document_type === 'Product List') ||
+                    templates[0];
                   const mapped = filteredProducts.map(p => ({
                     ...p,
                     purchase_price: p.cost,
@@ -838,9 +607,9 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                       type="button"
                       onClick={() => {
                         setHeaderDropdownOpen(false);
-                        const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') || 
-                                        templates.find(t => t.is_active && t.document_type === 'Product List') || 
-                                        templates[0];
+                        const activeT = templates.find(t => t.is_default && t.is_active && t.document_type === 'Product List') ||
+                          templates.find(t => t.is_active && t.document_type === 'Product List') ||
+                          templates[0];
                         const mapped = filteredProducts.map(p => ({
                           ...p,
                           purchase_price: p.cost,
@@ -893,28 +662,28 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         {stats.map((stat, i) => {
           const isActive = selectedStatus === stat.filter && stat.filter !== 'All';
           return (
-          <motion.div key={stat.label}
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-          >
-            <Card
-              className={`p-4 transition-all group cursor-pointer select-none ${isActive ? 'ring-2' : ''}`}
-              style={{ borderColor: isActive ? stat.color : '#E2E8F0', boxShadow: 'none' }}
-              onClick={() => { setSelectedStatus(stat.filter); setCurrentPage(1); }}
+            <motion.div key={stat.label}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07 }}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-black tracking-wide">{stat.label}</p>
-                  <p className="text-2xl font-black mt-1 tracking-tight" style={{ color: brand.dark }}>{stat.value}</p>
-                  <p className="text-[10px] font-medium text-slate-400 mt-1">{stat.sub}</p>
+              <Card
+                className={`p-4 transition-all group cursor-pointer select-none ${isActive ? 'ring-2' : ''}`}
+                style={{ borderColor: isActive ? stat.color : '#E2E8F0', boxShadow: 'none' }}
+                onClick={() => { setSelectedStatus(stat.filter); setCurrentPage(1); }}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold text-black tracking-wide">{stat.label}</p>
+                    <p className="text-2xl font-black mt-1 tracking-tight" style={{ color: brand.dark }}>{stat.value}</p>
+                    <p className="text-[10px] font-medium text-slate-400 mt-1">{stat.sub}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                    style={{ background: stat.bg }}>
+                    <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
-                  style={{ background: stat.bg }}>
-                  <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
@@ -1082,19 +851,19 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                             { label: 'Last Updated', key: null, width: 'w-[12%]' },
                             { label: 'Actions', key: null, width: 'w-28' },
                           ] as { label: string; key: SortKey | null; width: string }[])
-                          .filter(h => h.label === 'Actions' || docSettings.columns[h.label])
-                          .map((h) => (
-                            <TableHeader
-                              key={h.label}
-                              label={h.label}
-                              sortKey={h.key || undefined}
-                              activeSortKey={sortKey}
-                              sortDir={sortDir}
-                              onSort={(key) => handleSort(key)}
-                              width={h.width}
-                              borderLeft={false}
-                            />
-                          ))}
+                            .filter(h => h.label === 'Actions' || docSettings.columns[h.label])
+                            .map((h) => (
+                              <TableHeader
+                                key={h.label}
+                                label={h.label}
+                                sortKey={h.key || undefined}
+                                activeSortKey={sortKey}
+                                sortDir={sortDir}
+                                onSort={(key) => handleSort(key)}
+                                width={h.width}
+                                borderLeft={false}
+                              />
+                            ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -1168,8 +937,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                                 <td className="px-4 py-3">
                                   {(product.opening_qty || 0) < (product.low_stock_level || 0)
                                     ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
-                                        <TrendingDown className="w-3 h-3" /> Low Stock
-                                      </span>
+                                      <TrendingDown className="w-3 h-3" /> Low Stock
+                                    </span>
                                     : <ActiveChip label="Active" size="md" onClick={() => handleToggleActive(product.id)} />
                                   }
                                 </td>
@@ -1191,9 +960,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                                   <Button onClick={() => handleEditClick(product)}
                                     variant="ghost" size="xs" icon={Edit2} title="Edit"
                                     className="!px-1 text-blue-600 hover:bg-blue-50" />
-                                  <Button onClick={() => setViewingQrProduct(product)}
-                                    variant="ghost" size="xs" icon={QrCode} title="QR Code"
-                                    className="!px-1 text-blue-600 hover:bg-blue-50" />
+
                                   <Button onClick={() => handleDelete(product.id, product.name)}
                                     variant="ghost" size="xs" icon={Trash2} title="Delete"
                                     className="!px-1 !text-red-500" />
@@ -1242,13 +1009,6 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
                               </div>
 
                               <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  onClick={() => setViewingQrProduct(product)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 transition-colors cursor-pointer"
-                                  title="QR Code"
-                                >
-                                  <QrCode className="w-4 h-4" />
-                                </button>
                                 <button
                                   onClick={() => handleEditClick(product)}
                                   className="p-1.5 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 transition-colors cursor-pointer"
@@ -1433,10 +1193,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         )}
       </AnimatePresence>
 
-      {/* ── View Product QR Code Modal ── */}
-      <AnimatePresence>
-        {viewQrModalContent(viewingQrProduct, brand)}
-      </AnimatePresence>
+
 
       {/* ── Filter Drawer (Side Panel) ── */}
       <ProductFilterDrawer

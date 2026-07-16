@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../../components/ui/Modal';
+
 import { Button } from '../../components/ui/Button';
 import { Input, ScrollArea, ComboBox, Toggle, Select } from '../../components/ui/FormControls';
 import { useTheme } from '../../context/ThemeContext';
-import { Plus, Pencil, X, ChevronRight, Binary, Paperclip } from 'lucide-react';
+import { Plus, Pencil, X, ChevronRight, Binary, Paperclip, QrCode } from 'lucide-react';
 import type { Product } from './ProductList';
 import { AddButton } from '../../components/ui/ActionButtons';
+import { ModalHeader } from '../../components/ui/Typography';
+import Card from '../../components/ui/Card';
+import { getQRCodeSvgPath } from '../../utils/qrCode';
+import { BatchQrCodeModal } from './BatchQrCodeModal';
 
 interface ProductBatch {
   id: string;
@@ -73,6 +78,7 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
   // Modals visibility
   const [showFormModal, setShowFormModal] = useState<boolean>(false);
   const [showAddProductModal, setShowAddProductModal] = useState<boolean>(false);
+  const [viewingQrBatch, setViewingQrBatch] = useState<ProductBatch | null>(null);
 
   // Form states
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
@@ -367,6 +373,19 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
             >
               Edit
             </Button>
+            <Button
+              variant="white"
+              size="sm"
+              icon={QrCode}
+              onClick={() => {
+                const b = batches.find(x => x.id === selectedBatchId);
+                if (b) setViewingQrBatch(b);
+              }}
+              disabled={!selectedBatchId}
+              className="border font-bold text-xs"
+            >
+              QR Code
+            </Button>
           </div>
           <Button
             variant="primary"
@@ -406,17 +425,18 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr className="border-b border-slate-100">
                   <th className="w-10 px-2 py-2.5 text-center border-b border-slate-150"></th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[35%]">Product Name</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[30%]">Product Name</th>
                   <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[20%]">Batch No.</th>
                   <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[15%]">Expiry Date</th>
                   <th className="px-2 py-2.5 text-center text-[10px] font-black text-slate-400 w-[10%]">File</th>
                   <th className="px-4 py-2.5 text-left text-[10px] font-black text-slate-400 w-[15%]">Status</th>
+                  <th className="px-2 py-2.5 text-center text-[10px] font-black text-slate-400 w-[10%]">QR</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBatches.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-slate-400 font-medium text-[11px]">
+                    <td colSpan={7} className="text-center py-12 text-slate-400 font-medium text-[11px]">
                       No product batch records found.
                     </td>
                   </tr>
@@ -468,6 +488,18 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
                           >
                             {b.is_active ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingQrBatch(b);
+                            }}
+                            className="inline-flex items-center justify-center p-1.5 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 transition-colors"
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -742,6 +774,17 @@ export const ProductBatchModal: React.FC<ProductBatchModalProps> = ({
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── View QR Code Modal ── */}
+      <AnimatePresence>
+        {viewingQrBatch && (
+          <BatchQrCodeModal
+            viewingQrBatch={viewingQrBatch}
+            brand={brand}
+            onClose={() => setViewingQrBatch(null)}
+          />
         )}
       </AnimatePresence>
     </Modal>

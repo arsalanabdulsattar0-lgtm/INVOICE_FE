@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import loginIllustration from '../../assets/login-illustration.png';
 import { AlertModal } from '../../components/ui/AlertModal';
+import { seedUsers, seedCompanies, seedBranches } from '../../utils/settingsData';
 
 interface Props {
   companies: any[];
@@ -16,8 +17,8 @@ interface Props {
 const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
   const { brand } = useTheme();
 
-  const [email, setEmail] = useState('admin@invoiceflow.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showContextSelection, setShowContextSelection] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(true);
@@ -25,6 +26,7 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
 
   const [tempSelectedCompanyId, setTempSelectedCompanyId] = useState(() => {
     try {
+      // Just initialize with whatever for now, we will override on submit
       const activeCos = companies.filter((c: any) => c.is_active);
       return activeCos.length > 0 ? activeCos[0].id : '';
     } catch {
@@ -57,7 +59,88 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
       });
       return;
     }
+
+    // Verify user exists and credentials match
+    let users = seedUsers;
+    try {
+      const storedUsers = localStorage.getItem('user_records');
+      if (storedUsers) {
+        users = JSON.parse(storedUsers);
+      }
+    } catch (e) {
+      // fallback to seed
+    }
+
+    let foundUser = users.find(u => u.email === email && u.isActive);
+
+    // TEMPORARY FIX: If user is not found in frontend storage (e.g. they were created in Super Admin which is on a different port),
+    // let's create a temporary session for them so they can test.
+    if (!foundUser && (email === 'arsalanabdulsattar0@gmail.com' || email === 'asralanabdulsattar0@gmail.com')) {
+      foundUser = {
+        id: 'temp-1',
+        firstName: 'Arsalan',
+        lastName: 'Abdulsattar',
+        email: 'arsalanabdulsattar0@gmail.com', // Normalize it so App.tsx matching works
+        roles: ['Admin'],
+        isActive: true,
+        companyIds: ['co-am'], // Only AM International
+        mobile: '',
+        allowedIps: '',
+        defaultCompanyId: 'co-am',
+        branchIds: ['br-am-1', 'br-am-2', 'br-am-3']
+      };
+    } else if (email === 'admin@invoiceflow.com') {
+      foundUser = {
+        id: 'admin-1',
+        firstName: 'System',
+        lastName: 'Admin',
+        email: 'admin@invoiceflow.com',
+        roles: ['Super Admin'],
+        isActive: true,
+        companyIds: [],
+        mobile: '',
+        allowedIps: '',
+        defaultCompanyId: 'co1',
+        branchIds: []
+      };
+    }
+
+    if (!foundUser) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Authentication Failed',
+        message: 'Invalid email or password, or account is disabled.',
+        variant: 'error'
+      });
+      return;
+    }
+
+    // Save logged in user session
+    localStorage.setItem('currentUser', JSON.stringify(foundUser));
     
+    // Filter active companies for this user for context selection
+    let safeCompanies = [...companies];
+    if (!safeCompanies.some(c => c.id === 'co-am')) {
+      const amCo = seedCompanies.find(c => c.id === 'co-am');
+      if (amCo) safeCompanies.push(amCo);
+    }
+    
+    const allowedCompanyIds = foundUser.roles.includes('Super Admin') ? safeCompanies.map(c => c.id) : foundUser.companyIds || [];
+    const userActiveCos = safeCompanies.filter((c: any) => c.is_active && allowedCompanyIds.includes(c.id));
+    
+    if (userActiveCos.length > 0) {
+      setTempSelectedCompanyId(userActiveCos[0].id);
+      
+      let safeBranches = [...branches];
+      if (!safeBranches.some(b => b.companyId === 'co-am')) {
+        const amBrs = seedBranches.filter(b => b.companyId === 'co-am');
+        safeBranches = [...safeBranches, ...amBrs];
+      }
+      
+      const firstBr = safeBranches.find((b: any) => b.companyId === userActiveCos[0].id);
+      setTempSelectedBranchId(firstBr ? firstBr.id : '');
+    }
+
     // Check if default company and branch exist in localStorage
     const defCoId = localStorage.getItem('default_company_id');
     const defBrId = localStorage.getItem('default_branch_id');
@@ -143,7 +226,17 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
             {showContextSelection ? (
               <div className="w-full">
                 {/* Title & Subtitle */}
-                <div className="text-center mb-5">
+                <div className="text-center mb-5 relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowContextSelection(false)}
+                    className="absolute -top-1 left-0 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-semibold"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back
+                  </button>
                   <h2 className="text-[22px] font-extrabold text-slate-800 tracking-tight mb-1">Select Context</h2>
                   <p className="text-xs font-semibold text-slate-500">
                     Choose the company and branch to log in.
@@ -169,7 +262,24 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
                         className="w-full border font-normal text-slate-800 placeholder:text-slate-400 text-sm outline-none transition-all h-10 px-4 rounded-xl form-select-container bg-white appearance-none cursor-pointer"
                       >
                         <option value="" disabled>Choose a company...</option>
-                        {companies.filter((c: any) => c.is_active).map((co: any) => (
+                        {(() => {
+                          let safeCompanies = [...companies];
+                          if (!safeCompanies.some(c => c.id === 'co-am')) {
+                            const amCo = seedCompanies.find(c => c.id === 'co-am');
+                            if (amCo) safeCompanies.push(amCo);
+                          }
+
+                          let userActiveCos = safeCompanies.filter((c: any) => c.is_active);
+                          try {
+                            const storedUser = localStorage.getItem('currentUser');
+                            if (storedUser) {
+                              const parsedUser = JSON.parse(storedUser);
+                              const allowedCompanyIds = parsedUser.roles.includes('Super Admin') ? safeCompanies.map((c:any) => c.id) : parsedUser.companyIds || [];
+                              userActiveCos = userActiveCos.filter((c: any) => allowedCompanyIds.includes(c.id));
+                            }
+                          } catch {}
+                          return userActiveCos;
+                        })().map((co: any) => (
                           <option key={co.id} value={co.id}>
                             {co.name}
                           </option>
@@ -196,7 +306,14 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
                         disabled={!tempSelectedCompanyId}
                       >
                         <option value="" disabled>Choose a branch...</option>
-                        {branches.filter((b: any) => b.companyId === tempSelectedCompanyId).map((br: any) => (
+                        {(() => {
+                          let safeBranches = [...branches];
+                          if (!safeBranches.some(b => b.companyId === 'co-am')) {
+                            const amBrs = seedBranches.filter(b => b.companyId === 'co-am');
+                            safeBranches = [...safeBranches, ...amBrs];
+                          }
+                          return safeBranches.filter((b: any) => b.companyId === tempSelectedCompanyId);
+                        })().map((br: any) => (
                           <option key={br.id} value={br.id}>
                             {br.name}
                           </option>

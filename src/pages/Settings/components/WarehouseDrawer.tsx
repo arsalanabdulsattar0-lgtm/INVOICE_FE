@@ -41,12 +41,20 @@ export const WarehouseDrawer: React.FC<WarehouseDrawerProps> = ({
   const [error, setError] = useState('');
 
   const companies = useMemo<Company[]>(() => {
+    let allCompanies = seedCompanies;
     try {
       const stored = localStorage.getItem('company_records');
-      return stored ? JSON.parse(stored) : seedCompanies;
-    } catch {
-      return seedCompanies;
-    }
+      if (stored) allCompanies = JSON.parse(stored);
+      
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (!parsedUser.roles.includes('Super Admin')) {
+           return allCompanies.filter(c => parsedUser.companyIds?.includes(c.id));
+        }
+      }
+    } catch {}
+    return allCompanies;
   }, []);
 
   const branches = useMemo<Branch[]>(() => {

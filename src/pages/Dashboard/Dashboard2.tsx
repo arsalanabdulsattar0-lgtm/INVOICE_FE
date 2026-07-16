@@ -34,6 +34,17 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
     return 'co1';
   })();
 
+  const isSpecificUser = (() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  })();
+
   /* ── load data ── */
   const inv = useMemo(() => {
     const raw = invoiceItems && invoiceItems.length > 0
@@ -152,7 +163,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
         <div className="mb-1">
           <PageHeader
             title="Dashboard"
-            subtitle="Here's your overview of your business sales."
+            subtitle={isSpecificUser ? "Here's your overview of your business purchases." : "Here's your overview of your business sales."}
             actions={
               <DashboardTabSwitcher
                 companyId={companyIdToUse}
@@ -203,7 +214,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           </div>
         </motion.div>
 
-        {/* Card 3 – Organic Sales */}
+        {/* Card 3 – Organic Purchases */}
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.15}}
           style={wCard({ height:152, padding:'22px 22px 18px', display:'flex', flexDirection:'column', justifyContent:'space-between' })}>
           <Notch />
@@ -252,15 +263,15 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
         </motion.div>
       </div>
 
-      {/* ── Row 2: Sales Report + Sales Activity ── */}
+      {/* ── Row 2: Purchases Report + Purchases Activity ── */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:14, marginBottom:16 }}>
 
-        {/* Sales Report Area */}
+        {/* Purchases Report Area */}
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.25}}
           style={wCard({ padding:'22px 24px' })}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
             <div>
-              <h4 style={{ fontSize:15, fontWeight:800, margin:0 }}>Sales Report Area</h4>
+              <h4 style={{ fontSize:15, fontWeight:800, margin:0 }}>{isSpecificUser ? "Purchases Report Area" : "Sales Report Area"}</h4>
               <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4 }}>
                 <span style={{ padding: '2px 6px', borderRadius: 6, fontSize: 9, fontWeight: 800, background: '#fee2e2', color: '#b91c1c' }}>-4.5%</span>
                 <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>vs last years</span>
@@ -304,7 +315,7 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
             {/* Right side */}
             <div style={{ paddingBottom:22 }}>
               <div style={{ fontSize:32, fontWeight:900, letterSpacing:'-1px', color:'#0f172a' }}>${fmt(dAvg)}</div>
-              <p style={{ fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.8px', margin:'4px 0 16px' }}>Per unit sales</p>
+              <p style={{ fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.8px', margin:'4px 0 16px' }}>{isSpecificUser ? "Per unit purchases" : "Per unit sales"}</p>
               <div style={{ display:'inline-block', background:'#eff6ff', color:'#2563eb', fontSize:10, fontWeight:800, padding:'4px 12px', borderRadius:8 }}>
                 Target overflow
               </div>
@@ -315,11 +326,11 @@ export default function Dashboard2({ invoiceItems, onViewChange }: Dashboard2Pro
           </div>
         </motion.div>
 
-        {/* Sales Activity Gauge */}
+        {/* Purchases Activity Gauge */}
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.30}}
           style={wCard({ padding:'22px 22px', display:'flex', flexDirection:'column' })}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <h4 style={{ fontSize:15, fontWeight:800, margin:0 }}>Sales Activity</h4>
+            <h4 style={{ fontSize:15, fontWeight:800, margin:0 }}>{isSpecificUser ? "Purchases Activity" : "Sales Activity"}</h4>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ fontSize:11, color:'#64748b', fontWeight:600, background:'#f8fafc', padding:'4px 10px', borderRadius:8, border:'1px solid #e8edf5' }}>Monthly ∨</span>
             </div>

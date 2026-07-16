@@ -264,6 +264,13 @@ export const seedCompanies: Company[] = [
     city: 'Karachi', zip_code: '75300', business_type: 'Partnership',
     address3: 'Auto Parts Market, Sohrab Goth, Karachi', is_active: true,
   },
+  {
+    id: 'co-am', name: 'AM INTERNATIONAL', ntn: '8887776-5', stn: '',
+    cnic: '42201-8887776-5', email: 'admin@aminternational.com', phone: '021-38887776',
+    mobile: '0321-8887776', website: 'https://aminternational.com', pral_sandbox_token: '', pral_production_token: '',
+    city: 'Karachi', zip_code: '74000', business_type: 'Private Limited',
+    address3: 'Clifton, Karachi', is_active: true,
+  },
 ];
 
 
@@ -281,6 +288,9 @@ export const seedBranches: Branch[] = [
   { id: 'br-2', companyId: 'co1', name: 'Karachi Branch', code: 'KHI', address: 'DHA Phase 6, Karachi', is_head_office: false },
   { id: 'br-3', companyId: 'co2', name: 'Karachi Head Office', code: 'KHO', address: 'I.I. Chundrigar Road, Clifton, Karachi', is_head_office: true },
   { id: 'br-4', companyId: 'co4', name: 'Faisalabad Head Office', code: 'FHO', address: 'D-Ground, Peoples Colony, Faisalabad', is_head_office: true },
+  { id: 'br-am-1', companyId: 'co-am', name: 'AM Head Office', code: 'BR-AM-1', address: 'Clifton, Karachi', is_head_office: true },
+  { id: 'br-am-2', companyId: 'co-am', name: 'AM DHA Branch', code: 'BR-AM-2', address: 'DHA, Karachi', is_head_office: false },
+  { id: 'br-am-3', companyId: 'co-am', name: 'AM Warehouse', code: 'BR-AM-3', address: 'SITE Area, Karachi', is_head_office: false },
 ];
 
 export interface UserRecord {

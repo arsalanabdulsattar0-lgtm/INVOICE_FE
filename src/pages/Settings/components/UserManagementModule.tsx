@@ -42,7 +42,18 @@ export const UserManagementModule: React.FC<UserManagementModuleProps> = ({ bran
   const companies = useMemo<Company[]>(() => {
     try {
       const stored = localStorage.getItem('company_records');
-      return stored ? JSON.parse(stored) : seedCompanies;
+      let allCompanies = stored ? JSON.parse(stored) : seedCompanies;
+      
+      try {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          const allowedCompanyIds = parsedUser.roles.includes('Super Admin') ? allCompanies.map((c: Company) => c.id) : parsedUser.companyIds || [];
+          allCompanies = allCompanies.filter((c: Company) => allowedCompanyIds.includes(c.id));
+        }
+      } catch {}
+
+      return allCompanies;
     } catch {
       return seedCompanies;
     }

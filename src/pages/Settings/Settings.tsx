@@ -44,6 +44,17 @@ const Settings: React.FC = () => {
     { id: 'department',      title: 'Department Settings', desc: 'Manage departments used throughout the ERP system.', icon: FolderOpen },
   ];
 
+  let filteredSections = sections;
+  try {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') {
+        filteredSections = sections.filter(s => s.id !== 'sales');
+      }
+    }
+  } catch {}
+
   const renderModule = (id: string) => {
     switch (id) {
       case 'profile':         return <ProfileModule brand={brand} />;
@@ -59,7 +70,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  const currentSection = sections.find(s => s.id === activeSection);
+  const currentSection = filteredSections.find(s => s.id === activeSection);
 
   return (
     <div className="flex flex-col p-6 h-full" style={{ backgroundColor: brand.mainBg }}>
@@ -194,7 +205,7 @@ const Settings: React.FC = () => {
                       style={{ minHeight: 0 }}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {sections.map((section, i) => {
+                        {filteredSections.map((section, i) => {
                           const IconComponent = section.icon;
                           return (
                             <motion.button

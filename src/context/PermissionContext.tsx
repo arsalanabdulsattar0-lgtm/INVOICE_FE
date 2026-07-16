@@ -97,7 +97,21 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [companyPermissions, setCompanyPermissions] = useState<CompanyPermission[]>(() => {
     const saved = localStorage.getItem('sa_company_permissions');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved) as CompanyPermission[];
+      // Ensure all seed companies have a permission record
+      const missing = seedCompanies.filter(c => !parsed.some(p => p.companyId === c.id));
+      if (missing.length > 0) {
+        const newPerms = missing.map(c => ({
+          companyId: c.id,
+          packageId: 'pkg-standard',
+          moduleOverrides: {} as Record<ModuleId, boolean>,
+          functionOverrides: {} as Record<FunctionId, boolean>
+        }));
+        return [...parsed, ...newPerms];
+      }
+      return parsed;
+    }
     
     // Default assignments: assign pkg-standard to all seed companies initially
     return seedCompanies.map(c => ({
