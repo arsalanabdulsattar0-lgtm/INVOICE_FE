@@ -1590,6 +1590,15 @@ function App() {
   };
 
   const handleViewChange = (v: string) => {
+    try {
+      const u = localStorage.getItem('currentUser');
+      if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+        if (v === 'dashboard' || v === 'dashboard2') {
+          v = 'dashboard1';
+        }
+      }
+    } catch {}
+
     const companyId = activeCompany?.id || 'co1';
     const branchId = activeBranch?.id || 'br-1';
 
