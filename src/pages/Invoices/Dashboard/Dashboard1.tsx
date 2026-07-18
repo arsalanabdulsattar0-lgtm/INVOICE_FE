@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { usePermissions } from '../../../context/PermissionContext';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -18,6 +18,28 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
     } catch {}
     return 'co1';
   })();
+
+  const checkSpecificUser = () => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  };
+
+  const [isSpecificUser, setIsSpecificUser] = useState<boolean>(checkSpecificUser);
+
+  useEffect(() => {
+    // Re-check immediately in case it was set just before mount
+    setIsSpecificUser(checkSpecificUser());
+    // Also listen for storage events (cross-tab)
+    const onStorage = () => setIsSpecificUser(checkSpecificUser());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const sparkline1 = useMemo(() => [{v: 10}, {v: 15}, {v: 12}, {v: 20}, {v: 18}, {v: 25}, {v: 30}], []);
   const sparkline2 = useMemo(() => [{v: 5}, {v: 8}, {v: 12}, {v: 10}, {v: 15}, {v: 22}, {v: 20}], []);
@@ -142,30 +164,32 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Dashboard Version Switcher */}
-            <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
-              {[
-                { id: 'dashboard', label: 'Default', fnId: 'default_dashboard' },
-                { id: 'dashboard1', label: 'Inventory Operations Dashboard', fnId: 'inventory_dashboard' },
-              ].filter(t => isFunctionEnabled(companyIdToUse, t.fnId as any)).map(t => {
-                const isActive = t.id === 'dashboard1';
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => onViewChange?.(t.id)}
-                    className={`px-4 py-1.5 text-[12px] font-bold rounded-lg transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-white text-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
-                        : 'text-slate-500 hover:text-slate-800 bg-transparent'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
+          {!isSpecificUser && (
+            <div className="flex items-center gap-3">
+              {/* Dashboard Version Switcher */}
+              <div className="flex bg-slate-200/50 p-0.5 rounded-lg border border-slate-200/30">
+                {[
+                  { id: 'dashboard', label: 'Default', fnId: 'default_dashboard' },
+                  { id: 'dashboard1', label: 'Inventory Operations Dashboard', fnId: 'inventory_dashboard' },
+                ].filter(t => isFunctionEnabled(companyIdToUse, t.fnId as any)).map(t => {
+                  const isActive = t.id === 'dashboard1';
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => onViewChange?.(t.id)}
+                      className={`px-4 py-1.5 text-[12px] font-bold rounded-lg transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-white text-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                          : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* TOP ROW: 4 KPI Cards */}

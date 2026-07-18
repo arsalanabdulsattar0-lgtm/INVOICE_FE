@@ -23,6 +23,17 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
     return 'co1';
   })();
 
+  const isSpecificUser = (() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  })();
+
   const sparkline1 = useMemo(() => [{v: 10}, {v: 15}, {v: 12}, {v: 20}, {v: 18}, {v: 25}, {v: 30}], []);
   const sparkline2 = useMemo(() => [{v: 5}, {v: 8}, {v: 12}, {v: 10}, {v: 15}, {v: 22}, {v: 20}], []);
   const sparkline3 = useMemo(() => [{v: 2}, {v: 1}, {v: 3}, {v: 2}, {v: 4}, {v: 3}, {v: 5}], []);
@@ -143,11 +154,13 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
           <PageHeader
             title="Inventory Operations Dashboard"
             actions={
-              <DashboardTabSwitcher
-                companyId={companyIdToUse}
-                activeTab="dashboard1"
-                onViewChange={onViewChange}
-              />
+              !isSpecificUser ? (
+                <DashboardTabSwitcher
+                  companyId={companyIdToUse}
+                  activeTab="dashboard1"
+                  onViewChange={onViewChange}
+                />
+              ) : undefined
             }
           />
         </div>

@@ -294,11 +294,13 @@ export default function Dashboard({ invoiceItems, onViewChange }: DashboardProps
             title="Dashboard"
             subtitle={isSpecificUser ? "Here's your overview of your business purchases." : "Here's your overview of your business sales."}
             actions={
-              <DashboardTabSwitcher
-                companyId={companyIdToUse}
-                activeTab="dashboard"
-                onViewChange={onViewChange}
-              />
+              !isSpecificUser ? (
+                <DashboardTabSwitcher
+                  companyId={companyIdToUse}
+                  activeTab="dashboard"
+                  onViewChange={onViewChange}
+                />
+              ) : undefined
             }
           />
         </div>

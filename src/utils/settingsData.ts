@@ -289,8 +289,6 @@ export const seedBranches: Branch[] = [
   { id: 'br-3', companyId: 'co2', name: 'Karachi Head Office', code: 'KHO', address: 'I.I. Chundrigar Road, Clifton, Karachi', is_head_office: true },
   { id: 'br-4', companyId: 'co4', name: 'Faisalabad Head Office', code: 'FHO', address: 'D-Ground, Peoples Colony, Faisalabad', is_head_office: true },
   { id: 'br-am-1', companyId: 'co-am', name: 'AM Head Office', code: 'BR-AM-1', address: 'Clifton, Karachi', is_head_office: true },
-  { id: 'br-am-2', companyId: 'co-am', name: 'AM DHA Branch', code: 'BR-AM-2', address: 'DHA, Karachi', is_head_office: false },
-  { id: 'br-am-3', companyId: 'co-am', name: 'AM Warehouse', code: 'BR-AM-3', address: 'SITE Area, Karachi', is_head_office: false },
 ];
 
 export interface UserRecord {

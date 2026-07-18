@@ -87,7 +87,7 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
         mobile: '',
         allowedIps: '',
         defaultCompanyId: 'co-am',
-        branchIds: ['br-am-1', 'br-am-2', 'br-am-3']
+        branchIds: ['br-am-1']
       };
     } else if (email === 'admin@invoiceflow.com') {
       foundUser = {
@@ -131,9 +131,9 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
     if (userActiveCos.length > 0) {
       setTempSelectedCompanyId(userActiveCos[0].id);
       
-      let safeBranches = [...branches];
+      let safeBranches = branches.filter((b: any) => !['br-am-2', 'br-am-3'].includes(b.id));
       if (!safeBranches.some(b => b.companyId === 'co-am')) {
-        const amBrs = seedBranches.filter(b => b.companyId === 'co-am');
+        const amBrs = seedBranches.filter(b => b.companyId === 'co-am' && !['br-am-2', 'br-am-3'].includes(b.id));
         safeBranches = [...safeBranches, ...amBrs];
       }
       

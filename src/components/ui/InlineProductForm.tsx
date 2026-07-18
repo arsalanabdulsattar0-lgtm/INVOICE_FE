@@ -601,8 +601,8 @@ const InlineProductForm: React.FC<Props> = ({ isOpen, onClose, initialData }) =>
                         {docSettings['Cost Price'] && (
                           <Input variant="compact" label="Cost" type="number" value={formData.cost || ''} onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
                         )}
-                        <Input variant="compact" label="MRP ex tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
-                        <Input variant="compact" label="MRP inc tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                        <Input variant="compact" label="MRP Ex. Tax" type="number" value={formData.mrp_ex_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_ex_tax: parseFloat(e.target.value) || 0 })} placeholder="0" />
+                        <Input variant="compact" label="MRP Inc. Tax" type="number" value={formData.mrp_inc_tax || ''} onChange={(e) => setFormData({ ...formData, mrp_inc_tax: parseFloat(e.target.value) || 0 })} placeholder="0" />
                         <Input
                           variant="compact"
                           label="Expiry Date"

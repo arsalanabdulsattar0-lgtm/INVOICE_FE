@@ -33,16 +33,16 @@ interface ProductBatch {
 }
 
 const DEFAULT_BATCHES: ProductBatch[] = [
-  { id: 'b-1', product_id: 'p-1', product_name: 'Flavopure', batch_no: '20250305', expiry_date: '2030-03-05', is_active: true },
-  { id: 'b-2', product_id: 'p-1', product_name: 'Flavopure', batch_no: 'LL2511', expiry_date: '2029-12-24', is_active: true },
-  { id: 'b-3', product_id: 'p-2', product_name: 'Fragrances', batch_no: '202412221', expiry_date: '2029-12-21', is_active: true },
-  { id: 'b-4', product_id: 'p-2', product_name: 'Fragrances', batch_no: 'LK2511', expiry_date: '2029-11-24', is_active: true },
-  { id: 'b-5', product_id: 'p-3', product_name: 'Powder', batch_no: 'LK2411', expiry_date: '2029-11-22', is_active: true },
-  { id: 'b-6', product_id: 'p-3', product_name: 'Powder', batch_no: '22503020', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-7', product_id: 'p-3', product_name: 'Powder', batch_no: '22503018', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-8', product_id: 'p-3', product_name: 'Powder', batch_no: '22503019', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-9', product_id: 'p-3', product_name: 'Powder', batch_no: '3250113120', expiry_date: '2029-02-20', is_active: true },
-  { id: 'b-10', product_id: 'p-4', product_name: 'Liquid', batch_no: 'LB0311', expiry_date: '2029-02-02', is_active: true }
+  { id: 'b-1', product_id: 'p-1', product_name: 'Flavopure', batch_no: '20250305', mfg_date: '2025-03-05', expiry_date: '2030-03-05', is_active: true },
+  { id: 'b-2', product_id: 'p-1', product_name: 'Flavopure', batch_no: 'LL2511', mfg_date: '2024-12-24', expiry_date: '2029-12-24', is_active: true },
+  { id: 'b-3', product_id: 'p-2', product_name: 'Fragrances', batch_no: '202412221', mfg_date: '2024-12-21', expiry_date: '2029-12-21', is_active: true },
+  { id: 'b-4', product_id: 'p-2', product_name: 'Fragrances', batch_no: 'LK2511', mfg_date: '2024-11-24', expiry_date: '2029-11-24', is_active: true },
+  { id: 'b-5', product_id: 'p-3', product_name: 'Powder', batch_no: 'LK2411', mfg_date: '2024-11-22', expiry_date: '2029-11-22', is_active: true },
+  { id: 'b-6', product_id: 'p-3', product_name: 'Powder', batch_no: '22503020', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
+  { id: 'b-7', product_id: 'p-3', product_name: 'Powder', batch_no: '22503018', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
+  { id: 'b-8', product_id: 'p-3', product_name: 'Powder', batch_no: '22503019', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
+  { id: 'b-9', product_id: 'p-3', product_name: 'Powder', batch_no: '3250113120', mfg_date: '2024-02-20', expiry_date: '2029-02-20', is_active: true },
+  { id: 'b-10', product_id: 'p-4', product_name: 'Liquid', batch_no: 'LB0311', mfg_date: '2024-02-02', expiry_date: '2029-02-02', is_active: true }
 ];
 
 const formatDateForDisplay = (dateStr: string) => {
@@ -100,7 +100,13 @@ export const ProductBatchPage: React.FC = () => {
 
       const storedBatches = localStorage.getItem('product_batches');
       if (storedBatches) {
-        setBatches(JSON.parse(storedBatches));
+        let parsed = JSON.parse(storedBatches);
+        // Force refresh defaults if old schema without mfg_date is found on default batch
+        if (parsed.length > 0 && parsed[0].id === 'b-1' && !parsed[0].mfg_date) {
+          parsed = DEFAULT_BATCHES;
+          localStorage.setItem('product_batches', JSON.stringify(DEFAULT_BATCHES));
+        }
+        setBatches(parsed);
       } else {
         localStorage.setItem('product_batches', JSON.stringify(DEFAULT_BATCHES));
         setBatches(DEFAULT_BATCHES);
@@ -447,10 +453,11 @@ export const ProductBatchPage: React.FC = () => {
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-[#E2E8F0]">
                 {([
-                  { label: 'Product Name', key: 'product_name', width: 'w-[40%]' },
-                  { label: 'Batch No.', key: 'batch_no', width: 'w-[20%]' },
+                  { label: 'Product Name', key: 'product_name', width: 'w-[30%]' },
+                  { label: 'Batch No.', key: 'batch_no', width: 'w-[15%]' },
+                  { label: 'Mfg Date', key: 'mfg_date', width: 'w-[15%]' },
                   { label: 'Expiry Date', key: 'expiry_date', width: 'w-[15%]' },
-                  { label: 'File', key: 'file_attachment', width: 'w-[10%]' },
+                  { label: 'File', key: 'file_attachment', width: 'w-[5%]' },
                   { label: 'Status', key: 'is_active', width: 'w-[10%]' },
                   { label: 'Actions', key: 'actions', width: 'w-[10%]' }
                 ] as { label: string; key: string; width: string }[]).map(h => (
@@ -489,6 +496,9 @@ export const ProductBatchPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 font-semibold text-[12px] text-slate-800 font-mono">
                       {b.batch_no || '—'}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[12px] text-slate-800 font-mono">
+                      {formatDateForDisplay(b.mfg_date || '')}
                     </td>
                     <td className="px-4 py-3 font-semibold text-[12px] text-slate-800 font-mono">
                       {formatDateForDisplay(b.expiry_date)}

@@ -135,16 +135,23 @@ function App() {
     try {
       const stored = localStorage.getItem('branch_records');
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (!parsed.some((b: any) => b.companyId === 'co-am')) {
+        let parsed = JSON.parse(stored);
+        // Remove stale extra AM branches — AM International has only 1 branch (br-am-1)
+        const removedIds = ['br-am-2', 'br-am-3'];
+        const cleaned = parsed.filter((b: any) => !removedIds.includes(b.id));
+        if (!cleaned.some((b: any) => b.companyId === 'co-am')) {
           const amBranches = seedBranches.filter(b => b.companyId === 'co-am');
           if (amBranches.length > 0) {
-            const merged = [...parsed, ...amBranches];
+            const merged = [...cleaned, ...amBranches];
             localStorage.setItem('branch_records', JSON.stringify(merged));
             return merged;
           }
         }
-        return parsed;
+        // If we removed stale entries, persist the cleaned list
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem('branch_records', JSON.stringify(cleaned));
+        }
+        return cleaned;
       }
       return seedBranches;
     } catch {
@@ -305,8 +312,20 @@ function App() {
   });
   const [activeView, setActiveView] = useState<View>(() => {
     try {
+      const isSpecificUser = (() => {
+        try {
+          const u = localStorage.getItem('currentUser');
+          return u ? JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com' : false;
+        } catch { return false; }
+      })();
       const stored = localStorage.getItem('active_view');
-      if (stored) return stored as View;
+      if (stored) {
+        // If specific user and stored view is 'dashboard' (default), redirect to dashboard1
+        if (isSpecificUser && stored === 'dashboard') return 'dashboard1';
+        return stored as View;
+      }
+      // No stored view – pick the right default
+      return isSpecificUser ? 'dashboard1' : 'dashboard';
     } catch { }
     return 'dashboard';
   });
@@ -686,6 +705,13 @@ function App() {
               }
             } catch { }
             setIsLoggedIn(true);
+            // Immediately redirect specific user to Inventory Operations dashboard
+            try {
+              const u = localStorage.getItem('currentUser');
+              if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+                setActiveView('dashboard1');
+              }
+            } catch { }
           }}
         />
       </Suspense>
@@ -1727,7 +1753,17 @@ function App() {
             setActiveCompany(null);
             setActiveBranch(null);
             setIsLoggedIn(false);
-            setActiveView('dashboard');
+            // Keep dashboard1 for specific user so next login has no flash
+            try {
+              const u = localStorage.getItem('currentUser');
+              if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+                setActiveView('dashboard1');
+              } else {
+                setActiveView('dashboard');
+              }
+            } catch {
+              setActiveView('dashboard');
+            }
           }}
           userName={userProfile.name}
           userRole={userProfile.role}

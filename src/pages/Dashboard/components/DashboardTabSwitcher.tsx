@@ -19,6 +19,17 @@ export const DashboardTabSwitcher: React.FC<DashboardTabSwitcherProps> = ({ comp
   const { brand } = useTheme();
   const { isFunctionEnabled } = usePermissions();
 
+  const isSpecificUser = (() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+      }
+    } catch {}
+    return false;
+  })();
+
   return (
     <div
       style={{
@@ -32,7 +43,10 @@ export const DashboardTabSwitcher: React.FC<DashboardTabSwitcherProps> = ({ comp
       className="select-none"
     >
       {tabs
-        .filter((item) => isFunctionEnabled(companyId, item.fnId as any))
+        .filter((item) => {
+          if (isSpecificUser && item.id !== 'dashboard1') return false;
+          return isFunctionEnabled(companyId, item.fnId as any);
+        })
         .map((item) => {
           const isActive = item.id === activeTab;
           return (
