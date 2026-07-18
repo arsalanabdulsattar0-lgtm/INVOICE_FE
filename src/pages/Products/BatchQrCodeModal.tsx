@@ -151,27 +151,27 @@ export const BatchQrCodeModal: React.FC<BatchQrCodeModalProps> = ({ viewingQrBat
                 display: inline-block;
               }
               .qr-container {
-                width: 150px;
-                height: 150px;
-                margin: 0 auto 10px auto;
+                width: 300px;
+                height: 300px;
+                margin: 0 auto 20px auto;
               }
               .qr-container svg {
                 width: 100%;
                 height: 100%;
               }
               .info-row {
-                margin: 8px 0;
+                margin: 12px 0;
               }
               .info-label {
-                font-size: 12px;
+                font-size: 20px;
                 font-weight: bold;
                 color: #0f172a;
               }
               .info-value {
-                font-size: 12px;
+                font-size: 20px;
                 font-weight: 600;
                 color: #64748b;
-                margin-top: 2px;
+                margin-top: 4px;
               }
               @media print {
                 html, body {

@@ -48,6 +48,16 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
 
   // ── Load products (Force Dummy Data for Preview) ──────────────────────────────
   const products = useMemo(() => {
+    if (isSpecificUser) {
+      return [
+        { name: 'Cough Syrup Cherry Flavour (Medicine)', code: 'MED-FLV-01', batchNo: 'BT-2024', opening_qty: 150, low_stock_level: 200, expiry_date: new Date(Date.now() - 10*86400000).toISOString(), mfg_date: new Date(Date.now() - 200*86400000).toISOString() }, 
+        { name: 'Paracetamol Masking Fragrance (Medicine)', code: 'MED-FRG-02', batchNo: 'BT-2025', opening_qty: 320, low_stock_level: 150, expiry_date: new Date(Date.now() + 45*86400000).toISOString(), mfg_date: new Date(Date.now() - 150*86400000).toISOString() }, 
+        { name: 'Jasmine Perfume Oil (Perfume)', code: 'PRF-FRG-01', batchNo: 'BT-2026', opening_qty: 50, low_stock_level: 100, expiry_date: new Date(Date.now() + 120*86400000).toISOString(), mfg_date: new Date(Date.now() - 100*86400000).toISOString() }, 
+        { name: 'Oud Wood Extract (Perfume)', code: 'PRF-FRG-02', batchNo: 'BT-2027', opening_qty: 0, low_stock_level: 50, expiry_date: new Date(Date.now() + 60*86400000).toISOString(), mfg_date: new Date(Date.now() - 80*86400000).toISOString() }, 
+        { name: 'Vanilla Baking Essence (Food)', code: 'FOD-FLV-01', batchNo: 'BT-2028', opening_qty: 450, low_stock_level: 200, expiry_date: new Date(Date.now() + 25*86400000).toISOString(), mfg_date: new Date(Date.now() - 40*86400000).toISOString() }, 
+        { name: 'Mango Food Flavouring (Food)', code: 'FOD-FLV-02', batchNo: 'BT-2029', opening_qty: 120, low_stock_level: 100, expiry_date: new Date(Date.now() + 300*86400000).toISOString(), mfg_date: new Date(Date.now() - 20*86400000).toISOString() }, 
+      ];
+    }
     // ALWAYS return Dummy Data so the user can preview the UI with data
     return [
       { name: 'Paracetamol 500mg', code: 'PRC-001', batchNo: 'BT-1024', opening_qty: 450, low_stock_level: 500, expiry_date: new Date(Date.now() - 30*86400000).toISOString(), mfg_date: new Date(Date.now() - 200*86400000).toISOString() }, 
@@ -57,7 +67,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
       { name: 'Azithromycin 500mg',code: 'AZI-005', batchNo: 'BT-1028', opening_qty: 850, low_stock_level: 400, expiry_date: new Date(Date.now() + 25*86400000).toISOString(), mfg_date: new Date(Date.now() - 40*86400000).toISOString() }, 
       { name: 'Vitamin C Zinc',    code: 'VIT-006', batchNo: 'BT-1029', opening_qty: 300, low_stock_level: 100, expiry_date: new Date(Date.now() + 300*86400000).toISOString(), mfg_date: new Date(Date.now() - 20*86400000).toISOString() }, 
     ];
-  }, []);
+  }, [isSpecificUser]);
 
   // ── Batch summary counts ─────────────────────────────────────────────────
   const batchSummary = useMemo(() => {
