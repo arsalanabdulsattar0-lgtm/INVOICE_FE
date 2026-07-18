@@ -20,6 +20,7 @@ import { AlertModal } from '../../components/ui/AlertModal';
 import { Toast } from '../../components/ui/Toast';
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
 import { AddButton, SaveButton } from '../../components/ui/ActionButtons';
+import { Pagination } from '../../components/common/Pagination';
 
 export interface Customer {
   id: string;
@@ -969,40 +970,16 @@ const CustomerComponent: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 flex items-center justify-between border-t border-slate-100 print-hidden bg-slate-50/50">
-            <span className="text-xs text-slate-400 font-medium">
-              Showing <strong className="text-slate-700 font-bold">{Math.min(filteredCustomers.length, (currentPage - 1) * perPage + 1)}-{Math.min(filteredCustomers.length, currentPage * perPage)}</strong> of <strong className="text-slate-700 font-bold">{filteredCustomers.length}</strong> customers
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="white" size="xs" icon={ChevronLeft}
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              />
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`h-7 min-w-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    currentPage === i + 1
-                      ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-650 hover:bg-slate-50'
-                  }`}
-                  style={{ backgroundColor: currentPage === i + 1 ? brand.primary : 'transparent' }}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <Button
-                variant="white" size="xs" icon={ChevronRight}
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              />
-            </div>
-          </div>
-        )}
+        {/* Reusable Pagination */}
+        <div className="print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredCustomers.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* Details View Drawer */}

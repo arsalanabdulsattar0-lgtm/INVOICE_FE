@@ -18,6 +18,7 @@ import { TrendingDown } from 'lucide-react';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
+import { Pagination } from '../../components/common/Pagination';
 import type { PrintTemplate } from '../../utils/settingsData';
 import { AddButton } from '../../components/ui/ActionButtons';
 import {
@@ -205,7 +206,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
 
   const sortRef = useRef<HTMLDivElement>(null);
   const headerDropdownRef = useRef<HTMLDivElement>(null);
-  const perPage = 15;
+  const perPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -1046,33 +1047,16 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Pagination (InvoiceList Style) */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between print-hidden"
-            style={{ borderColor: '#E2E8F0', background: brand.surface + '60' }}>
-            <p className="text-[11px] font-medium text-black">
-              Showing {(currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filteredProducts.length)} of {filteredProducts.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                variant="white" size="xs" icon={ChevronLeft}
-                className="w-8 h-8 px-0" />
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <Button key={p} onClick={() => setCurrentPage(p)}
-                  variant={currentPage === p ? 'primary' : 'white'} size="xs"
-                  className="w-8 h-8 px-0 border-none"
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                variant="white" size="xs" icon={ChevronRight}
-                className="w-8 h-8 px-0" />
-            </div>
-          </div>
-        )}
+        {/* Reusable Pagination */}
+        <div className="print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredProducts.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* ── View Product Detail Modal ── */}

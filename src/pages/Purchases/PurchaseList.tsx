@@ -16,6 +16,7 @@ import type { InvoiceData, InvoiceItem } from '../../types';
 import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationModal';
 import { AlertModal } from '../../components/ui/AlertModal';
 import { seedPrintTemplates } from '../../utils/settingsData';
+import { Pagination } from '../../components/common/Pagination';
 export interface SupplierListItem {
   id: string;
   name: string;
@@ -129,7 +130,7 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant?: 'warning' | 'error' | 'info' }>({ isOpen: false, title: '', message: '' });
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
-  const perPage = 15;
+  const perPage = 10;
 
   const sortRef = useRef<HTMLDivElement>(null);
 
@@ -718,33 +719,14 @@ const PurchaseList: React.FC<PurchaseListProps> = ({ onViewChange, purchaseItems
           </motion.div>
         </AnimatePresence>
 
-        {/* Pagination */}
-        <div className="mt-auto px-4 py-3 border-t flex items-center justify-between"
-          style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
-          <p className="text-[11px] font-medium text-black">
-            Showing {filtered.length === 0 ? 0 : (currentPage - 1) * perPage + 1}–{Math.min(currentPage * perPage, filtered.length)} of {filtered.length}
-          </p>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                variant="white" size="xs" icon={ChevronLeft}
-                className="w-8 h-8 px-0" />
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <Button key={p} onClick={() => setCurrentPage(p)}
-                  variant={currentPage === p ? 'primary' : 'white'} size="xs"
-                  className="w-8 h-8 px-0 border-none"
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                variant="white" size="xs" icon={ChevronRight}
-                className="w-8 h-8 px-0" />
-            </div>
-          )}
-        </div>
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={perPage}
+          onPageChange={setCurrentPage}
+        />
       </motion.div>
 
       {/* Click outside is handled by document click listener */}

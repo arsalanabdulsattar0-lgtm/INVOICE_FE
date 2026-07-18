@@ -13,6 +13,7 @@ import { DeleteConfirmationModal } from '../../components/ui/DeleteConfirmationM
 import type { Product } from './ProductList';
 import { AddButton } from '../../components/ui/ActionButtons';
 import { BatchQrCodeModal } from './BatchQrCodeModal';
+import { Pagination } from '../../components/common/Pagination';
 
 interface ProductBatch {
   id: string;
@@ -90,6 +91,10 @@ export const ProductBatchPage: React.FC = () => {
   const [sortKey, setSortKey] = useState<string>('product_name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  // Pagination state
+  const perPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Load batches and products from localStorage
   const loadData = () => {
     try {
@@ -126,6 +131,7 @@ export const ProductBatchPage: React.FC = () => {
     let list = [...batches];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
+      setCurrentPage(1); // Reset page on search
       list = list.filter(
         b =>
           (b.batch_no || '').toLowerCase().includes(q) ||
@@ -155,6 +161,9 @@ export const ProductBatchPage: React.FC = () => {
     }
     return list;
   }, [filteredBatches, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(sortedBatches.length / perPage);
+  const paginatedBatches = sortedBatches.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   // Stats Card Calculations
   const stats = useMemo(() => {
@@ -475,15 +484,15 @@ export const ProductBatchPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedBatches.length === 0 ? (
+              {paginatedBatches.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-16 text-slate-400 font-medium text-[12px]">
+                  <td colSpan={7} className="text-center py-16 text-slate-400 font-medium text-[12px]">
                     <Binary className="w-10 h-10 mx-auto mb-3 opacity-30" />
                     <p className="font-semibold text-sm">No product batches found.</p>
                   </td>
                 </tr>
               ) : (
-                sortedBatches.map((b, idx) => (
+                paginatedBatches.map((b, idx) => (
                   <motion.tr
                     key={b.id}
                     initial={{ opacity: 0, y: 8 }}
@@ -567,6 +576,15 @@ export const ProductBatchPage: React.FC = () => {
             </tbody>
           </table>
         </ScrollArea>
+        <div className="p-4 border-t border-slate-100">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={sortedBatches.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* Modal: Add/Edit Product Batch */}

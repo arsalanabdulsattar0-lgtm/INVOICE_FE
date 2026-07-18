@@ -10,6 +10,7 @@ import { Select, ScrollArea } from '../../components/ui/FormControls';
 import { Button } from '../../components/ui/Button';
 import { FilterDrawer } from '../../components/ui/FilterDrawer';
 import Card from '../../components/ui/Card';
+import { Pagination } from '../../components/common/Pagination';
 import { formatExpiryDate } from '../../utils/qrCode';
 import type { Product } from './ProductList';
 
@@ -121,6 +122,10 @@ const WarehousesPage: React.FC = () => {
   // Sorting state
   const [sortKey, setSortKey] = useState<string>('warehouse_id');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // Pagination state
+  const perPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Load configured warehouses from localStorage (with seed fallback)
   const warehousesList = useMemo(() => {
@@ -362,6 +367,7 @@ const WarehousesPage: React.FC = () => {
     let list = [...tableData];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
+      setCurrentPage(1); // Reset page on search
       list = list.filter(row => 
         (row.warehouse_id || '').toLowerCase().includes(q) ||
         (row.warehouse_name || '').toLowerCase().includes(q) ||
@@ -393,6 +399,9 @@ const WarehousesPage: React.FC = () => {
     }
     return list;
   }, [searchedTableData, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(sortedTableData.length / perPage);
+  const paginatedTableData = sortedTableData.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   // Compute total stock of the selected product
   const totalStockForSelectedProduct = useMemo(() => {
@@ -475,6 +484,7 @@ const WarehousesPage: React.FC = () => {
     setWithBatch(tempWithBatch);
     setWithZeroStock(tempWithZeroStock);
     setShowFilterDrawer(false);
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
@@ -488,6 +498,7 @@ const WarehousesPage: React.FC = () => {
     setWithBatch(false);
     setWithZeroStock(true);
     setShowFilterDrawer(false);
+    setCurrentPage(1);
   };
 
   return (
@@ -633,7 +644,7 @@ const WarehousesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedTableData.length === 0 ? (
+              {paginatedTableData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-16 text-slate-400 font-medium text-[12px]">
                     <Warehouse className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -643,7 +654,7 @@ const WarehousesPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                sortedTableData.map((row, idx) => {
+                paginatedTableData.map((row, idx) => {
                   const isRowSelected = activeRowId === row.warehouse_id;
                   return (
                     <motion.tr
@@ -708,6 +719,15 @@ const WarehousesPage: React.FC = () => {
             </tbody>
           </table>
         </ScrollArea>
+        <div className="p-4 border-t border-slate-100">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={sortedTableData.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* Filter Drawer */}

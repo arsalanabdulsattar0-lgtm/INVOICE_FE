@@ -1,8 +1,9 @@
 @import "tailwindcss";
 @import "./assets/style.css";
 
-body {
-  overflow-x: hidden;
+body, html {
+  overflow: hidden;
+  height: 100%;
 }
 
 @media print {

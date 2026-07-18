@@ -13,6 +13,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
 import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
 import { AddButton } from '../../../components/ui/ActionButtons';
+import { Pagination } from '../../../components/common/Pagination';
 
 export interface Department {
   id: string; // Department Code
@@ -86,6 +87,11 @@ export const DepartmentModule: React.FC<DepartmentModuleProps> = ({ brand }) => 
       return matchSearch && matchStatus;
     });
   }, [departments, search, filterStatus]);
+
+  const perPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const getActiveCode = () => {
     try {
@@ -213,8 +219,8 @@ export const DepartmentModule: React.FC<DepartmentModuleProps> = ({ brand }) => 
             variant="compact"
             icon={Search}
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search By Code or Name..."
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+            placeholder="Search departments..."
           />
         </div>
         <div className="flex items-center gap-2">
@@ -253,11 +259,11 @@ export const DepartmentModule: React.FC<DepartmentModuleProps> = ({ brand }) => 
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-slate-400">No department records found.</td>
                 </tr>
-              ) : filtered.map((d, i) => (
+              ) : paginated.map((d, i) => (
                 <motion.tr
                   key={d.id}
                   initial={{ opacity: 0, y: 6 }}
@@ -304,6 +310,15 @@ export const DepartmentModule: React.FC<DepartmentModuleProps> = ({ brand }) => 
             </tbody>
           </table>
         </ScrollArea>
+        <div className="p-4 border-t border-slate-100 print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </Card>
 
       <Modal

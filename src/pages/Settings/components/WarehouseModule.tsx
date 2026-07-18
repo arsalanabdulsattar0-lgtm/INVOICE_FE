@@ -18,6 +18,7 @@ import { WarehouseDrawer } from './WarehouseDrawer';
 import { incrementNextCode } from '../../../utils/codeSettingsHelper';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { AddButton } from '../../../components/ui/ActionButtons';
+import { Pagination } from '../../../components/common/Pagination';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -438,48 +439,16 @@ export const WarehouseModule: React.FC<WarehouseModuleProps> = ({ brand }) => {
             </tbody>
           </table>
         </ScrollArea>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div
-            className="px-4 py-3 border-t flex items-center justify-between"
-            style={{ borderColor: '#E2E8F0', background: brand.surface + '60' }}
-          >
-            <p className="text-[11px] font-medium text-slate-400">
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                variant="white"
-                size="xs"
-                icon={ChevronLeft}
-                className="w-8 h-8 px-0"
-              />
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <Button
-                  key={p}
-                  onClick={() => setCurrentPage(p)}
-                  variant={currentPage === p ? 'primary' : 'white'}
-                  size="xs"
-                  className="w-8 h-8 px-0 border-none"
-                  style={currentPage === p ? { backgroundColor: brand.primary } : undefined}
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                variant="white"
-                size="xs"
-                icon={ChevronRight}
-                className="w-8 h-8 px-0"
-              />
-            </div>
-          </div>
-        )}
+        {/* Reusable Pagination */}
+        <div className="p-4 border-t border-slate-100 print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* ── Add / Edit Side Drawer ─────────────────────────────────────────── */}

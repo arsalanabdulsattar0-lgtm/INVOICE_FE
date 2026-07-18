@@ -23,9 +23,10 @@ import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '
 import { seedPrintTemplates } from '../../utils/settingsData';
 import type { PrintTemplate } from '../../utils/settingsData';
 import { AddButton, SaveButton } from '../../components/ui/ActionButtons';
+import { Pagination } from '../../components/common/Pagination';
 
 // ---------------------------------------------------------------------------
-// Types â€“ reflect the backend model supplied by the user
+// Types – reflect the backend model supplied by the user
 // ---------------------------------------------------------------------------
 export interface Customer {
   id: string;
@@ -284,7 +285,7 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
     }
   });
 
-  const perPage = 15;
+  const perPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', name: '' });
   const [bulkConfirmModal, setBulkConfirmModal] = useState(false);
@@ -675,8 +676,8 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
     return result;
   }, [customers, search, selectedFilerStatus, selectedWalkinStatus, selectedActiveStatus, selectedSalesPerson, selectedBpType, selectedFromBp, selectedToBp, sortKey, sortDir]);
 
-  const totalPages = 1;
-  const paginatedCustomers = filteredCustomers;
+  const totalPages = Math.ceil(filteredCustomers.length / perPage);
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   // KPI Calculations
   const totalCount = customers.length;
@@ -1272,33 +1273,16 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({ initialOpenCrea
           </motion.div>
         </AnimatePresence>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between print-hidden"
-            style={{ borderColor: brand.dark + '08', background: brand.surface + '60' }}>
-            <p className="text-[11px] font-medium text-black">
-              Showing {(currentPage - 1) * perPage + 1}-{Math.min(currentPage * perPage, filteredCustomers.length)} of {filteredCustomers.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                variant="white" size="xs" icon={ChevronLeft}
-                className="w-8 h-8 px-0" />
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <Button key={p} onClick={() => setCurrentPage(p)}
-                  variant={currentPage === p ? 'primary' : 'white'} size="xs"
-                  className="w-8 h-8 px-0 border-none"
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                variant="white" size="xs" icon={ChevronRight}
-                className="w-8 h-8 px-0" />
-            </div>
-          </div>
-        )}
+        {/* Reusable Pagination */}
+        <div className="print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredCustomers.length}
+            itemsPerPage={perPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* â”€â”€ View Customer Profile Detail Modal â”€â”€ */}

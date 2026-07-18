@@ -9,6 +9,7 @@ import { TableHeader } from '../../../components/ui/Typography';
 import { useTheme } from '../../../context/ThemeContext';
 import { seedCompanies } from '../../../utils/settingsData';
 import { DeleteConfirmationModal } from '../../../components/ui/DeleteConfirmationModal';
+import { Pagination } from '../../../components/common/Pagination';
 import { ProductSetupValuesDrawer } from './ProductSetupValuesDrawer';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { AddButton } from '../../../components/ui/ActionButtons';
@@ -370,49 +371,16 @@ export const ProductSetupModule: React.FC<ProductSetupModuleProps> = ({ brand })
           </table>
         </ScrollArea>
 
-        {/* Pagination Types */}
-        {totalPagesTypes > 1 && (
-          <div
-            className="px-4 py-2.5 border-t flex items-center justify-between"
-            style={{ borderColor: '#E2E8F0', background: brand.surface + '40' }}
-          >
-            <p className="text-[11px] font-medium text-slate-400">
-              Showing {(currentPageTypes - 1) * PAGE_SIZE + 1}–{Math.min(currentPageTypes * PAGE_SIZE, filteredTypes.length)} of {filteredTypes.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => setCurrentPageTypes(p => Math.max(1, p - 1))}
-                disabled={currentPageTypes === 1}
-                variant="white"
-                size="xs"
-                className="h-7 w-7 px-0"
-              >
-                &lt;
-              </Button>
-              {Array.from({ length: totalPagesTypes }, (_, i) => i + 1).map(p => (
-                <Button
-                  key={p}
-                  onClick={() => setCurrentPageTypes(p)}
-                  variant={currentPageTypes === p ? 'primary' : 'white'}
-                  size="xs"
-                  className="h-7 w-7 px-0 border-none"
-                  style={currentPageTypes === p ? { backgroundColor: brand.primary } : undefined}
-                >
-                  {p}
-                </Button>
-              ))}
-              <Button
-                onClick={() => setCurrentPageTypes(p => Math.min(totalPagesTypes, p + 1))}
-                disabled={currentPageTypes === totalPagesTypes}
-                variant="white"
-                size="xs"
-                className="h-7 w-7 px-0"
-              >
-                &gt;
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Reusable Pagination */}
+        <div className="p-4 border-t border-slate-100 print-hidden">
+          <Pagination
+            currentPage={currentPageTypes}
+            totalPages={totalPagesTypes}
+            totalItems={filteredTypes.length}
+            itemsPerPage={PAGE_SIZE}
+            onPageChange={setCurrentPageTypes}
+          />
+        </div>
       </motion.div>
 
       {/* ─── Modal: Add/Edit Setup Type ─── */}
