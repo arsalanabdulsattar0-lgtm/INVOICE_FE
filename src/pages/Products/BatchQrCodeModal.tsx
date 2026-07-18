@@ -63,49 +63,49 @@ export const BatchQrCodeModal: React.FC<BatchQrCodeModalProps> = ({ viewingQrBat
     const image = new Image();
     image.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 370;
+      canvas.width = 400;
+      canvas.height = 580;
       const context = canvas.getContext('2d');
       if (context) {
         // Fill white background
         context.fillStyle = '#FFFFFF';
-        context.fillRect(0, 0, 300, 370);
+        context.fillRect(0, 0, 400, 580);
         
         // Draw QR Code centered
-        context.drawImage(image, 50, 20, 200, 200);
+        context.drawImage(image, 50, 40, 300, 300);
         
         // Set text alignment
         context.textAlign = 'center';
         
         // Product Code Label
-        context.font = 'bold 12px sans-serif';
+        context.font = 'bold 22px sans-serif';
         context.fillStyle = '#0F172A';
-        context.fillText('Product Code', 150, 245);
+        context.fillText('Product Code', 200, 380);
         
         // Product Code Value
-        context.font = '600 12px sans-serif';
+        context.font = '600 20px sans-serif';
         context.fillStyle = '#64748B';
-        context.fillText(productCode, 150, 263);
+        context.fillText(productCode, 200, 410);
         
         // Mfg Date Label
-        context.font = 'bold 12px sans-serif';
+        context.font = 'bold 22px sans-serif';
         context.fillStyle = '#0F172A';
-        context.fillText('Manufacturing Date', 150, 290);
+        context.fillText('Manufacturing Date', 200, 455);
         
         // Mfg Date Value
-        context.font = '600 12px sans-serif';
+        context.font = '600 20px sans-serif';
         context.fillStyle = '#64748B';
-        context.fillText(mfgDateText, 150, 308);
+        context.fillText(mfgDateText, 200, 485);
 
         // Expiry Date Label
-        context.font = 'bold 12px sans-serif';
+        context.font = 'bold 22px sans-serif';
         context.fillStyle = '#0F172A';
-        context.fillText('Expiry Date', 150, 335);
+        context.fillText('Expiry Date', 200, 530);
         
         // Expiry Date Value
-        context.font = '600 12px sans-serif';
+        context.font = '600 20px sans-serif';
         context.fillStyle = '#64748B';
-        context.fillText(expiryDateText, 150, 353);
+        context.fillText(expiryDateText, 200, 560);
         
         const png = canvas.toDataURL('image/png');
         const downloadLink = document.createElement('a');
@@ -160,18 +160,18 @@ export const BatchQrCodeModal: React.FC<BatchQrCodeModalProps> = ({ viewingQrBat
                 height: 100%;
               }
               .info-row {
-                margin: 12px 0;
+                margin: 16px 0;
               }
               .info-label {
-                font-size: 20px;
+                font-size: 28px;
                 font-weight: bold;
                 color: #0f172a;
               }
               .info-value {
-                font-size: 20px;
+                font-size: 26px;
                 font-weight: 600;
                 color: #64748b;
-                margin-top: 4px;
+                margin-top: 8px;
               }
               @media print {
                 html, body {
