@@ -1845,12 +1845,34 @@ function App() {
 
         const companyDetails = (() => {
           try {
-            const storedUser = localStorage.getItem('currentUser');
-            let isSpecific = false;
-            if (storedUser) {
-              const parsedUser = JSON.parse(storedUser);
-              if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') isSpecific = true;
-            }
+            const isSpecific = (() => {
+              try {
+                const u = localStorage.getItem('currentUser');
+                return u ? JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com' : false;
+              } catch { return false; }
+            })();
+            
+            const defaultAm = {
+              name: 'AM INTERNATIONAL',
+              address: 'Clifton, Karachi',
+              phone: '021-38887776',
+              email: 'admin@aminternational.com',
+              website: 'www.aminternational.com',
+              ntn: '8887776-5',
+              strn: '03-00-1234-567-89'
+            };
+            
+            const defaultAcme = {
+              name: 'Acme Corporation',
+              address: 'Main Boulevard, Gulberg III, Lahore',
+              phone: '042-35711111',
+              email: 'info@acme.com',
+              website: 'www.acme.com',
+              ntn: '1234567-8',
+              strn: '03-00-1234-567-89'
+            };
+
+            const fallback = isSpecific ? defaultAm : defaultAcme;
 
             const stored = localStorage.getItem('company_records');
             if (stored) {
@@ -1862,16 +1884,17 @@ function App() {
               }
               if (activeCo) {
                 return {
-                  name: activeCo.name || 'Acme Corporation',
-                  address: activeCo.address3 ? `${activeCo.address3}${activeCo.city ? ', ' + activeCo.city : ''}` : 'Main Boulevard, Gulberg III, Lahore',
-                  phone: activeCo.phone || activeCo.mobile || '042-35711111',
-                  email: activeCo.email || 'info@acme.com',
-                  website: activeCo.website || 'www.acme.com',
-                  ntn: activeCo.ntn || '1234567-8',
-                  strn: activeCo.stn || '03-00-1234-567-89'
+                  name: activeCo.name || fallback.name,
+                  address: activeCo.address3 ? `${activeCo.address3}${activeCo.city ? ', ' + activeCo.city : ''}` : fallback.address,
+                  phone: activeCo.phone || activeCo.mobile || fallback.phone,
+                  email: activeCo.email || fallback.email,
+                  website: activeCo.website || fallback.website,
+                  ntn: activeCo.ntn || fallback.ntn,
+                  strn: activeCo.stn || fallback.strn
                 };
               }
             }
+            return fallback;
           } catch { }
           return {
             name: 'Acme Corporation',
@@ -2117,6 +2140,28 @@ function App() {
               if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') isSpecific = true;
             }
 
+            const defaultAm = {
+              name: 'AM INTERNATIONAL',
+              address: 'Clifton, Karachi',
+              phone: '021-38887776',
+              email: 'admin@aminternational.com',
+              website: 'www.aminternational.com',
+              ntn: '8887776-5',
+              strn: '03-00-1234-567-89'
+            };
+            
+            const defaultAcme = {
+              name: 'Acme Corporation',
+              address: 'Main Boulevard, Gulberg III, Lahore',
+              phone: '042-35711111',
+              email: 'info@acme.com',
+              website: 'www.acme.com',
+              ntn: '1234567-8',
+              strn: '03-00-1234-567-89'
+            };
+
+            const fallback = isSpecific ? defaultAm : defaultAcme;
+
             const stored = localStorage.getItem('company_records');
             if (stored) {
               const list = JSON.parse(stored);
@@ -2127,16 +2172,17 @@ function App() {
               }
               if (activeCo) {
                 return {
-                  name: activeCo.name || 'Acme Corporation',
-                  address: activeCo.address3 ? `${activeCo.address3}${activeCo.city ? ', ' + activeCo.city : ''}` : 'Main Boulevard, Gulberg III, Lahore',
-                  phone: activeCo.phone || activeCo.mobile || '042-35711111',
-                  email: activeCo.email || 'info@acme.com',
-                  website: activeCo.website || 'www.acme.com',
-                  ntn: activeCo.ntn || '1234567-8',
-                  strn: activeCo.stn || '03-00-1234-567-89'
+                  name: activeCo.name || fallback.name,
+                  address: activeCo.address3 ? `${activeCo.address3}${activeCo.city ? ', ' + activeCo.city : ''}` : fallback.address,
+                  phone: activeCo.phone || activeCo.mobile || fallback.phone,
+                  email: activeCo.email || fallback.email,
+                  website: activeCo.website || fallback.website,
+                  ntn: activeCo.ntn || fallback.ntn,
+                  strn: activeCo.stn || fallback.strn
                 };
               }
             }
+            return fallback;
           } catch { }
           return {
             name: 'Acme Corporation',
