@@ -299,8 +299,14 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
           ctx.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/png');
           setForm(prev => ({ ...prev, logo: dataUrl }));
+          if (editing) {
+            setCompanies(prev => prev.map(c => c.id === editing.id ? { ...c, logo: dataUrl } : c));
+          }
         } else {
           setForm(prev => ({ ...prev, logo: result }));
+          if (editing) {
+            setCompanies(prev => prev.map(c => c.id === editing.id ? { ...c, logo: result } : c));
+          }
         }
       };
       img.src = result;
@@ -690,7 +696,12 @@ export const CompanyModule: React.FC<CompanyModuleProps> = ({ brand }) => {
                       <img src={form.logo} alt="Logo" className="w-full h-full object-contain rounded-xl" />
                       <button
                         type="button"
-                        onClick={() => setForm(prev => ({ ...prev, logo: '' }))}
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, logo: '' }));
+                          if (editing) {
+                            setCompanies(prev => prev.map(c => c.id === editing.id ? { ...c, logo: '' } : c));
+                          }
+                        }}
                         className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors shadow"
                       >
                         <X className="w-2.5 h-2.5" />
