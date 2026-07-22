@@ -9,7 +9,7 @@ export type FunctionId =
   | 'create_product' | 'edit_product'
   | 'create_customer' | 'edit_customer'
   | 'bp_list' | 'bp_ledger' | 'bp_adjustments'
-  | 'product_list' | 'warehouses' | 'product_batches' | 'stock_adjustments'
+  | 'product_list' | 'warehouses' | 'product_batches' | 'stock_adjustments' | 'stock_transfer'
   | 'purchase_list' | 'add_purchase_invoice' | 'purchase_return'
   | 'sale_list' | 'add_sale_invoice' | 'return_invoice' | 'add_service_invoice' | 'add_digital_invoice'
   | 'default_dashboard' | 'inventory_dashboard';
@@ -58,7 +58,7 @@ const defaultPackages: Package[] = [
     allowedFunctions: [
       'create_sale', 'edit_sale', 'post_sale', 'create_customer', 'edit_customer',
       'create_purchase', 'edit_purchase', 'post_purchase', 'create_product',
-      'default_dashboard', 'inventory_dashboard', 'bp_list', 'bp_ledger', 'bp_adjustments', 'product_list', 'warehouses', 'product_batches', 'stock_adjustments', 'purchase_list', 'add_purchase_invoice', 'purchase_return', 'sale_list', 'add_sale_invoice', 'return_invoice', 'add_service_invoice', 'add_digital_invoice'
+      'default_dashboard', 'inventory_dashboard', 'bp_list', 'bp_ledger', 'bp_adjustments', 'product_list', 'warehouses', 'product_batches', 'stock_adjustments', 'stock_transfer', 'purchase_list', 'add_purchase_invoice', 'purchase_return', 'sale_list', 'add_sale_invoice', 'return_invoice', 'add_service_invoice', 'add_digital_invoice'
     ]
   },
   {
@@ -71,10 +71,10 @@ const defaultPackages: Package[] = [
       'create_product', 'edit_product',
       'create_customer', 'edit_customer',
       'bp_list', 'bp_ledger', 'bp_adjustments',
-      'product_list', 'warehouses', 'product_batches', 'stock_adjustments',
+      'product_list', 'warehouses', 'product_batches', 'stock_adjustments', 'stock_transfer',
       'purchase_list', 'add_purchase_invoice', 'purchase_return',
       'sale_list', 'add_sale_invoice', 'return_invoice', 'add_service_invoice', 'add_digital_invoice',
-      'default_dashboard', 'inventory_dashboard', 'bp_list', 'bp_ledger', 'bp_adjustments', 'product_list', 'warehouses', 'product_batches', 'stock_adjustments', 'purchase_list', 'add_purchase_invoice', 'purchase_return', 'sale_list', 'add_sale_invoice', 'return_invoice', 'add_service_invoice', 'add_digital_invoice'
+      'default_dashboard', 'inventory_dashboard', 'bp_list', 'bp_ledger', 'bp_adjustments', 'product_list', 'warehouses', 'product_batches', 'stock_adjustments', 'stock_transfer', 'purchase_list', 'add_purchase_invoice', 'purchase_return', 'sale_list', 'add_sale_invoice', 'return_invoice', 'add_service_invoice', 'add_digital_invoice'
     ]
   }
 ];
@@ -87,7 +87,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (saved) {
       const parsed = JSON.parse(saved) as Package[];
       const stdPkg = parsed.find(p => p.id === 'pkg-standard');
-      if (stdPkg && !stdPkg.allowedFunctions.includes('bp_list')) {
+      if (stdPkg && (!stdPkg.allowedFunctions.includes('bp_list') || !stdPkg.allowedFunctions.includes('stock_transfer'))) {
         return defaultPackages;
       }
       return parsed;

@@ -4,10 +4,10 @@ import {
   Box, Plus, Search, Trash2, Edit2, LayoutGrid, List,
   SlidersHorizontal, ArrowUpDown, X, Eye,
   FileText, CheckCircle, ChevronLeft, ChevronRight,
-  CreditCard, ShieldCheck, Printer, QrCode, ChevronDown, Boxes
+  CreditCard, ShieldCheck, Printer, ChevronDown, Boxes
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { getQRCodeSvgPath, formatExpiryDate } from '../../utils/qrCode';
+
 import { PageHeader, SectionHeader, TableHeader, CardTitle, ModalHeader } from '../../components/ui/Typography';
 import Card from '../../components/ui/Card';
 import { ScrollArea, Input } from '../../components/ui/FormControls';
@@ -28,6 +28,7 @@ import {
   ProductSize,
   ProductUOM
 } from '../../utils/productData';
+import { formatExpiryDate } from '../../utils/qrCode';
 
 export interface Product {
   id: string;

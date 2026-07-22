@@ -24,7 +24,7 @@ export const DashboardTabSwitcher: React.FC<DashboardTabSwitcherProps> = ({ comp
       const stored = localStorage.getItem('currentUser');
       if (stored) {
         const parsed = JSON.parse(stored);
-        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+        return parsed.email === 'aminternational@gmail.com';
       }
     } catch {}
     return false;

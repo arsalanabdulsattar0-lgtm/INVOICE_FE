@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   Binary,
   SlidersHorizontal,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import SidebarNavButton from './SidebarNavButton';
@@ -89,6 +90,7 @@ const Sidebar: React.FC<Props> = ({
         { id: 'warehouses', label: 'Product Warehouses', icon: Warehouse },
         { id: 'product-batches', label: 'Product Batches', icon: Binary },
         { id: 'stock-adjustments', label: 'Stock Adjustment', icon: SlidersHorizontal },
+        { id: 'stock-transfer', label: 'Stock Transfer', icon: ArrowLeftRight },
       ]
     },
     {
@@ -129,6 +131,7 @@ const Sidebar: React.FC<Props> = ({
           'warehouses': 'warehouses',
           'product-batches': 'product_batches',
           'stock-adjustments': 'stock_adjustments',
+          'stock-transfer': 'stock_transfer',
           'purchases': 'purchase_list',
           'add-purchase-invoice': 'add_purchase_invoice',
           'purchase-return': 'purchase_return',
@@ -162,7 +165,7 @@ const Sidebar: React.FC<Props> = ({
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.email === 'arsalanabdulsattar0@gmail.com' && mappedModuleId === 'sales') {
+        if (parsedUser.email === 'aminternational@gmail.com' && mappedModuleId === 'sales') {
           return false;
         }
       }
@@ -182,7 +185,7 @@ const Sidebar: React.FC<Props> = ({
     activeView === 'bp-ledger' ||
     activeView === 'bp-adjustments' ||
     activeView === 'add-bp-adjustment';
-  const isProductsActive = activeView === 'products' || activeView === 'warehouses' || activeView === 'product-batches';
+  const isProductsActive = activeView === 'products' || activeView === 'warehouses' || activeView === 'product-batches' || activeView === 'stock-adjustments' || activeView === 'stock-transfer';
   const isPurchaseActive = activeView === 'purchases' || activeView === 'add-purchase-invoice' || activeView === 'purchase-return';
 
   const [salesExpanded, setSalesExpanded] = React.useState(isSalesActive);

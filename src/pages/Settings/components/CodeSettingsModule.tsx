@@ -163,7 +163,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        return parsedUser.email === 'arsalanabdulsattar0@gmail.com';
+        return parsedUser.email === 'aminternational@gmail.com';
       }
     } catch {}
     return false;
@@ -1002,7 +1002,7 @@ export const CodeSettingsModule: React.FC<CodeSettingsModuleProps> = ({ brand })
                   const storedUser = localStorage.getItem('currentUser');
                   if (storedUser) {
                     const parsedUser = JSON.parse(storedUser);
-                    if (parsedUser.email === 'arsalanabdulsattar0@gmail.com' && (mod.id as string) === 'sales') {
+                    if (parsedUser.email === 'aminternational@gmail.com' && (mod.id as string) === 'sales') {
                       return false;
                     }
                   }

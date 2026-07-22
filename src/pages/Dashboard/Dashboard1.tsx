@@ -28,7 +28,7 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
       const stored = localStorage.getItem('currentUser');
       if (stored) {
         const parsed = JSON.parse(stored);
-        return parsed.email === 'arsalanabdulsattar0@gmail.com';
+        return parsed.email === 'aminternational@gmail.com';
       }
     } catch {}
     return false;

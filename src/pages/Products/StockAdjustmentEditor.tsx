@@ -549,42 +549,6 @@ export const StockAdjustmentEditor: React.FC<Props> = ({
         </ScrollArea>
       </div>
 
-      {/* Footer */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-4 bg-white" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-          <div className="flex flex-col h-full gap-2">
-            <label className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Select Product Serial Nos incase of Adjustment Out</label>
-            <div className="flex-1 border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-               <textarea 
-                  className="w-full h-32 p-2 text-xs bg-transparent border-none focus:outline-none resize-none"
-                  value={serialNosOut}
-                  onChange={e => setSerialNosOut(e.target.value)}
-               />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-white" style={{ borderColor: '#E2E8F0', boxShadow: 'none' }}>
-          <div className="flex flex-col h-full gap-2">
-            <label className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Enter Product Serial Nos incase of Adjustment In</label>
-            <div className="flex-1 border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-                <textarea 
-                  className="w-full h-32 p-2 text-xs bg-transparent border-none focus:outline-none resize-none"
-                  value={serialNosIn}
-                  onChange={e => setSerialNosIn(e.target.value)}
-               />
-            </div>
-            <div className="mt-2 flex items-center">
-              <Toggle 
-                label="Include in Tax Record" 
-                checked={includeInTaxRecord}
-                onChange={setIncludeInTaxRecord}
-              />
-            </div>
-          </div>
-        </Card>
-      </div>
-
     </div>
   );
 };

@@ -30,6 +30,7 @@ import { AlertModal } from './components/ui/AlertModal';
 import type { BPAdjustment, BPAdjustmentData } from './types/types';
 import { BPAdjustmentEditor } from './pages/BusinessPartner/BPAdjustmentEditor';
 import { StockAdjustmentEditor } from './pages/Products/StockAdjustmentEditor';
+import { StockTransferPage } from './pages/Products/StockTransferPage';
 
 // Static imports for types / initial data only
 import { initialInvoices } from './pages/Invoices/invoiceTypes';
@@ -71,7 +72,7 @@ const parseCustomCss = (cssString?: string): React.CSSProperties => {
   return styles;
 };
 
-type View = 'dashboard' | 'dashboard1' | 'dashboard2' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
+type View = 'dashboard' | 'dashboard1' | 'dashboard2' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'stock-transfer' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
 
 const initialPurchases: Invoice[] = [
   {
@@ -315,7 +316,7 @@ function App() {
       const isSpecificUser = (() => {
         try {
           const u = localStorage.getItem('currentUser');
-          return u ? JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com' : false;
+          return u ? JSON.parse(u).email === 'aminternational@gmail.com' : false;
         } catch { return false; }
       })();
       const stored = localStorage.getItem('active_view');
@@ -708,7 +709,7 @@ function App() {
             // Immediately redirect specific user to Inventory Operations dashboard
             try {
               const u = localStorage.getItem('currentUser');
-              if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+              if (u && JSON.parse(u).email === 'aminternational@gmail.com') {
                 setActiveView('dashboard1');
               }
             } catch { }
@@ -1592,7 +1593,7 @@ function App() {
   const handleViewChange = (v: string) => {
     try {
       const u = localStorage.getItem('currentUser');
-      if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+      if (u && JSON.parse(u).email === 'aminternational@gmail.com') {
         if (v === 'dashboard' || v === 'dashboard2') {
           v = 'dashboard1';
         }
@@ -1674,7 +1675,7 @@ function App() {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') {
+        if (parsedUser.email === 'aminternational@gmail.com') {
           dashboardList = filteredPurchaseList;
         }
       }
@@ -1726,6 +1727,8 @@ function App() {
         return <ProductBatchPage />;
       case 'stock-adjustments':
         return <StockAdjustmentEditor onViewChange={handleViewChange} />;
+      case 'stock-transfer':
+        return <StockTransferPage onViewChange={handleViewChange} />;
       case 'purchases':
         return <PurchaseList purchaseItems={filteredPurchaseList} setPurchaseItems={setPurchaseList} onViewChange={handleViewChange} onPrintPurchase={handlePrintInvoice} onEditPurchase={handleEditPurchase} onPrintList={handlePrintList} />;
       case 'add-purchase-invoice':
@@ -1765,7 +1768,7 @@ function App() {
             // Keep dashboard1 for specific user so next login has no flash
             try {
               const u = localStorage.getItem('currentUser');
-              if (u && JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com') {
+              if (u && JSON.parse(u).email === 'aminternational@gmail.com') {
                 setActiveView('dashboard1');
               } else {
                 setActiveView('dashboard');
@@ -1857,7 +1860,7 @@ function App() {
             const isSpecific = (() => {
               try {
                 const u = localStorage.getItem('currentUser');
-                return u ? JSON.parse(u).email === 'arsalanabdulsattar0@gmail.com' : false;
+                return u ? JSON.parse(u).email === 'aminternational@gmail.com' : false;
               } catch { return false; }
             })();
             
@@ -2146,7 +2149,7 @@ function App() {
             let isSpecific = false;
             if (storedUser) {
               const parsedUser = JSON.parse(storedUser);
-              if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') isSpecific = true;
+              if (parsedUser.email === 'aminternational@gmail.com') isSpecific = true;
             }
 
             const defaultAm = {

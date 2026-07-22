@@ -133,3 +133,27 @@ export interface StockAdjustmentData {
   status?: 'Posted' | 'Unposted';
 }
 
+export interface StockTransferDetailRow {
+  productId: string;
+  productName: string;
+  unit: string;
+  batchNo?: string;
+  currentStock: number;
+  transferQty: number;
+}
+
+export interface StockTransferData {
+  transferNumber: string;
+  date: string;
+  sourceWarehouseId: string;
+  sourceWarehouseName: string;
+  destinationWarehouseId: string;
+  destinationWarehouseName: string;
+  gtsNo?: string;
+  reference?: string;
+  remarks?: string; // mapping to Detail/Remarks
+  items: StockTransferDetailRow[];
+  status?: 'Posted' | 'Unposted';
+}
+
+

@@ -71,19 +71,28 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
       // fallback to seed
     }
 
+    if ((email === 'aminternational@gmail.com' || email === 'admin@invoiceflow.com') && password !== 'password123') {
+      setAlertModal({
+        isOpen: true,
+        title: 'Authentication Failed',
+        message: 'Invalid password.',
+        variant: 'error'
+      });
+      return;
+    }
+
     let foundUser = users.find(u => u.email === email && u.isActive);
 
-    // TEMPORARY FIX: If user is not found in frontend storage (e.g. they were created in Super Admin which is on a different port),
-    // let's create a temporary session for them so they can test.
-    if (!foundUser && (email === 'arsalanabdulsattar0@gmail.com' || email === 'asralanabdulsattar0@gmail.com')) {
+    // TEMPORARY FIX: If user is not found in frontend storage
+    if (!foundUser && email === 'aminternational@gmail.com') {
       foundUser = {
         id: 'temp-1',
-        firstName: 'Arsalan',
-        lastName: 'Abdulsattar',
-        email: 'arsalanabdulsattar0@gmail.com', // Normalize it so App.tsx matching works
+        firstName: 'AM',
+        lastName: 'International',
+        email: 'aminternational@gmail.com',
         roles: ['Admin'],
         isActive: true,
-        companyIds: ['co-am'], // Only AM International
+        companyIds: ['co-am'],
         mobile: '',
         allowedIps: '',
         defaultCompanyId: 'co-am',

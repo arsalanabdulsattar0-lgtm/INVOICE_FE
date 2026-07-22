@@ -49,7 +49,7 @@ const Settings: React.FC = () => {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.email === 'arsalanabdulsattar0@gmail.com') {
+      if (parsedUser.email === 'aminternational@gmail.com') {
         filteredSections = sections.filter(s => s.id !== 'sales');
       }
     }
