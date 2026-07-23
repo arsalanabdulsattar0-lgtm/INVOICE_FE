@@ -37,7 +37,7 @@ export const Select: React.FC<SelectProps> = ({
       className={`w-full ${!isCompact ? 'space-y-1' : 'space-y-1'} group`}
     >
       {label && (
-        <label className="text-[11px] text-black ml-1 flex items-center gap-1">
+        <label className="text-[11px] font-semibold text-black ml-1 flex items-center gap-1">
           {label}
         </label>
       )}

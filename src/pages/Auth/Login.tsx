@@ -204,19 +204,22 @@ const Login: React.FC<Props> = ({ companies, branches, onLoginSuccess }) => {
         {/* Outer centered container holding Logo + Card */}
         <div className="w-full max-w-[390px] space-y-6 relative z-10">
           
-          {/* InvoiceFlow App Logo */}
+          {/* App Logo */}
           <div className="flex items-center gap-3 justify-center">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-lg"
+              className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-white shadow-lg shrink-0"
               style={{
                 backgroundColor: brand.primary,
                 boxShadow: `0 4px 12px ${brand.primary}40`,
-                fontSize: 18
+                fontSize: 14
               }}
             >
-              I
+              ITS
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-800">Inventory Tracking System</span>
+            <div className="flex flex-col">
+              <span className="text-2xl font-extrabold tracking-tight text-slate-800 leading-none">ITS</span>
+              <span className="text-xs font-semibold text-slate-500 mt-0.5">Inventory Tracking System</span>
+            </div>
           </div>
 
           {/* Standard Themed Login Card */}

@@ -94,7 +94,7 @@ function writeCustomers(data: StoredCustomer[]) {
 
 const NAV_MAP: Record<string, string> = {
   dashboard: 'dashboard1', home: 'dashboard1', main: 'dashboard1', overview: 'dashboard1',
-  dashboard2: 'dashboard2', salesmonk: 'dashboard2', businessoverview: 'dashboard2', 'business-overview': 'dashboard2',
+  dashboard2: 'dashboard1', salesmonk: 'dashboard1', businessoverview: 'dashboard1', 'business-overview': 'dashboard1',
   invoices: 'invoices', invoice: 'invoices', bills: 'invoices',
   clients: 'customers', customers: 'customers', client: 'customers', customer: 'customers',
   products: 'products', inventory: 'products', product: 'products',
@@ -777,13 +777,6 @@ function getSuggestions(activeView: string): Suggestion[] {
       { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to customers' },
     ],
     'dashboard1': [
-      { label: 'Show total revenue', icon: TrendingUp, color: '#10B981', command: 'Show revenue this month' },
-      { label: 'Show overdue invoices', icon: AlertCircle, color: '#EF4444', command: 'Show overdue invoices' },
-      { label: 'Show pending payments', icon: DollarSign, color: '#F59E0B', command: 'What is pending amount?' },
-      { label: 'Create invoice', icon: PlusCircle, color: '#10B981', command: 'Create invoice' },
-      { label: 'View customers', icon: Users, color: '#8B5CF6', command: 'Go to customers' },
-    ],
-    'dashboard2': [
       { label: 'Show total revenue', icon: TrendingUp, color: '#10B981', command: 'Show revenue this month' },
       { label: 'Show overdue invoices', icon: AlertCircle, color: '#EF4444', command: 'Show overdue invoices' },
       { label: 'Show pending payments', icon: DollarSign, color: '#F59E0B', command: 'What is pending amount?' },

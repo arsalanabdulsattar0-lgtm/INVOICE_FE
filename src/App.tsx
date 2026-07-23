@@ -9,7 +9,6 @@ import { useTheme } from './context/ThemeContext';
 // Static page imports for instantaneous and smooth transitions
 import Dashboard from './pages/Invoices/Dashboard/Dashboard';
 import Dashboard1 from './pages/Invoices/Dashboard/Dashboard1';
-import Dashboard2 from './pages/Invoices/Dashboard/Dashboard2';
 import InvoiceEditorV4 from './pages/Invoices/SaleInvoiceEditor';
 import ReturnInvoiceEditor from './pages/Invoices/ReturnInvoiceEditor';
 import InvoiceListModule from './pages/Invoices/InvoiceList';
@@ -72,7 +71,7 @@ const parseCustomCss = (cssString?: string): React.CSSProperties => {
   return styles;
 };
 
-type View = 'dashboard' | 'dashboard1' | 'dashboard2' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'stock-transfer' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
+type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'stock-transfer' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
 
 const initialPurchases: Invoice[] = [
   {
@@ -1594,7 +1593,7 @@ function App() {
     try {
       const u = localStorage.getItem('currentUser');
       if (u && JSON.parse(u).email === 'aminternational@gmail.com') {
-        if (v === 'dashboard' || v === 'dashboard2') {
+        if (v === 'dashboard') {
           v = 'dashboard1';
         }
       }
@@ -1686,8 +1685,6 @@ function App() {
         return <Dashboard invoiceItems={dashboardList} onViewChange={handleViewChange} />;
       case 'dashboard1':
         return <Dashboard1 invoiceItems={dashboardList} onViewChange={handleViewChange} />;
-      case 'dashboard2':
-        return <Dashboard2 invoiceItems={dashboardList} onViewChange={handleViewChange} />;
       case 'add-invoice':
         return <div>Invoice creation is handled via AI Inline Panel.</div>;
       case 'add-invoice-v2':

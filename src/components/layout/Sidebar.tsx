@@ -295,14 +295,23 @@ const Sidebar: React.FC<Props> = ({
         </button>
 
         {!isCurrentlyCollapsed && (
-          <motion.span
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-md font-bold tracking-tight whitespace-normal break-words leading-tight transition-colors duration-300"
-            style={{ color: brand.textPrimary }}
+            className="flex flex-col justify-center leading-tight overflow-hidden"
           >
-            Inventory Tracking System
-          </motion.span>
+            <span
+              className="text-base font-extrabold tracking-tight transition-colors duration-300"
+              style={{ color: brand.textPrimary }}
+            >
+              ITS
+            </span>
+            <span
+              className="text-[10px] font-semibold text-slate-500 transition-colors duration-300 -mt-0.5 whitespace-nowrap"
+            >
+              Inventory Tracking System
+            </span>
+          </motion.div>
         )}
       </div>
 

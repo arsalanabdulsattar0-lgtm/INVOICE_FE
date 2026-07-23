@@ -20,7 +20,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
       className="space-y-1 w-full group"
     >
       {label && (
-        <label className="text-[11px]  text-black ml-1">
+        <label className="text-[11px] font-semibold text-black ml-1">
           {label}
         </label>
       )}

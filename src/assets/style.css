@@ -1,3 +1,20 @@
+/* Global Font Setting */
+:root {
+  --font-sans: 'Work Sans', sans-serif;
+}
+
+body, html, input, button, select, textarea {
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+label, .form-label {
+  font-weight: 600 !important;
+}
+
+@theme {
+  --font-sans: 'Work Sans', sans-serif;
+}
+
 /* Centralized Style Definitions for Form Controls and Page Restructuring */
 
 /* Theme Colors & Borders Utility Classes */
@@ -228,7 +245,7 @@
   overflow: hidden;
 }
 .printable-invoice-container {
-  font-family: 'Inter, system-ui, sans-serif' !important;
+  font-family: 'Work Sans', sans-serif !important;
   font-size: 12px !important;
   line-height: 1.6 !important;
   background: white !important;

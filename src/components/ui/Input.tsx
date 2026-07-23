@@ -48,7 +48,7 @@ export const Input: React.FC<InputProps> = ({
       className={`w-full form-input-container-group ${!isTransparent ? 'space-y-1 group' : ''}`}
     >
       {label && (
-        <label className="text-[11px] text-black ml-1 flex items-center gap-1">
+        <label className="text-[11px] font-semibold text-black ml-1 flex items-center gap-1">
           {label}
         </label>
       )}

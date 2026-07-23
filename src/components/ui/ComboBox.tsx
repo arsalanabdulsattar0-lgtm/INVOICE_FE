@@ -143,7 +143,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       data-invalid={error ? "true" : undefined}
     >
       {label && (
-        <label className="text-[11px] text-black ml-1 flex items-center gap-1.5">
+        <label className="text-[11px] font-semibold text-black ml-1 flex items-center gap-1.5">
           {label}
         </label>
       )}
