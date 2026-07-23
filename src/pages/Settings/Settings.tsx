@@ -8,7 +8,6 @@ import { useTheme } from '../../context/ThemeContext';
 
 // Import child modules
 import { ProfileModule } from './components/ProfileModule';
-import { BillingModule } from './components/BillingModule';
 import { AppearanceModule } from './components/AppearanceModule';
 import { TaxSetupModule } from './components/TaxSetupModule';
 import { SalesPersonModule } from './components/SalesPersonModule';
@@ -17,8 +16,6 @@ import { UserManagementModule } from './components/UserManagementModule';
 import { CodeSettingsModule } from './components/CodeSettingsModule';
 import { DepartmentModule } from './components/DepartmentModule';
 import { ProductSetupModule } from './components/ProductSetupModule';
-import { WarehouseModule } from './components/WarehouseModule';
-import { AdjustmentTypeModule } from './components/AdjustmentTypeModule';
 
 // Re-export types
 export type { TaxSetup } from './components/TaxSetupModule';
@@ -35,7 +32,6 @@ const Settings: React.FC = () => {
 
   const sections = [
     { id: 'profile',            title: 'Profile Settings',        desc: 'Manage your public profile and avatar.',                                    icon: User },
-    { id: 'billing',            title: 'Billing & Plans',         desc: 'Manage your subscription and payment methods.',                             icon: CreditCard },
     { id: 'appearance',         title: 'Appearance',              desc: 'Customize the look and feel of the app.',                                   icon: Palette },
     { id: 'tax',                title: 'Tax Setup',               desc: 'Manage tax codes, types, rates, and provinces.',                            icon: Receipt },
     { id: 'sales',              title: 'Salesperson',             desc: 'Manage salespersons, targets, and commissions.',                            icon: Users },
@@ -44,8 +40,6 @@ const Settings: React.FC = () => {
     { id: 'code-settings',      title: 'Code Settings',           desc: 'Manage document fields visibility, auto/manual numbering sequences, and formatting grids.', icon: Binary },
     { id: 'department',         title: 'Department Settings',     desc: 'Manage departments used throughout the ERP system.',                        icon: FolderOpen },
     { id: 'product-setup',      title: 'Product Setup Settings',  desc: 'Manage product setup categories, preview codes, and lookup values.',       icon: Settings2 },
-    { id: 'warehouse-settings', title: 'Warehouse Settings',      desc: 'Manage inventory storage warehouses and godowns.',                          icon: Building2 },
-    { id: 'adjustment-types',   title: 'Adjustment Types',        desc: 'Manage stock adjustment categories and reason codes.',                      icon: Settings2 },
   ];
 
   let filteredSections = sections;
@@ -62,7 +56,6 @@ const Settings: React.FC = () => {
   const renderModule = (id: string) => {
     switch (id) {
       case 'profile':            return <ProfileModule brand={brand} />;
-      case 'billing':            return <BillingModule brand={brand} />;
       case 'appearance':         return <AppearanceModule brand={brand} activeTheme={activeTheme} setTheme={setTheme} />;
       case 'tax':                return <TaxSetupModule brand={brand} />;
       case 'sales':              return <SalesPersonModule brand={brand} />;
@@ -71,8 +64,6 @@ const Settings: React.FC = () => {
       case 'code-settings':      return <CodeSettingsModule brand={brand} onClose={() => setActiveSection(null)} />;
       case 'department':         return <DepartmentModule brand={brand} />;
       case 'product-setup':      return <ProductSetupModule brand={brand} />;
-      case 'warehouse-settings': return <WarehouseModule brand={brand} />;
-      case 'adjustment-types':   return <AdjustmentTypeModule brand={brand} />;
       default:                   return null;
     }
   };
