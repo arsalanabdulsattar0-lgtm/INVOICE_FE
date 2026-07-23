@@ -22,15 +22,15 @@ import Settings from './pages/Settings/Settings';
 import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
 import loginIllustration from './assets/login-illustration.png';
-import ProductList from './pages/Products/ProductList';
-import WarehousesPage from './pages/Products/Warehouses';
-import { ProductBatchPage } from './pages/Products/ProductBatchPage';
+import ProductList from './pages/Inventry/ProductList';
+import WarehousesPage from './pages/Inventry/Warehouses';
+import { ProductBatchPage } from './pages/Inventry/ProductBatchPage';
 import InlineProductForm from './components/ui/InlineProductForm';
 import { AlertModal } from './components/ui/AlertModal';
 import type { BPAdjustment, BPAdjustmentData } from './types/types';
 import { BPAdjustmentEditor } from './pages/BusinessPartner/BPAdjustmentEditor';
-import { StockAdjustmentEditor } from './pages/Products/StockAdjustmentEditor';
-import { StockTransferPage } from './pages/Products/StockTransferPage';
+import { StockAdjustmentEditor } from './pages/Inventry/StockAdjustmentEditor';
+import { StockTransferPage } from './pages/Inventry/StockTransferPage';
 
 // Static imports for types / initial data only
 import { initialInvoices } from './pages/Invoices/invoiceTypes';

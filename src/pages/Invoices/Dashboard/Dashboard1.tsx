@@ -374,10 +374,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
           {/* 1. BATCH EXPIRY ALERTS */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200 flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-900">Batch Expiry Alerts</h2>
-              <div className="px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-2 text-xs font-medium text-slate-500">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-bold text-slate-900 tracking-tight">Batch Expiry Alerts</h2>
+              <div className="px-3 py-1 bg-slate-50 rounded-lg border border-slate-200/60 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 <span>By Date</span>
                 <ArrowRight className="w-3 h-3 rotate-90" />
               </div>
@@ -385,35 +385,34 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
 
             {expiryAlerts.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center py-12">
-                <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-4" />
-                <p className="text-[15px] font-bold text-slate-700">No Expiry Alerts</p>
-                <p className="text-sm text-slate-500 mt-1">All batches are within the safe expiry range.</p>
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mb-3" />
+                <p className="text-sm font-bold text-slate-700">No Expiry Alerts</p>
+                <p className="text-xs text-slate-500 mt-1">All batches are within the safe expiry range.</p>
               </div>
             ) : (
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr>
-                      {['Product', 'Batch ID', 'Expiry Date', 'Status'].map(h => (
-                        <th key={h} className="pb-4 text-sm font-bold text-slate-500 border-b border-slate-100 whitespace-nowrap px-2 uppercase tracking-wider">
-                          {h}
-                        </th>
-                      ))}
+                    <tr className="border-b border-slate-100">
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500">Product</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500">Batch ID</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500">Expiry Date</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500 text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {expiryAlerts.slice(0, 5).map((a: any, idx: number) => (
-                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => onViewChange?.('products')}>
-                        <td className="py-4 px-2 text-base font-semibold text-slate-800 border-b border-slate-50">
+                      <tr key={idx} className="group hover:bg-slate-50/60 transition-colors cursor-pointer" onClick={() => onViewChange?.('products')}>
+                        <td className="py-3 px-2.5 text-xs font-semibold text-slate-800 max-w-[200px] truncate" title={a.productName}>
                           {a.productName}
                         </td>
-                        <td className="py-4 px-2 text-sm font-medium text-slate-500 border-b border-slate-50">{a.batchNo}</td>
-                        <td className="py-4 px-2 text-sm font-medium text-slate-500 border-b border-slate-50">{formatDate(a.expiryDate)}</td>
-                        <td className="py-4 px-2 border-b border-slate-50">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-[8px] text-xs font-bold ${
+                        <td className="py-3 px-2.5 text-xs font-mono text-slate-500">{a.batchNo}</td>
+                        <td className="py-3 px-2.5 text-xs font-medium text-slate-500">{formatDate(a.expiryDate)}</td>
+                        <td className="py-3 px-2.5 text-right">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-tight ${
                             a.daysLeft < 0 
-                              ? 'bg-red-50 text-red-600 border border-red-100' 
-                              : 'bg-orange-50 text-orange-600 border border-orange-100'
+                              ? 'bg-red-50 text-red-600 border border-red-200/70' 
+                              : 'bg-amber-50 text-amber-700 border border-amber-200/70'
                           }`}>
                             {a.daysLeft < 0 ? 'Expired' : 'Expiring Soon'}
                           </span>
@@ -427,10 +426,10 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
           </div>
 
           {/* 2. LOW STOCK ALERTS */}
-          <div className="bg-white rounded-[24px] p-6 border border-slate-200 flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-900">Low Stock Alerts</h2>
-              <div className="px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-2 text-xs font-medium text-slate-500">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-bold text-slate-900 tracking-tight">Low Stock Alerts</h2>
+              <div className="px-3 py-1 bg-slate-50 rounded-lg border border-slate-200/60 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 <span>By Stock</span>
                 <ArrowRight className="w-3 h-3 rotate-90" />
               </div>
@@ -438,35 +437,34 @@ const Dashboard1: React.FC<Dashboard1Props> = ({ onViewChange }) => {
 
             {stockAlerts.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center py-12">
-                <CheckCircle2 className="w-12 h-12 text-emerald-400 mb-4" />
-                <p className="text-[15px] font-bold text-slate-700">No Low Stock Alerts</p>
-                <p className="text-sm text-slate-500 mt-1">Current inventory levels are healthy.</p>
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mb-3" />
+                <p className="text-sm font-bold text-slate-700">No Low Stock Alerts</p>
+                <p className="text-xs text-slate-500 mt-1">Current inventory levels are healthy.</p>
               </div>
             ) : (
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr>
-                      {['Product', 'Code', 'Current Stock', 'Status'].map(h => (
-                        <th key={h} className="pb-4 text-sm font-bold text-slate-400 border-b border-slate-100 whitespace-nowrap px-2 uppercase tracking-wider">
-                          {h}
-                        </th>
-                      ))}
+                    <tr className="border-b border-slate-100">
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500">Product</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500">Code</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500 text-right">Current Stock</th>
+                      <th className="pb-2.5 px-2.5 text-xs font-semibold text-slate-500 text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {stockAlerts.slice(0, 5).map((s: any, idx: number) => (
-                      <tr key={idx} className="group hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => onViewChange?.('products')}>
-                        <td className="py-4 px-2 text-base font-semibold text-slate-800 border-b border-slate-50">
+                      <tr key={idx} className="group hover:bg-slate-50/60 transition-colors cursor-pointer" onClick={() => onViewChange?.('products')}>
+                        <td className="py-3 px-2.5 text-xs font-semibold text-slate-800 max-w-[200px] truncate" title={s.productName}>
                           {s.productName}
                         </td>
-                        <td className="py-4 px-2 text-sm font-medium text-slate-500 border-b border-slate-50">{s.productCode}</td>
-                        <td className="py-4 px-2 text-base font-bold text-slate-900 border-b border-slate-50">{s.currentStock.toLocaleString()}</td>
-                        <td className="py-4 px-2 border-b border-slate-50">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-[8px] text-xs font-bold ${
+                        <td className="py-3 px-2.5 text-xs font-mono text-slate-500">{s.productCode}</td>
+                        <td className="py-3 px-2.5 text-xs font-bold text-slate-900 text-right font-mono">{s.currentStock.toLocaleString()}</td>
+                        <td className="py-3 px-2.5 text-right">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-tight ${
                             s.currentStock <= 0 
-                              ? 'bg-rose-50 text-rose-600 border border-rose-100' 
-                              : 'bg-amber-50 text-amber-600 border border-amber-100'
+                              ? 'bg-rose-50 text-rose-600 border border-rose-200/70' 
+                              : 'bg-amber-50 text-amber-700 border border-amber-200/70'
                           }`}>
                             {s.currentStock <= 0 ? 'Out of Stock' : 'Low Stock'}
                           </span>

@@ -146,7 +146,7 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
   const filteredDropdownOptions = useMemo(() => {
     if (!rowSearchVal) return allProducts;
     return allProducts.filter((p: any) =>
-      (p.code?.toLowerCase() || p.id?.toLowerCase() || '').includes(rowSearchVal.toLowerCase()) ||
+      ((p.code || '').toLowerCase().includes(rowSearchVal.toLowerCase()) || (p.id || '').toLowerCase().includes(rowSearchVal.toLowerCase())) ||
       (p.name?.toLowerCase() || '').includes(rowSearchVal.toLowerCase())
     );
   }, [allProducts, rowSearchVal]);
@@ -166,20 +166,34 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
 
   // ─── Real-time Available Stock Lookup ─────────────────────────────────────────
   const getWarehouseStockQty = (prodCodeOrId: string, whCode: string, batch?: string): number => {
-    if (!prodCodeOrId || !whCode) return 0;
+    if (!prodCodeOrId) return 0;
     try {
-      const storedStock = localStorage.getItem('location_wise_stock');
-      if (storedStock) {
-        const stockList = JSON.parse(storedStock);
-        const matches = stockList.filter((item: any) =>
-          (item.product_code === prodCodeOrId || item.product_id === prodCodeOrId) &&
-          (item.warehouse_id === whCode)
-        );
-        if (batch) {
-          const batchMatch = matches.find((item: any) => item.batch_no === batch);
-          return batchMatch ? Number(batchMatch.quantity) || 0 : 0;
+      // First try location_wise_stock (set after actual stock adjustments)
+      if (whCode) {
+        const storedStock = localStorage.getItem('location_wise_stock');
+        if (storedStock) {
+          const stockList = JSON.parse(storedStock);
+          const matches = stockList.filter((item: any) =>
+            (item.product_code === prodCodeOrId || item.product_id === prodCodeOrId) &&
+            (item.warehouse_id === whCode)
+          );
+          if (matches.length > 0) {
+            if (batch) {
+              const batchMatch = matches.find((item: any) => item.batch_no === batch);
+              return batchMatch ? Number(batchMatch.quantity) || 0 : 0;
+            }
+            return matches.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0);
+          }
         }
-        return matches.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0);
+      }
+      // Fallback: use opening_qty from product catalog
+      const storedProducts = localStorage.getItem('products_list');
+      if (storedProducts) {
+        const productList = JSON.parse(storedProducts);
+        const product = productList.find((p: any) =>
+          p.code === prodCodeOrId || p.id === prodCodeOrId
+        );
+        if (product) return Number(product.opening_qty) || 0;
       }
     } catch {}
     return 0;
@@ -263,26 +277,6 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
     );
   };
 
-  // ─── Keyboard Shortcuts ──────────────────────────────────────────────────────
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F7') {
-        e.preventDefault();
-        handleSave();
-      } else if (e.key === 'F8') {
-        e.preventDefault();
-        handleClear();
-      } else if (e.key === 'F11') {
-        e.preventDefault();
-        handlePrint();
-      } else if (e.key === 'F12') {
-        e.preventDefault();
-        handleClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [transferNumber, date, fromLocation, toLocation, gtsNo, reference, detail, rows]);
 
   // ─── Action Handlers ─────────────────────────────────────────────────────────
 
@@ -290,27 +284,6 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
     onViewChange?.('dashboard');
   };
 
-  const handleClear = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Clear Form',
-      message: 'Are you sure you want to clear all fields and start over?',
-      onConfirm: () => {
-        setFromLocation('');
-        setToLocation('');
-        setGtsNo('');
-        setReference('');
-        setDetail('');
-        setRows([createEmptyRow()]);
-        setToast({
-          isOpen: true,
-          title: 'Cleared',
-          messages: ['Form reset successful.'],
-          type: 'success'
-        });
-      }
-    });
-  };
 
   const handleSave = () => {
     const validationErrors: string[] = [];
@@ -541,38 +514,28 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
       <Button
         onClick={handleSave}
         variant="primary"
-        size="sm"
+        size="md"
         icon={Save}
-        className="cursor-pointer font-bold"
+        className="cursor-pointer font-bold rounded-lg px-4"
       >
         Save
       </Button>
       <Button
-        onClick={handleClear}
-        variant="secondary"
-        size="sm"
-        icon={RefreshCw}
-        className="cursor-pointer"
+        onClick={handleClose}
+        variant="white"
+        size="md"
+        className="cursor-pointer font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-4 hover:bg-slate-50"
       >
-        Clear
+        Cancel
       </Button>
       <Button
         onClick={handlePrint}
-        variant="outline"
-        size="sm"
+        variant="white"
+        size="md"
         icon={Printer}
-        className="cursor-pointer"
+        className="cursor-pointer font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-4 hover:bg-slate-50"
       >
         Print
-      </Button>
-      <Button
-        onClick={handleClose}
-        variant="danger"
-        size="sm"
-        icon={X}
-        className="cursor-pointer"
-      >
-        Close
       </Button>
     </div>
   );
@@ -750,6 +713,7 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
                               ) : (
                                 filteredDropdownOptions.map((p: any) => {
                                   const localQty = getWarehouseStockQty(p.code || p.id, fromLocation, row.batchNo);
+                                  const displayQty = localQty > 0 ? localQty : (Number(p.opening_qty) || 0);
                                   return (
                                     <tr
                                       key={p.id || p.code}
@@ -762,7 +726,7 @@ export const StockTransferPage: React.FC<{ onViewChange: (view: string) => void 
                                     >
                                       <td className="p-2 border-r border-slate-100 font-bold text-blue-600 font-mono hover:text-white">{p.code || p.id}</td>
                                       <td className="p-2 border-r border-slate-100 text-slate-700 font-medium whitespace-normal">{p.name}</td>
-                                      <td className="p-2 text-right font-semibold text-slate-600">{localQty}</td>
+                                      <td className="p-2 text-right font-semibold text-slate-600">{displayQty}</td>
                                     </tr>
                                   );
                                 })

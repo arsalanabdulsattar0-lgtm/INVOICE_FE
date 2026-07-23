@@ -82,7 +82,7 @@ export const StockAdjustmentEditor: React.FC<Props> = ({
   const filteredDropdownOptions = useMemo(() => {
     if (!rowSearchVal) return allProducts;
     return allProducts.filter((p: any) => 
-      (p.code?.toLowerCase() || p.id?.toLowerCase() || '').includes(rowSearchVal.toLowerCase()) ||
+      ((p.code || '').toLowerCase().includes(rowSearchVal.toLowerCase()) || (p.id || '').toLowerCase().includes(rowSearchVal.toLowerCase())) ||
       (p.name?.toLowerCase() || '').includes(rowSearchVal.toLowerCase())
     );
   }, [allProducts, rowSearchVal]);
@@ -423,9 +423,9 @@ export const StockAdjustmentEditor: React.FC<Props> = ({
                                 >
                                   <td className="p-2 border-r border-slate-100 font-black group-hover:text-white text-blue-600 text-[11px]">{p.code || p.id}</td>
                                   <td className="p-2 border-r border-slate-100 text-slate-700 group-hover:text-white font-medium text-[11px] whitespace-normal break-words max-w-[200px]">{p.name}</td>
-                                  <td className="p-2 border-r border-slate-100 text-right font-medium">{p.stock || p.opening_stock || 0}</td>
+                                  <td className="p-2 border-r border-slate-100 text-right font-medium">{p.opening_qty ?? p.stock ?? p.opening_stock ?? 0}</td>
                                   <td className="p-2 border-r border-slate-100">{p.location || 'L001'}</td>
-                                  <td className="p-2">{p.unit || 'PCS'}</td>
+                                  <td className="p-2">{p.fbr_uom || p.unit || 'PCS'}</td>
                                 </tr>
                               ))
                             )}

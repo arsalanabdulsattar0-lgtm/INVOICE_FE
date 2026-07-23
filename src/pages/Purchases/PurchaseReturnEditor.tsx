@@ -837,24 +837,6 @@ const PurchaseReturnEditor: React.FC<Props> = ({ data, onChange, onSave, onViewC
                       />
                     </div>
                   )}
-                  {docSettings.fields['Sales Person'] && (
-                    <div className="lg:col-span-2">
-                      <Select
-                        variant="compact"
-                        label="Purchaser"
-                        value={data.salesPerson || ''}
-                        onChange={(e) => onChange({ ...data, salesPerson: e.target.value })}
-                        options={[
-                          { value: '', label: 'Select Purchaser' },
-                          { value: 'SP001', label: 'SP001-Ahmed Ali' },
-                          { value: 'SP002', label: 'SP002-Hassan Khan' },
-                          { value: 'SP003', label: 'SP003-Usman Malik' },
-                          { value: 'SP004', label: 'SP004-Bilal Raza' },
-                          { value: 'SP005', label: 'SP005-Zara Noor' },
-                        ]}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             </Card>

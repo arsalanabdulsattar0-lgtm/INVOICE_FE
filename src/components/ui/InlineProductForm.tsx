@@ -6,7 +6,7 @@ import { Input, TextArea, ComboBox, Toggle } from './FormControls';
 import Card from './Card';
 import { Button } from './Button';
 import { SectionHeader, ModalHeader } from './Typography';
-import type { Product } from '../../pages/Products/ProductList';
+import type { Product } from '../../pages/Inventry/ProductList';
 import { AlertModal } from './AlertModal';
 import { Toast } from './Toast';
 import { getCodeSettingsForBranch, generateNextCode, incrementNextCode } from '../../utils/codeSettingsHelper';

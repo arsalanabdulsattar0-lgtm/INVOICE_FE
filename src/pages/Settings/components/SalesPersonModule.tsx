@@ -15,6 +15,7 @@ import { SalesTargetsModal } from './SalesTargetsModal';
 import { generateNextCode, incrementNextCode } from '../../../utils/codeSettingsHelper';
 import { SectionCard } from '../../../components/ui/SectionCard';
 import { AddButton } from '../../../components/ui/ActionButtons';
+import { Pagination } from '../../../components/common/Pagination';
 
 export interface SalesPerson {
   id: string;
@@ -122,6 +123,8 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
   }, [people]);
 
   const [search, setSearch] = useState('');
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [tempStatus, setTempStatus] = useState('all');
@@ -133,12 +136,19 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
 
 
 
+  
+
   const filtered = people.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchStatus =
       filterStatus === 'all' || (filterStatus === 'active' ? p.active : !p.active);
     return matchSearch && matchStatus;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = React.useMemo(() => {
+    return filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const openAdd = () => {
     setEditing(null);
@@ -259,7 +269,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
             variant="compact"
             icon={Search}
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
             placeholder="Search By Name..."
           />
         </div>
@@ -324,7 +334,7 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
                   </td>
                 </tr>
               ) : (
-                filtered.map((p, i) => (
+                paginated.map((p, i) => (
                   <motion.tr
                     key={p.id}
                     initial={{ opacity: 0, y: 6 }}
@@ -391,6 +401,17 @@ export const SalesPersonModule: React.FC<SalesPersonModuleProps> = ({ brand }) =
             </tbody>
           </table>
         </ScrollArea>
+
+        {/* Reusable Pagination */}
+        <div className="p-4 border-t border-slate-100 print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            itemsPerPage={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </motion.div>
 
       {/* Modal: Add / Edit salesperson */}

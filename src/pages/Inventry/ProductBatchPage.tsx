@@ -14,6 +14,7 @@ import type { Product } from './ProductList';
 import { AddButton } from '../../components/ui/ActionButtons';
 import { BatchQrCodeModal } from './BatchQrCodeModal';
 import { Pagination } from '../../components/common/Pagination';
+import { buildSeededBatches } from '../../utils/seedProducts';
 
 interface ProductBatch {
   id: string;
@@ -33,18 +34,8 @@ interface ProductBatch {
   flash_point?: string;
 }
 
-const DEFAULT_BATCHES: ProductBatch[] = [
-  { id: 'b-1', product_id: 'p-1', product_name: 'Flavopure', batch_no: '20250305', mfg_date: '2025-03-05', expiry_date: '2030-03-05', is_active: true },
-  { id: 'b-2', product_id: 'p-1', product_name: 'Flavopure', batch_no: 'LL2511', mfg_date: '2024-12-24', expiry_date: '2029-12-24', is_active: true },
-  { id: 'b-3', product_id: 'p-2', product_name: 'Fragrances', batch_no: '202412221', mfg_date: '2024-12-21', expiry_date: '2029-12-21', is_active: true },
-  { id: 'b-4', product_id: 'p-2', product_name: 'Fragrances', batch_no: 'LK2511', mfg_date: '2024-11-24', expiry_date: '2029-11-24', is_active: true },
-  { id: 'b-5', product_id: 'p-3', product_name: 'Powder', batch_no: 'LK2411', mfg_date: '2024-11-22', expiry_date: '2029-11-22', is_active: true },
-  { id: 'b-6', product_id: 'p-3', product_name: 'Powder', batch_no: '22503020', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-7', product_id: 'p-3', product_name: 'Powder', batch_no: '22503018', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-8', product_id: 'p-3', product_name: 'Powder', batch_no: '22503019', mfg_date: '2024-03-15', expiry_date: '2029-03-15', is_active: true },
-  { id: 'b-9', product_id: 'p-3', product_name: 'Powder', batch_no: '3250113120', mfg_date: '2024-02-20', expiry_date: '2029-02-20', is_active: true },
-  { id: 'b-10', product_id: 'p-4', product_name: 'Liquid', batch_no: 'LB0311', mfg_date: '2024-02-02', expiry_date: '2029-02-02', is_active: true }
-];
+// Default batches are now generated from seedProducts.ts (2 per product × 55 = 110 batches)
+const DEFAULT_BATCHES: ProductBatch[] = buildSeededBatches() as ProductBatch[];
 
 const formatDateForDisplay = (dateStr: string) => {
   if (!dateStr) return '—';
@@ -104,17 +95,15 @@ export const ProductBatchPage: React.FC = () => {
       }
 
       const storedBatches = localStorage.getItem('product_batches');
-      if (storedBatches) {
-        let parsed = JSON.parse(storedBatches);
-        // Force refresh defaults if old schema without mfg_date is found on default batch
-        if (parsed.length > 0 && parsed[0].id === 'b-1' && !parsed[0].mfg_date) {
-          parsed = DEFAULT_BATCHES;
-          localStorage.setItem('product_batches', JSON.stringify(DEFAULT_BATCHES));
-        }
-        setBatches(parsed);
+      const batchSeededFlag = localStorage.getItem('batches_seeded_v2');
+      if (storedBatches && batchSeededFlag === 'true') {
+        setBatches(JSON.parse(storedBatches));
       } else {
-        localStorage.setItem('product_batches', JSON.stringify(DEFAULT_BATCHES));
-        setBatches(DEFAULT_BATCHES);
+        // Seed batches from the 55 real ingredient products
+        const seededBatches = buildSeededBatches() as ProductBatch[];
+        localStorage.setItem('product_batches', JSON.stringify(seededBatches));
+        localStorage.setItem('batches_seeded_v2', 'true');
+        setBatches(seededBatches);
       }
     } catch (e) {
       console.error(e);

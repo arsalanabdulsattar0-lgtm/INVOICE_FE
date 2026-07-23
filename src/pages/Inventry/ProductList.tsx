@@ -29,6 +29,7 @@ import {
   ProductUOM
 } from '../../utils/productData';
 import { formatExpiryDate } from '../../utils/qrCode';
+import { buildSeededProducts } from '../../utils/seedProducts';
 
 export interface Product {
   id: string;
@@ -282,68 +283,16 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const loadProducts = () => {
     try {
       const stored = localStorage.getItem('products_list');
-      const seededFlag = localStorage.getItem('products_seeded_v8');
+      const seededFlag = localStorage.getItem('products_seeded_v9');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setProducts(parsed);
       } else {
-        // Seed 30 sample enterprise products
-        const seededProducts: Product[] = Array.from({ length: 30 }, (_, i) => ({
-          id: crypto.randomUUID(),
-          name: i === 0 ? 'Watermelon Ice Flavour'
-            : i === 1 ? 'Mango Peach Flavour'
-              : i === 2 ? 'Blueberry Mint Flavour'
-                : i === 3 ? 'Strawberry Kiwi Flavour'
-                  : i === 4 ? 'Grape Aloe Flavour'
-                    : i === 5 ? 'Cool Mint Flavour'
-                      : i === 6 ? 'Lychee Ice Flavour'
-                        : i === 7 ? 'Double Apple Flavour'
-                          : i === 8 ? 'Paracetamol 500mg'
-                            : `Flavour Product ${i + 1}`,
-          code: i === 8 ? 'PRD-0001' : `GD${36457 + i}`,
-          expiry_date: i === 8 ? '31-Dec-2027'
-            : i % 3 === 0 ? '30-Jun-2028'
-              : i % 3 === 1 ? '31-Dec-2026'
-                : '15-Aug-2027',
-          category_id: i === 8 ? 'cat-6' : 'cat-1',
-          brand_id: `br-${(i % 6) + 1}`,
-          make_id: `mk-${(i % 5) + 1}`,
-          model_id: `md-${(i % 5) + 1}`,
-          size_id: `sz-${(i % 5) + 1}`,
-          uom_id: `uom-${(i % 5) + 1}`,
-          sale_price: 50 + (i * 12.5),
-          cost: 30 + (i * 8.5),
-          mrp_ex_tax: 45 + (i * 11.5),
-          mrp_inc_tax: 53.1 + (i * 13.57),
-          opening_qty: 30 + (i * 4) > 100 ? 50 : 30 + (i * 4),
-          opening_rate: 30 + (i * 8.5),
-          low_stock_level: 10,
-          weight: 0.5 + (i * 0.05),
-          gst_rate: 18,
-          non_filer_gst_rate: 24,
-          adt_rate: 2,
-          sale_discount: 5,
-          purchase_discount: 8,
-          fbr_uom: 'PCS',
-          sro_item_serial_no: `SRO-SR-${100 + i}`,
-          sro_schedule_no: `SCH-N-${200 + i}`,
-          fbr_sale_rate: 50 + (i * 12.5),
-          fbr_sale_type: 'Taxable',
-          hs_code: `HS-${8500 + i}`,
-          gst_tax_id: 'tax-gst-18',
-          non_filer_tax_id: 'tax-nf-4',
-          adt_tax_id: 'tax-adt-1',
-          fbr_tax_id: 'tax-fbr-active',
-          description: i < 8 ? `${i % 2 === 0 ? 'Comfortable cotton blend stylish hoodie for winter.' : 'Casual lightweight daily wear slim-fit clothing.'}` : `High-quality industrial standard enterprise grade product. Model-${(i % 5) + 1}.`,
-          notes: 'Wash with similar colors.',
-          is_active: i % 3 !== 2,
-          created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          preferred_supplier_id: `sup-${(i % 5) + 1}`
-        }));
-
+        // Seed 30 sample enterprise products (data defined in utils/seedProducts.ts)
+        const seededProducts: Product[] = buildSeededProducts();
         setProducts(seededProducts);
         localStorage.setItem('products_list', JSON.stringify(seededProducts));
-        localStorage.setItem('products_seeded_v8', 'true');
+        localStorage.setItem('products_seeded_v9', 'true');
         window.dispatchEvent(new CustomEvent('ai-sync-data'));
       }
     } catch (e) {
@@ -354,7 +303,6 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
 
   useEffect(() => {
     loadProducts();
-
     const handleSync = () => loadProducts();
     window.addEventListener('ai-sync-data', handleSync);
     return () => window.removeEventListener('ai-sync-data', handleSync);
@@ -411,7 +359,6 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
     setSelectedProductIds([]);
     window.dispatchEvent(new CustomEvent('ai-sync-data'));
   };
-
   const handleBulkToggleActive = (active: boolean) => {
     const updatedProducts = products.map(p =>
       selectedProductIds.includes(p.id) ? { ...p, is_active: active } : p
@@ -454,7 +401,8 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
     let result = products.filter(p => {
       const matchQuery =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.code.toLowerCase().includes(search.toLowerCase()) ||
+        (p.code || '').toLowerCase().includes(search.toLowerCase()) ||
+        (p.id || '').toLowerCase().includes(search.toLowerCase()) ||
         p.description.toLowerCase().includes(search.toLowerCase());
 
       const matchCategory = p.category_id === selectedCategory;

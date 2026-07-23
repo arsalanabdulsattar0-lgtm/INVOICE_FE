@@ -30,60 +30,60 @@ export interface WarehouseStock {
   is_hold?: boolean;
 }
 
-const SEED_PRODUCTS = [
-  { id: 'p-1', name: 'Flavopure', code: '0001', low_stock_level: 50 },
-  { id: 'p-2', name: 'Fragrances', code: '0002', low_stock_level: 100 },
-  { id: 'p-3', name: 'Powder', code: '0003', low_stock_level: 150 },
-  { id: 'p-4', name: 'Liquid', code: '0004', low_stock_level: 80 }
-];
-
 function loadStock(productsList: Product[], warehousesList: any[]): WarehouseStock[] {
   try {
     const stored = localStorage.getItem('location_wise_stock');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // If we have records and they have expiry_date column, return to preserve user data
+      // Return saved data only if it's non-empty and has correct product codes (not old 0001 style)
       if (parsed && parsed.length > 5 && parsed[0].hasOwnProperty('expiry_date')) {
-        return parsed;
+        // Check if codes match current products (not stale old codes)
+        const firstCode = parsed[0]?.product_code || '';
+        const hasRealCodes = productsList.some(p => p.code === firstCode);
+        if (hasRealCodes) return parsed;
       }
     }
   } catch {}
 
-  // Generate rich mock warehouse stock records for ALL products in the catalog
+  // Generate warehouse stock records using the real products catalog
   const generated: WarehouseStock[] = [];
-  const dummyBatches = ['BT-001', 'BT-002', 'BT-003', 'BT-004', 'BT-005'];
+  const batchSuffixes = ['A', 'B', 'C'];
   const dummyDetails = ['Main Rack A1', 'Storage Shelf B2', 'Cold Room Sec C', 'Bulk Pallet D4', 'Mini Bin E5'];
   const dummyDates = ['30-Jun-2028', '31-Dec-2027', '31-Dec-2026', '15-Aug-2027', '31-Mar-2029'];
 
-  const prodsToSeed = productsList.length > 0 ? productsList : SEED_PRODUCTS;
+  const prodsToSeed = productsList.length > 0 ? productsList : [];
   const whsToSeed = warehousesList.length > 0 ? warehousesList : [
     { id: 'wh1', name: 'SHOP KEH', code: 'L001' },
     { id: 'wh2', name: 'MC', code: 'L002' },
     { id: 'wh3', name: 'NS', code: 'L004' }
   ];
 
-  prodsToSeed.forEach((p, pIdx) => {
-    whsToSeed.forEach((w, wIdx) => {
-      // Create 1-2 batch entries per warehouse to make it realistic (except for 0001 which has no batch)
-      const numBatches = p.code === '0001' ? 1 : ((pIdx + wIdx) % 2 === 0 ? 2 : 1);
+  prodsToSeed.forEach((p: any, pIdx) => {
+    whsToSeed.forEach((w: any, wIdx) => {
+      // 1-2 batch entries per product per warehouse
+      const numBatches = ((pIdx + wIdx) % 2 === 0 ? 2 : 1);
       for (let b = 0; b < numBatches; b++) {
-        const batchIndex = (pIdx + wIdx + b) % dummyBatches.length;
+        const batchSuffix = batchSuffixes[(pIdx + wIdx + b) % batchSuffixes.length];
+        const batchNo = `${p.code}-LOT${String(pIdx + 1).padStart(3, '0')}${batchSuffix}`;
         const detailsIndex = (pIdx + wIdx + b) % dummyDetails.length;
         const dateIndex = (pIdx + wIdx + b) % dummyDates.length;
-        const qty = p.code === '0001' ? 0 : (((pIdx + 1) * (wIdx + 1) * (b + 1) * 150) % 3500);
-        const isHold = p.code === '0001' ? false : ((pIdx + wIdx + b) % 5 === 0);
+
+        // Use opening_qty from the product; spread across warehouses
+        const baseQty = Number((p as any).opening_qty) || 20 + (pIdx % 8) * 5;
+        const qty = Math.round(baseQty / whsToSeed.length);
+        const isHold = ((pIdx + wIdx + b) % 7 === 0);
 
         generated.push({
-          id: `ls-${p.id}-${w.id || w.code}-${b}`,
+          id: `ls-${p.id}-${w.code || w.id}-${b}`,
           warehouse_id: w.code || w.id,
           warehouse_name: w.name,
           product_id: p.id,
           product_code: p.code,
           product_name: p.name,
-          batch_no: p.code === '0001' ? '' : dummyBatches[batchIndex],
+          batch_no: batchNo,
           quantity: qty,
           details: dummyDetails[detailsIndex],
-          expiry_date: p.code === '0001' ? '' : dummyDates[dateIndex],
+          expiry_date: dummyDates[dateIndex],
           is_hold: isHold
         });
       }
@@ -162,84 +162,24 @@ const WarehousesPage: React.FC = () => {
   // Load and seed products & stocks
   const loadProductsAndStock = () => {
     try {
-      const isSeededV11 = localStorage.getItem('warehouses_seeded_v11');
-      let storedProducts = localStorage.getItem('products_list');
-      let loadedProducts: any[] = storedProducts ? JSON.parse(storedProducts) : [];
-
-      if (isSeededV11 !== 'true') {
-        // Remove old dummy seed products (p-1, p-2, p-3, p-4) or products matching old names
-        loadedProducts = loadedProducts.filter(
-          p => !['p-1', 'p-2', 'p-3', 'p-4'].includes(p.id) && 
-               !['Paracetamol 500mg', 'Amoxicillin 250mg', 'Panadol Extra'].includes(p.name)
-        );
-
-        // Prepends the new seed products
-        const seedMapped = SEED_PRODUCTS.map(p => ({
-          id: p.id,
-          name: p.name,
-          code: p.code,
-          low_stock_level: p.low_stock_level,
-          sale_price: 10,
-          cost: 8,
-          opening_qty: 0,
-          weight: 0.1,
-          gst_rate: 17,
-          non_filer_gst_rate: 22,
-          is_active: true
-        }));
-        loadedProducts = [...seedMapped, ...loadedProducts];
-        localStorage.setItem('products_list', JSON.stringify(loadedProducts));
-        
-        // Force re-seeding of warehouse stocks
-        localStorage.removeItem('location_wise_stock');
-        localStorage.setItem('warehouses_seeded_v11', 'true');
-      } else {
-        // Double check to make sure Flavopure is present
-        const hasFlavopure = loadedProducts.some(p => p.name === 'Flavopure');
-        if (!hasFlavopure) {
-          const seedMapped = SEED_PRODUCTS.map(p => ({
-            id: p.id,
-            name: p.name,
-            code: p.code,
-            low_stock_level: p.low_stock_level,
-            sale_price: 10,
-            cost: 8,
-            opening_qty: 0,
-            weight: 0.1,
-            gst_rate: 17,
-            non_filer_gst_rate: 22,
-            is_active: true
-          }));
-          loadedProducts = [...seedMapped, ...loadedProducts];
-          localStorage.setItem('products_list', JSON.stringify(loadedProducts));
-          localStorage.removeItem('location_wise_stock');
-          localStorage.setItem('warehouses_seeded_v11', 'true');
-        }
-      }
+      // Read products seeded by seedProducts.ts — do NOT overwrite them
+      const storedProducts = localStorage.getItem('products_list');
+      const loadedProducts: any[] = storedProducts ? JSON.parse(storedProducts) : [];
 
       setProducts(loadedProducts);
 
-      // Load & dynamically seed warehouse stock records
-      let loadedStock = loadStock(loadedProducts, warehousesList);
-      
-      // Ensure product code '0001' (Flavopure) stock is zero and has empty batch/expiry across all locations
-      let hasUpdate = false;
-      loadedStock = loadedStock.map(s => {
-        if (s.product_code === '0001') {
-          if (s.batch_no !== '' || s.expiry_date !== '' || s.quantity !== 0) {
-            hasUpdate = true;
-            return { ...s, batch_no: '', expiry_date: '', quantity: 0 };
-          }
-        }
-        return s;
-      });
-      if (hasUpdate) {
-        localStorage.setItem('location_wise_stock', JSON.stringify(loadedStock));
+      // Check if location_wise_stock needs re-seeding with correct product codes
+      const warehousesSeedVersion = localStorage.getItem('warehouses_seeded_v14');
+      if (warehousesSeedVersion !== 'true') {
+        // Force regeneration so codes match current products_list
+        localStorage.removeItem('location_wise_stock');
+        localStorage.setItem('warehouses_seeded_v14', 'true');
       }
-
+      
+      const loadedStock = loadStock(loadedProducts, warehousesList);
       setStock(loadedStock);
-    } catch (e) {
-      console.error('Failed to load products and stock data', e);
+    } catch (error) {
+      console.error('Error loading products and stock:', error);
     }
   };
 

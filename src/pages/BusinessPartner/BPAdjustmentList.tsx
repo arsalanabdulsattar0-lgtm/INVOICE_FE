@@ -11,6 +11,7 @@ import {
   Plus, Edit, Trash2, CheckCircle, HelpCircle
 } from 'lucide-react';
 import type { BPAdjustment } from '../../types/types';
+import { Pagination } from '../../components/common/Pagination';
 
 interface BPAdjustmentListProps {
   adjustments: BPAdjustment[];
@@ -93,6 +94,8 @@ export const BPAdjustmentList: React.FC<BPAdjustmentListProps> = ({
 
   // Search query state
   const [searchQuery, setSearchQuery] = useState('');
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -152,6 +155,12 @@ export const BPAdjustmentList: React.FC<BPAdjustmentListProps> = ({
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
   }, [filteredAdjustments, sortKey, sortDir]);
+
+
+  const totalPages = Math.max(1, Math.ceil(sortedAdjustments.length / PAGE_SIZE));
+  const paginatedAdjustments = useMemo(() => {
+    return sortedAdjustments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [sortedAdjustments, currentPage]);
 
   // KPIs
   const stats = useMemo(() => {
@@ -303,7 +312,7 @@ export const BPAdjustmentList: React.FC<BPAdjustmentListProps> = ({
               type="text"
               placeholder="Search adjustments..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full bg-white/10 hover:bg-white/15 focus:bg-white text-white focus:text-slate-800 placeholder-white/60 focus:placeholder-slate-400 rounded-lg pl-9 pr-4 py-1.5 text-xs font-semibold focus:outline-none transition-all border-none focus:ring-1 focus:ring-white/20"
             />
           </div>
@@ -333,7 +342,7 @@ export const BPAdjustmentList: React.FC<BPAdjustmentListProps> = ({
                   </td>
                 </tr>
               ) : (
-                sortedAdjustments.map((adj, idx) => {
+                paginatedAdjustments.map((adj, idx) => {
                   const isSelected = selectedRowId === adj.id;
                   const typeLabel = adj.partnerType === 'customer' ? 'Customer' : 'Supplier';
                   const isPosted = adj.status === 'Posted';
@@ -408,6 +417,17 @@ export const BPAdjustmentList: React.FC<BPAdjustmentListProps> = ({
             </tbody>
           </table>
         </ScrollArea>
+
+        {/* Reusable Pagination */}
+        <div className="p-4 border-t border-slate-100 print-hidden">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={sortedAdjustments.length}
+            itemsPerPage={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       {/* Slide-out Filter Drawer */}
