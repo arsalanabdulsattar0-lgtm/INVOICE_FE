@@ -73,7 +73,7 @@ const parseCustomCss = (cssString?: string): React.CSSProperties => {
   return styles;
 };
 
-type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'stock-transfer' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
+type View = 'dashboard' | 'dashboard1' | 'invoices' | 'add-invoice' | 'add-invoice-v2' | 'add-invoice-v3' | 'add-invoice-v4' | 'return-invoice' | 'customers' | 'add-customer' | 'bp-ledger' | 'bp-adjustments' | 'add-bp-adjustment' | 'bp-dashboard' | 'products' | 'warehouses' | 'product-batches' | 'stock-adjustments' | 'stock-transfer' | 'product-dashboard' | 'settings' | 'help' | 'purchases' | 'add-purchase-invoice' | 'purchase-return';
 
 const initialPurchases: Invoice[] = [
   {
