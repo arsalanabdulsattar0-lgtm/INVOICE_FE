@@ -16,12 +16,14 @@ import PurchaseList from './pages/Purchases/PurchaseList';
 import PurchaseInvoiceEditor from './pages/Purchases/PurchaseInvoiceEditor';
 import PurchaseReturnEditor from './pages/Purchases/PurchaseReturnEditor';
 import CustomerManagement from './pages/BusinessPartner/CustomerManagement';
+import { BPDashboard } from './pages/BusinessPartner/BPDashboard';
 import { BPLedgerForm } from './pages/BusinessPartner/BPLedgerForm';
 import Settings from './pages/Settings/Settings';
 import Help from './pages/Help/Help';
 import Login from './pages/Auth/Login';
 import loginIllustration from './assets/login-illustration.png';
 import ProductList from './pages/Inventry/ProductList';
+import { ProductDashboard } from './pages/Inventry/ProductDashboard';
 import WarehousesPage from './pages/Inventry/Warehouses';
 import { ProductBatchPage } from './pages/Inventry/ProductBatchPage';
 import InlineProductForm from './components/ui/InlineProductForm';
@@ -1699,6 +1701,8 @@ function App() {
         return <InvoiceListModule invoiceItems={filteredInvoiceList} setInvoiceItems={setInvoiceList} onViewChange={handleViewChange} onPrintInvoice={handlePrintInvoice} onEditInvoice={handleEditInvoice} onPrintList={handlePrintList} />;
       case 'customers':
         return <CustomerManagement onViewChange={handleViewChange} onPrintList={handlePrintList} />;
+      case 'bp-dashboard':
+        return <BPDashboard onViewChange={handleViewChange} />;
       case 'bp-ledger':
         return <BPLedgerForm />;
       case 'bp-adjustments':
@@ -1718,6 +1722,8 @@ function App() {
           setProductFormInitialData(undefined);
           setIsProductFormOpen(true);
         }} onPrintList={handlePrintList} />;
+      case 'product-dashboard':
+        return <ProductDashboard onViewChange={handleViewChange} />;
       case 'warehouses':
         return <WarehousesPage />;
       case 'product-batches':

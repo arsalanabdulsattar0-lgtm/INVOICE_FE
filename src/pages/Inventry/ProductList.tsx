@@ -150,7 +150,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const [search, setSearch] = useState('');
 
   // Interactive Filters & Sorting States
-  const [selectedCategory, setSelectedCategory] = useState<string>('cat-1');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [priceOperator, setPriceOperator] = useState<string>('all');
   const [priceValue, setPriceValue] = useState<string>('');
   const [stockOperator, setStockOperator] = useState<string>('all');
@@ -283,7 +283,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   const loadProducts = () => {
     try {
       const stored = localStorage.getItem('products_list');
-      const seededFlag = localStorage.getItem('products_seeded_v9');
+      const seededFlag = localStorage.getItem('products_seeded_v10');
       const parsed = stored ? JSON.parse(stored) : null;
       if (parsed && parsed.length > 0 && seededFlag === 'true') {
         setProducts(parsed);
@@ -292,7 +292,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         const seededProducts: Product[] = buildSeededProducts();
         setProducts(seededProducts);
         localStorage.setItem('products_list', JSON.stringify(seededProducts));
-        localStorage.setItem('products_seeded_v9', 'true');
+        localStorage.setItem('products_seeded_v10', 'true');
         window.dispatchEvent(new CustomEvent('ai-sync-data'));
       }
     } catch (e) {
@@ -370,7 +370,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
   };
 
   const handleResetFilters = () => {
-    setSelectedCategory('cat-1');
+    setSelectedCategory('All');
     setPriceOperator('all');
     setPriceValue('');
     setStockOperator('all');
@@ -405,7 +405,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
         (p.id || '').toLowerCase().includes(search.toLowerCase()) ||
         p.description.toLowerCase().includes(search.toLowerCase());
 
-      const matchCategory = p.category_id === selectedCategory;
+      const matchCategory = selectedCategory === 'All' || p.category_id === selectedCategory;
 
       const matchStatus =
         selectedStatus === 'All' ||
@@ -595,7 +595,7 @@ const ProductList: React.FC<Props> = ({ onAddProductClick, onPrintList }) => {
               className="relative"
             >
               Filter
-              {(selectedCategory !== 'cat-1' || fromProductId !== 'All' || toProductId !== 'All' || priceOperator !== 'all' || stockOperator !== 'all' || selectedStatus !== 'All' || selectedSupplier !== 'all' || search !== '') && (
+              {(selectedCategory !== 'All' || fromProductId !== 'All' || toProductId !== 'All' || priceOperator !== 'all' || stockOperator !== 'all' || selectedStatus !== 'All' || selectedSupplier !== 'all' || search !== '') && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center text-white"
                   style={{ background: brand.accent || '#EF4444' }}>!</span>
               )}

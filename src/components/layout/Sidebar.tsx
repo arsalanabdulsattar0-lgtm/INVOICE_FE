@@ -76,6 +76,7 @@ const Sidebar: React.FC<Props> = ({
       isParent: true,
       subItems: [
         { id: 'customers', label: 'Business Partner List', icon: List },
+        { id: 'bp-dashboard', label: 'Business Partner Dashboard', icon: LayoutDashboard },
         { id: 'bp-ledger', label: 'Business Partner Ledger', icon: FileText },
         { id: 'bp-adjustments', label: 'Business Partner Adjustment', icon: SlidersHorizontal }
       ]
@@ -87,6 +88,7 @@ const Sidebar: React.FC<Props> = ({
       isParent: true,
       subItems: [
         { id: 'products', label: 'Product List', icon: List },
+        { id: 'product-dashboard', label: 'Product Dashboard', icon: LayoutDashboard },
         { id: 'warehouses', label: 'Product Warehouses', icon: Warehouse },
         { id: 'product-batches', label: 'Product Batches', icon: Binary },
         { id: 'stock-adjustments', label: 'Stock Adjustment', icon: SlidersHorizontal },
@@ -122,12 +124,26 @@ const Sidebar: React.FC<Props> = ({
     return {
       ...item,
       subItems: item.subItems.filter(sub => {
+        try {
+          const storedUser = localStorage.getItem('currentUser');
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser.email === 'aminternational@gmail.com') {
+              if (sub.id === 'bp-dashboard' || sub.id === 'product-dashboard') {
+                return false;
+              }
+            }
+          }
+        } catch {}
+
         // Map sidebar sub-item IDs to the new FunctionIds
         const functionIdMap: Record<string, import('../../context/PermissionContext').FunctionId> = {
           'customers': 'bp_list',
+          'bp-dashboard': 'bp_dashboard',
           'bp-ledger': 'bp_ledger',
           'bp-adjustments': 'bp_adjustments',
           'products': 'product_list',
+          'product-dashboard': 'product_dashboard',
           'warehouses': 'warehouses',
           'product-batches': 'product_batches',
           'stock-adjustments': 'stock_adjustments',
@@ -182,10 +198,11 @@ const Sidebar: React.FC<Props> = ({
   const isBpActive =
     activeView === 'customers' ||
     activeView === 'add-customer' ||
+    activeView === 'bp-dashboard' ||
     activeView === 'bp-ledger' ||
     activeView === 'bp-adjustments' ||
     activeView === 'add-bp-adjustment';
-  const isProductsActive = activeView === 'products' || activeView === 'warehouses' || activeView === 'product-batches' || activeView === 'stock-adjustments' || activeView === 'stock-transfer';
+  const isProductsActive = activeView === 'products' || activeView === 'product-dashboard' || activeView === 'warehouses' || activeView === 'product-batches' || activeView === 'stock-adjustments' || activeView === 'stock-transfer';
   const isPurchaseActive = activeView === 'purchases' || activeView === 'add-purchase-invoice' || activeView === 'purchase-return';
 
   const [salesExpanded, setSalesExpanded] = React.useState(isSalesActive);

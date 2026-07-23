@@ -76,7 +76,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
   // Sync local states when the drawer opens
   React.useEffect(() => {
     if (isOpen) {
-      setLocalCategory(selectedCategory || 'cat-1');
+      setLocalCategory(selectedCategory || 'All');
       setLocalFromProductId(fromProductId || 'All');
       setLocalToProductId(toProductId || 'All');
       setLocalPriceOperator(priceOperator || 'all');
@@ -102,7 +102,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
   };
 
   const handleResetClick = () => {
-    setLocalCategory('cat-1');
+    setLocalCategory('All');
     setLocalFromProductId('All');
     setLocalToProductId('All');
     setLocalPriceOperator('all');
@@ -132,7 +132,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
         <div className="space-y-1.5">
           <label className="block text-[11px] font-bold text-black">Filter by Category</label>
           <div className="flex flex-wrap gap-1.5">
-            {ProductCategory.map((cat: { id: string; name: string }) => {
+            {[{ id: 'All', name: 'All Categories' }, ...ProductCategory].map((cat: { id: string; name: string }) => {
               const isSelected = localCategory === cat.id;
               return (
                 <button

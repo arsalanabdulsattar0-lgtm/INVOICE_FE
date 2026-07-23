@@ -1,10 +1,11 @@
 export const ProductCategory = [
-  { id: 'cat-1', name: 'Flavour' },
-  { id: 'cat-2', name: 'Hardware' },
-  { id: 'cat-3', name: 'Cabling' },
-  { id: 'cat-4', name: 'Networking' },
-  { id: 'cat-5', name: 'Software' },
-  { id: 'cat-6', name: 'Services' },
+  { id: 'cat-1', name: 'Sweeteners & Bulk Carriers' },
+  { id: 'cat-2', name: 'Acidulants & Preservatives' },
+  { id: 'cat-3', name: 'Aroma Chemicals (Fragrance)' },
+  { id: 'cat-4', name: 'Flavour Compounds' },
+  { id: 'cat-5', name: 'Essential Oils & Naturals' },
+  { id: 'cat-6', name: 'Solvents & Carriers' },
+  { id: 'cat-7', name: 'Emulsifiers & Stabilizers' },
 ];
 
 export const ProductBrand = [
